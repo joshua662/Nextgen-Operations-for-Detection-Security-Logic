@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
         $age = date_diff(date_create($birthDate), date_create('now'))->y;
 
         User::factory()->create([
+            'role' => 'admin',
             'first_name' => 'John',
             'middle_name' => 'Santos',
             'last_name' => 'Doe',
@@ -44,6 +45,6 @@ class DatabaseSeeder extends Seeder
             'password' => 'johndoe',
         ]);
 
-        User::factory(100)->create();
+        $this->call(GateAccessSeeder::class);
     }
 }

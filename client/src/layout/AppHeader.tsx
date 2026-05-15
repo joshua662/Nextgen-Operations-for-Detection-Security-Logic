@@ -79,7 +79,7 @@ const AppHeader = () => {
                 @{user.user.username}
               </p>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-neutral-subtle">
-                <span>{user.user.gender.gender}</span>
+                <span>{user.user.gender?.gender ?? "—"}</span>
                 <span className="text-border" aria-hidden>
                   •
                 </span>

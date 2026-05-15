@@ -5,7 +5,7 @@ import AuthForm from "./components/AuthForm";
 import { useAuth } from "../../contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 
-const LoginPage = () => {
+const RegisterPage = () => {
     const { message, isFailed, isVisible, showToastMessage, closeToastMessage } = useToastMessage("", false, false);
     const { user, loading } = useAuth();
 
@@ -14,11 +14,11 @@ const LoginPage = () => {
     }
 
     return (
-        <AuthPageLayout>
+        <AuthPageLayout welcomeTitle="Join Us" welcomeSubtitle="Create your gate access account today.">
             <ToastMessage message={message} isFailed={isFailed} isVisible={isVisible} onClose={closeToastMessage} />
-            <AuthForm message={showToastMessage} defaultMode="login" />
+            <AuthForm message={showToastMessage} defaultMode="register" />
         </AuthPageLayout>
     );
 };
 
-export default LoginPage;
+export default RegisterPage;

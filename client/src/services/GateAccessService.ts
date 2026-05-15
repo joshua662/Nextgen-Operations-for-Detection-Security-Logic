@@ -1,0 +1,59 @@
+import AxiosInstance from "./AxiosInstance";
+
+const GateAccessService = {
+    dashboardOverview: () => AxiosInstance.get("/dashboard/overview"),
+    trafficChart: (period: string) => AxiosInstance.get(`/dashboard/traffic-chart?period=${period}`),
+    gateStatus: () => AxiosInstance.get("/gate/status"),
+
+    loadResidents: (page: number, search = "") => {
+        const q = search ? `&search=${encodeURIComponent(search)}` : "";
+        return AxiosInstance.get(`/resident/loadResidents?page=${page}${q}`);
+    },
+    storeResident: (data: Record<string, unknown>) => AxiosInstance.post("/resident/storeResident", data),
+    updateResident: (id: number, data: Record<string, unknown>) => AxiosInstance.put(`/resident/updateResident/${id}`, data),
+    destroyResident: (id: number) => AxiosInstance.delete(`/resident/destroyResident/${id}`),
+
+    loadGateLogs: (page: number, filters: { direction?: string; status?: string; search?: string } = {}) => {
+        const params = new URLSearchParams({ page: String(page) });
+        if (filters.direction) params.append("direction", filters.direction);
+        if (filters.status) params.append("status", filters.status);
+        if (filters.search) params.append("search", filters.search);
+        return AxiosInstance.get(`/gate-log/loadGateLogs?${params}`);
+    },
+    myGateLogs: (page: number) => AxiosInstance.get(`/gate-log/my-logs?page=${page}`),
+    exportCsv: (filters: { direction?: string; status?: string } = {}) => {
+        const params = new URLSearchParams();
+        if (filters.direction) params.append("direction", filters.direction);
+        if (filters.status) params.append("status", filters.status);
+        return AxiosInstance.get(`/gate-log/export/csv?${params}`, { responseType: "blob" });
+    },
+    exportPdf: (filters: { direction?: string; status?: string } = {}) => {
+        const params = new URLSearchParams();
+        if (filters.direction) params.append("direction", filters.direction);
+        if (filters.status) params.append("status", filters.status);
+        return AxiosInstance.get(`/gate-log/export/pdf?${params}`, { responseType: "blob" });
+    },
+
+    loadNotifications: (page: number) => AxiosInstance.get(`/notification?page=${page}`),
+    markNotificationRead: (id: number) => AxiosInstance.put(`/notification/${id}/read`),
+    markAllNotificationsRead: () => AxiosInstance.put("/notification/read-all"),
+
+    loadUpdateRequests: (page: number, status?: string) => {
+        const q = status ? `&status=${status}` : "";
+        return AxiosInstance.get(`/update-request/loadRequests?page=${page}${q}`);
+    },
+    myUpdateRequests: (page: number) => AxiosInstance.get(`/update-request/my-requests?page=${page}`),
+    submitUpdateRequest: (data: Record<string, unknown>) => AxiosInstance.post("/update-request/submit", data),
+    reviewUpdateRequest: (id: number, data: { status: string; admin_notes?: string }) =>
+        AxiosInstance.put(`/update-request/review/${id}`, data),
+
+    toggleGate: (gate_status: string) => AxiosInstance.put("/gate/toggle", { gate_status }),
+    verifyPlate: (data: FormData) => AxiosInstance.post("/gate/verify", data),
+
+    residentLogin: (plate_number: string, contact_number: string) =>
+        AxiosInstance.post("/auth/resident/login", { plate_number, contact_number }),
+    residentRegister: (data: Record<string, unknown>) => AxiosInstance.post("/auth/resident/register", data),
+    updateProfile: (data: Record<string, unknown>) => AxiosInstance.put("/auth/profile", data),
+};
+
+export default GateAccessService;

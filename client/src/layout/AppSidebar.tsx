@@ -1,27 +1,25 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useSidebar } from "../contexts/SidebarContext";
 
 const AppSidebar = () => {
     const { isOpen, toggleSidebar } = useSidebar();
+    const location = useLocation();
 
     const sidebarItems = [
-        {
-            path: '/genders',
-            text: 'Gender',
-        },
-        {
-            path: '/users',
-            text: 'User',
-        }
-    ]
+        { path: '/dashboard', text: 'Dashboard' },
+        { path: '/residents', text: 'Residents' },
+        { path: '/gate-logs', text: 'Gate Logs' },
+        { path: '/reports', text: 'Reports' },
+        { path: '/notifications', text: 'Notifications' },
+        { path: '/update-requests', text: 'Update Requests' },
+        { path: '/users', text: 'Staff Users' },
+        { path: '/genders', text: 'Genders' },
+    ];
 
     return (
         <>
             {!isOpen && (
-                <div
-                    className="fixed inset-0 z-30 blur-lg sm:hidden"
-                    onClick={toggleSidebar}
-                />
+                <div className="fixed inset-0 z-30 blur-lg sm:hidden" onClick={toggleSidebar} />
             )}
             <aside
                 id="logo-sidebar"
@@ -31,14 +29,19 @@ const AppSidebar = () => {
                 aria-label="Sidebar"
             >
                 <div className="h-full px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
-                    <ul className="space-y-2 font-medium">
-                        {sidebarItems.map((sidebarItem, index) => (
-                            <li key={index}>
+                    <p className="px-2 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Gate Security</p>
+                    <ul className="space-y-1 font-medium">
+                        {sidebarItems.map((item) => (
+                            <li key={item.path}>
                                 <Link
-                                    to={sidebarItem.path}
-                                    className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                                    to={item.path}
+                                    className={`flex items-center p-2 rounded-lg group ${
+                                        location.pathname === item.path
+                                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                            : "text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    }`}
                                 >
-                                    <span className="ms-3">{sidebarItem.text}</span>
+                                    <span className="ms-3">{item.text}</span>
                                 </Link>
                             </li>
                         ))}
@@ -46,7 +49,7 @@ const AppSidebar = () => {
                 </div>
             </aside>
         </>
-    )
-}
+    );
+};
 
 export default AppSidebar;
