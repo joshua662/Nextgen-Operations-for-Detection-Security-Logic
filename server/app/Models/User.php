@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -23,6 +24,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'role',
         'profile_picture',
         'first_name',
         'middle_name',
@@ -33,7 +35,12 @@ class User extends Authenticatable
         'age',
         'username',
         'password',
-        'is_deleted'
+        'contact_number',
+        'address',
+        'plate_number',
+        'car_model',
+        'car_color',
+        'is_deleted',
     ];
 
     /**
@@ -60,5 +67,37 @@ class User extends Authenticatable
     public function gender(): BelongsTo
     {
         return $this->belongsTo(Gender::class, 'gender_id', 'gender_id');
+    }
+
+    public function gateLogs(): HasMany
+    {
+        return $this->hasMany(GateLog::class, 'user_id', 'user_id');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'user_id', 'user_id');
+    }
+
+    public function updateRequests(): HasMany
+    {
+        return $this->hasMany(UpdateRequest::class, 'user_id', 'user_id');
+    }
+
+    public function getOwnerNameAttribute(): string
+    {
+        $name = trim("{$this->first_name} {$this->middle_name} {$this->last_name}");
+
+        return $name ?: 'Unknown';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin' || $this->role === null;
+    }
+
+    public function isResident(): bool
+    {
+        return $this->role === 'resident';
     }
 }

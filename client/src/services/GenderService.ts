@@ -8,6 +8,9 @@ const GenderService = {
   loadGenders: async () => {
     return AxiosInstance.get("/gender/loadGenders");
   },
+  loadPublicGenders: async () => {
+    return AxiosInstance.get("/gender/publicGenders");
+  },
 
   storeGender: async (data: StoreGenderPayload) => {
     return AxiosInstance.post("/gender/storeGender", data);

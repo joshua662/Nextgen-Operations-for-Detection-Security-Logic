@@ -25,10 +25,12 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        // default admin staff users for factory
         $birthDate = fake()->date();
         $age = date_diff(date_create($birthDate), date_create('now'))->y;
 
         return [
+            'role' => 'admin',
             'first_name' => fake()->firstName(),
             'middle_name' => fake()->lastName(),
             'last_name' => fake()->lastName(),
