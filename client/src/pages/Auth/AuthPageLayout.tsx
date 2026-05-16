@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from "react";
-import loginBackdrop from "../../assets/img/pdp-logo-invert.png";
+import loginBackdrop from "../../assets/img/subdivision-gate-background.png";
 
 interface AuthPageLayoutProps {
     children: ReactNode;
@@ -18,13 +18,13 @@ const AuthPageLayout: FC<AuthPageLayoutProps> = ({ children }) => {
 
             {/* Twilight indigo / purple grading */}
             <div
-                className="absolute inset-0 bg-gradient-to-b from-indigo-950/72 via-violet-950/55 to-purple-950/78"
+                className="absolute inset-0 bg-gradient-to-b from-indigo-950/50 via-violet-950/35 to-purple-950/45"
                 aria-hidden
             />
 
             {/* Soft star specks */}
             <div
-                className="pointer-events-none absolute inset-0 opacity-[0.35]"
+                className="pointer-events-none absolute inset-0 opacity-20"
                 style={{
                     backgroundImage: `
             radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.75), transparent),
@@ -39,7 +39,7 @@ const AuthPageLayout: FC<AuthPageLayoutProps> = ({ children }) => {
 
             <div className="relative z-10 flex min-h-screen items-center justify-center px-5 py-12 sm:px-8">
                 <div
-                    className="auth-login-card-animate w-full max-w-[440px] rounded-[28px] border border-white/25 px-8 py-10 shadow-2xl shadow-black/45 sm:px-11 sm:py-12"
+                    className="auth-login-card-animate w-full max-w-[440px] rounded-[28px] border border-white/25 px-10 py-12 shadow-2xl shadow-black/45 sm:px-11 sm:py-12"
                     style={{
                         background: "rgba(30, 27, 75, 0.42)",
                         backdropFilter: "blur(18px)",

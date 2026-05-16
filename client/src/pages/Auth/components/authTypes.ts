@@ -7,7 +7,7 @@ export type ResidentRegistrationForm = {
     gender: string;
     birth_date: string;
     email: string;
-    username: string;
+    role: string;
     password: string;
     password_confirmation: string;
     contact_number: string;
@@ -24,7 +24,7 @@ export type AdminRegistrationForm = {
     gender: string;
     birth_date: string;
     email: string;
-    username: string;
+    role: string;
     password: string;
     password_confirmation: string;
 };
@@ -36,7 +36,7 @@ export const emptyResidentForm = (): ResidentRegistrationForm => ({
     gender: "",
     birth_date: "",
     email: "",
-    username: "",
+    role: "",
     password: "",
     password_confirmation: "",
     contact_number: "",
@@ -53,7 +53,7 @@ export const emptyAdminForm = (): AdminRegistrationForm => ({
     gender: "",
     birth_date: "",
     email: "",
-    username: "",
+    role: "",
     password: "",
     password_confirmation: "",
 });
