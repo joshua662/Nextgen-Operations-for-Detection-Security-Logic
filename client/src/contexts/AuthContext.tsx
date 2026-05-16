@@ -8,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
   adminRegister: (data: Record<string, unknown>) => Promise<void>;
-  residentLogin: (plateNumber: string, contactNumber: string) => Promise<void>;
+  residentLogin: (credentials: Record<string, string>) => Promise<void>;
   residentRegister: (data: Record<string, unknown>) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: boolean;
@@ -41,8 +41,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     throw new Error("Registration failed.");
   };
 
-  const residentLogin = async (plateNumber: string, contactNumber: string) => {
-    const res = await GateAccessService.residentLogin(plateNumber, contactNumber);
+  const residentLogin = async (credentials: Record<string, string>) => {
+    const res = await GateAccessService.residentLogin(credentials);
     if (res.status === 200) {
       localStorage.setItem("token", res.data.token);
       setUser(res.data);

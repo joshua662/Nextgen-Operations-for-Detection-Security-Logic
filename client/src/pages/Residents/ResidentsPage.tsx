@@ -10,6 +10,7 @@ import Modal from "../../components/Modal";
 
 const emptyForm = () => ({
     first_name: "", middle_name: "", last_name: "", gender: "", birth_date: "",
+    email: "", username: "", password: "", password_confirmation: "",
     contact_number: "", address: "", plate_number: "", car_model: "", car_color: "",
 });
 
@@ -40,8 +41,12 @@ const ResidentsPage = () => {
 
     const handleSave = async (e: FormEvent) => {
         e.preventDefault();
-        const payload = { ...form, gender: form.gender };
+        const payload: Record<string, string | undefined> = { ...form, gender: form.gender };
         if (editing) {
+            if (!payload.password?.trim()) {
+                delete payload.password;
+                delete payload.password_confirmation;
+            }
             await GateAccessService.updateResident(editing.user_id, payload);
             setMessage("Resident updated.");
         } else {
@@ -64,17 +69,24 @@ const ResidentsPage = () => {
                 <div className="mt-4 overflow-x-auto bg-white dark:bg-gray-800 rounded-xl border">
                     <table className="min-w-full text-sm">
                         <thead className="bg-gray-50 dark:bg-gray-700"><tr>
-                            <th className="p-3 text-left">Name</th><th>Plate</th><th>Contact</th><th>Car</th><th>Actions</th>
+                            <th className="p-3 text-left">Name</th><th>Username</th><th>Plate</th><th>Contact</th><th>Car</th><th>Actions</th>
                         </tr></thead>
                         <tbody>
                             {residents.map((r) => (
                                 <tr key={r.user_id} className="border-t">
                                     <td className="p-3">{r.last_name}, {r.first_name}</td>
+                                    <td className="p-3 font-mono text-xs">{r.username ?? "—"}</td>
                                     <td className="p-3 font-mono">{r.plate_number}</td>
                                     <td className="p-3">{r.contact_number}</td>
                                     <td className="p-3">{r.car_model} ({r.car_color})</td>
                                     <td className="p-3 space-x-2">
-                                        <button type="button" className="text-blue-600" onClick={() => { setEditing(r); setForm({ first_name: r.first_name, middle_name: r.middle_name ?? "", last_name: r.last_name, gender: String(r.gender?.gender_id ?? ""), birth_date: r.birth_date ?? "", contact_number: r.contact_number ?? "", address: r.address ?? "", plate_number: r.plate_number ?? "", car_model: r.car_model ?? "", car_color: r.car_color ?? "" }); setModalOpen(true); }}>Edit</button>
+                                        <button type="button" className="text-blue-600" onClick={() => { setEditing(r); setForm({
+                                            first_name: r.first_name, middle_name: r.middle_name ?? "", last_name: r.last_name,
+                                            gender: String(r.gender?.gender_id ?? ""), birth_date: r.birth_date ?? "",
+                                            email: r.email ?? "", username: r.username ?? "", password: "", password_confirmation: "",
+                                            contact_number: r.contact_number ?? "", address: r.address ?? "",
+                                            plate_number: r.plate_number ?? "", car_model: r.car_model ?? "", car_color: r.car_color ?? "",
+                                        }); setModalOpen(true); }}>Edit</button>
                                         <button type="button" className="text-red-600" onClick={async () => { if (confirm("Delete?")) { await GateAccessService.destroyResident(r.user_id); void load(); } }}>Delete</button>
                                     </td>
                                 </tr>
@@ -85,7 +97,7 @@ const ResidentsPage = () => {
             )}
             <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} showCloseButton>
                 <h2 className="text-lg font-semibold mb-4 px-4 pt-2">{editing ? "Edit Resident" : "Add Resident"}</h2>
-                <form onSubmit={handleSave} className="space-y-3 px-4 pb-4">
+                <form onSubmit={handleSave} className="space-y-3 px-4 pb-4 max-h-[70vh] overflow-y-auto">
                     <FloatingLabelInput type="text" label="First Name" name="first_name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required />
                     <FloatingLabelInput type="text" label="Middle Name" name="middle_name" value={form.middle_name} onChange={(e) => setForm({ ...form, middle_name: e.target.value })} />
                     <FloatingLabelInput type="text" label="Last Name" name="last_name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required />
@@ -94,6 +106,20 @@ const ResidentsPage = () => {
                         {genders.map((g) => <option key={g.gender_id} value={g.gender_id}>{g.gender}</option>)}
                     </FloatingLabelSelect>
                     <FloatingLabelInput label="Birthdate" name="birth_date" type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} required />
+                    <FloatingLabelInput type="email" label="Email" name="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                    <FloatingLabelInput type="text" label="Portal username" name="username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+                    {!editing ? (
+                        <>
+                            <FloatingLabelInput type="password" label="Password" name="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+                            <FloatingLabelInput type="password" label="Confirm password" name="password_confirmation" value={form.password_confirmation} onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} required />
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-xs text-gray-500">Leave password blank to keep current. Min 6 characters.</p>
+                            <FloatingLabelInput type="password" label="New password (optional)" name="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                            <FloatingLabelInput type="password" label="Confirm new password" name="password_confirmation" value={form.password_confirmation} onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} />
+                        </>
+                    )}
                     <FloatingLabelInput type="text" label="Contact Number" name="contact_number" value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} required />
                     <FloatingLabelInput type="text" label="Address" name="address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
                     <FloatingLabelInput type="text" label="Plate Number" name="plate_number" value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value })} required />

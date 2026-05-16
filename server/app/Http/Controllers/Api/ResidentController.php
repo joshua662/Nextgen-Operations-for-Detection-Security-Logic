@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ResidentGateAccessWelcomeMail;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class ResidentController extends Controller
@@ -25,7 +27,9 @@ class ResidentController extends Controller
                     ->orWhere('middle_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
                     ->orWhere('plate_number', 'like', "%{$search}%")
-                    ->orWhere('contact_number', 'like', "%{$search}%");
+                    ->orWhere('contact_number', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -37,10 +41,11 @@ class ResidentController extends Controller
     public function storeResident(Request $request)
     {
         $validated = $this->validateResident($request);
+        $plainPassword = $validated['password'];
 
         $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
 
-        User::create([
+        $user = User::create([
             'role' => 'resident',
             'first_name' => $validated['first_name'],
             'middle_name' => $validated['middle_name'] ?? null,
@@ -48,6 +53,9 @@ class ResidentController extends Controller
             'gender_id' => $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'age' => $age,
+            'email' => $validated['email'],
+            'username' => $validated['username'],
+            'password' => $plainPassword,
             'contact_number' => $validated['contact_number'],
             'address' => $validated['address'],
             'plate_number' => strtoupper($validated['plate_number']),
@@ -55,7 +63,19 @@ class ResidentController extends Controller
             'car_color' => $validated['car_color'],
         ]);
 
-        return response()->json(['message' => 'Resident successfully saved.'], 200);
+        $user->load('gender');
+
+        try {
+            Mail::to($user->email)->send(new ResidentGateAccessWelcomeMail(
+                $user,
+                $plainPassword,
+                config('gate.portal_url'),
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return response()->json(['message' => 'Resident successfully saved. Welcome email sent (if mail is configured).'], 200);
     }
 
     public function updateResident(Request $request, User $resident)
@@ -67,19 +87,27 @@ class ResidentController extends Controller
         $validated = $this->validateResident($request, $resident->user_id);
         $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
 
-        $resident->update([
+        $update = [
             'first_name' => $validated['first_name'],
             'middle_name' => $validated['middle_name'] ?? null,
             'last_name' => $validated['last_name'],
             'gender_id' => $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'age' => $age,
+            'email' => $validated['email'],
+            'username' => $validated['username'],
             'contact_number' => $validated['contact_number'],
             'address' => $validated['address'],
             'plate_number' => strtoupper($validated['plate_number']),
             'car_model' => $validated['car_model'],
             'car_color' => $validated['car_color'],
-        ]);
+        ];
+
+        if ($request->filled('password')) {
+            $update['password'] = $validated['password'];
+        }
+
+        $resident->update($update);
 
         return response()->json([
             'message' => 'Resident successfully updated.',
@@ -106,6 +134,11 @@ class ResidentController extends Controller
             'last_name' => ['required', 'max:55'],
             'gender' => ['required', 'exists:tbl_genders,gender_id'],
             'birth_date' => ['required', 'date'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')->ignore($ignoreUserId, 'user_id')],
+            'username' => ['required', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')->ignore($ignoreUserId, 'user_id')],
+            'password' => $ignoreUserId === null
+                ? ['required', 'string', 'min:6', 'max:12', 'confirmed']
+                : ['sometimes', 'nullable', 'string', 'min:6', 'max:12', 'confirmed'],
             'contact_number' => ['required', 'max:20'],
             'address' => ['required', 'max:255'],
             'plate_number' => ['required', 'max:20', Rule::unique('tbl_users', 'plate_number')->ignore($ignoreUserId, 'user_id')],

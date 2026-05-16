@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ResidentGateAccessWelcomeMail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
@@ -15,7 +17,6 @@ class AuthController extends Controller
         $validated = $request->validate([
             'username' => ['required', 'string', 'min:6', 'max:12'],
             'password' => ['required', 'string', 'min:6', 'max:12'],
-            'role' => ['nullable', 'in:admin,resident'],
         ]);
 
         $user = User::with(['gender'])
@@ -40,24 +41,43 @@ class AuthController extends Controller
 
     public function residentLogin(Request $request)
     {
-        $validated = $request->validate([
-            'plate_number' => ['required', 'string', 'max:20'],
-            'contact_number' => ['required', 'string', 'max:20'],
-        ]);
+        if ($request->filled('username')) {
+            $validated = $request->validate([
+                'username' => ['required', 'string', 'min:6', 'max:12'],
+                'password' => ['required', 'string', 'min:6', 'max:12'],
+            ]);
 
-        $normalizedPlate = strtoupper(preg_replace('/\s+/', '', $validated['plate_number']));
+            $user = User::with(['gender'])
+                ->where('role', 'resident')
+                ->where('is_deleted', false)
+                ->where('username', $validated['username'])
+                ->first();
 
-        $user = User::with(['gender'])
-            ->where('role', 'resident')
-            ->where('is_deleted', false)
-            ->where('contact_number', $validated['contact_number'])
-            ->whereRaw('UPPER(REPLACE(plate_number, " ", "")) = ?', [$normalizedPlate])
-            ->first();
+            if (! $user || ! Hash::check($validated['password'], $user->password)) {
+                return response()->json([
+                    'message' => 'The provided credentials are incorrect.',
+                ], 401);
+            }
+        } else {
+            $validated = $request->validate([
+                'plate_number' => ['required', 'string', 'max:20'],
+                'contact_number' => ['required', 'string', 'max:20'],
+            ]);
 
-        if (! $user) {
-            return response()->json([
-                'message' => 'Invalid plate number or contact number.',
-            ], 401);
+            $normalizedPlate = strtoupper(preg_replace('/\s+/', '', $validated['plate_number']));
+
+            $user = User::with(['gender'])
+                ->where('role', 'resident')
+                ->where('is_deleted', false)
+                ->where('contact_number', $validated['contact_number'])
+                ->whereRaw('UPPER(REPLACE(plate_number, " ", "")) = ?', [$normalizedPlate])
+                ->first();
+
+            if (! $user) {
+                return response()->json([
+                    'message' => 'Invalid plate number or contact number.',
+                ], 401);
+            }
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -76,6 +96,7 @@ class AuthController extends Controller
             'last_name' => ['required', 'max:55'],
             'gender' => ['required', 'exists:tbl_genders,gender_id'],
             'birth_date' => ['required', 'date'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('tbl_users', 'email')],
             'username' => ['required', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')],
             'password' => ['required', 'min:6', 'max:12', 'confirmed'],
         ]);
@@ -90,6 +111,7 @@ class AuthController extends Controller
             'gender_id' => $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'age' => $age,
+            'email' => $validated['email'] ?? null,
             'username' => $validated['username'],
             'password' => $validated['password'],
         ]);
@@ -111,6 +133,9 @@ class AuthController extends Controller
             'last_name' => ['required', 'max:55'],
             'gender' => ['required', 'exists:tbl_genders,gender_id'],
             'birth_date' => ['required', 'date'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')],
+            'username' => ['required', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')],
+            'password' => ['required', 'min:6', 'max:12', 'confirmed'],
             'contact_number' => ['required', 'max:20'],
             'address' => ['required', 'max:255'],
             'plate_number' => ['required', 'max:20', Rule::unique('tbl_users', 'plate_number')],
@@ -119,6 +144,7 @@ class AuthController extends Controller
         ]);
 
         $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
+        $plainPassword = $validated['password'];
 
         $user = User::create([
             'role' => 'resident',
@@ -128,6 +154,9 @@ class AuthController extends Controller
             'gender_id' => $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'age' => $age,
+            'email' => $validated['email'],
+            'username' => $validated['username'],
+            'password' => $plainPassword,
             'contact_number' => $validated['contact_number'],
             'address' => $validated['address'],
             'plate_number' => strtoupper($validated['plate_number']),
@@ -135,10 +164,22 @@ class AuthController extends Controller
             'car_color' => $validated['car_color'],
         ]);
 
-        $token = $user->load('gender')->createToken('auth_token')->plainTextToken;
+        $user->load('gender');
+
+        try {
+            Mail::to($user->email)->send(new ResidentGateAccessWelcomeMail(
+                $user,
+                $plainPassword,
+                config('gate.portal_url'),
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Registration successful.',
+            'message' => 'Registration successful. Check your email for portal credentials (if mail is configured).',
             'user' => $user,
             'token' => $token,
         ], 201);
@@ -174,6 +215,8 @@ class AuthController extends Controller
             'last_name' => ['required', 'max:55'],
             'gender' => ['required', 'exists:tbl_genders,gender_id'],
             'birth_date' => ['required', 'date'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')->ignore($user->user_id, 'user_id')],
+            'username' => ['required', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')->ignore($user->user_id, 'user_id')],
             'contact_number' => ['required', 'max:20'],
             'address' => ['required', 'max:255'],
             'plate_number' => ['required', 'max:20', Rule::unique('tbl_users', 'plate_number')->ignore($user->user_id, 'user_id')],
@@ -190,6 +233,8 @@ class AuthController extends Controller
             'gender_id' => $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'age' => $age,
+            'email' => $validated['email'],
+            'username' => $validated['username'],
             'contact_number' => $validated['contact_number'],
             'address' => $validated['address'],
             'plate_number' => strtoupper($validated['plate_number']),

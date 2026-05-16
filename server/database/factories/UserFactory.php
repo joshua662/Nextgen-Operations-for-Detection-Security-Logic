@@ -39,6 +39,7 @@ class UserFactory extends Factory
             'birth_date' => $birthDate,
             'age' => $age,
             'username' => strtolower(fake()->firstName() . fake()->lastName()),
+            'email' => fake()->unique()->safeEmail(),
             'password' => 'sample123'
         ];
     }

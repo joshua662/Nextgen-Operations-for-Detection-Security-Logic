@@ -1,58 +1,52 @@
 import type { FC, ReactNode } from "react";
-import subdivisionBackground from "../../assets/img/subdivision-gate-background.png";
+import loginBackdrop from "../../assets/img/pdp-logo-invert.png";
 
 interface AuthPageLayoutProps {
     children: ReactNode;
-    welcomeTitle?: string;
-    welcomeSubtitle?: string;
 }
 
-const AuthPageLayout: FC<AuthPageLayoutProps> = ({
-    children,
-    welcomeTitle = "Welcome",
-    welcomeSubtitle = "Have a great journey ahead...",
-}) => {
+/** Lavender-field-inspired fullscreen backdrop + centered glass card (children render inside card). */
+const AuthPageLayout: FC<AuthPageLayoutProps> = ({ children }) => {
     return (
         <div className="relative min-h-screen w-full overflow-hidden">
-            {/* Subdivision gate background */}
-            <div
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105"
-                style={{ backgroundImage: `url(${subdivisionBackground})` }}
+            <img
+                src={loginBackdrop}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover scale-105"
                 aria-hidden
             />
 
-            {/* Dark gradient overlay for text readability */}
+            {/* Twilight indigo / purple grading */}
             <div
-                className="absolute inset-0 bg-gradient-to-br from-slate-900/75 via-emerald-950/50 to-violet-950/65"
+                className="absolute inset-0 bg-gradient-to-b from-indigo-950/72 via-violet-950/55 to-purple-950/78"
                 aria-hidden
             />
 
-            <div className="relative z-10 flex min-h-screen flex-col lg:flex-row lg:items-center lg:justify-between px-6 py-10 sm:px-10 lg:px-16 xl:px-24">
-                {/* Left — Welcome */}
-                <div className="mb-10 lg:mb-0 lg:max-w-lg lg:flex-1">
-                    <p className="text-emerald-300/90 text-sm font-semibold uppercase tracking-widest mb-3 drop-shadow">
-                        Gate Access System
-                    </p>
-                    <h1 className="text-5xl sm:text-6xl xl:text-7xl font-bold text-white tracking-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
-                        {welcomeTitle}
-                    </h1>
-                    <p className="mt-4 text-lg sm:text-xl text-white/85 font-light drop-shadow-md max-w-md">
-                        {welcomeSubtitle}
-                    </p>
-                </div>
+            {/* Soft star specks */}
+            <div
+                className="pointer-events-none absolute inset-0 opacity-[0.35]"
+                style={{
+                    backgroundImage: `
+            radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.75), transparent),
+            radial-gradient(1px 1px at 70% 18%, rgba(255,255,255,0.55), transparent),
+            radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(1px 1px at 88% 52%, rgba(255,255,255,0.65), transparent),
+            radial-gradient(1px 1px at 12% 55%, rgba(255,255,255,0.45), transparent)
+          `,
+                }}
+                aria-hidden
+            />
 
-                {/* Right — Glass card */}
-                <div className="w-full max-w-md lg:flex-shrink-0">
-                    <div
-                        className="rounded-3xl border border-white/25 p-8 sm:p-10 shadow-2xl shadow-black/40"
-                        style={{
-                            background: "rgba(15, 23, 42, 0.45)",
-                            backdropFilter: "blur(20px)",
-                            WebkitBackdropFilter: "blur(20px)",
-                        }}
-                    >
-                        {children}
-                    </div>
+            <div className="relative z-10 flex min-h-screen items-center justify-center px-5 py-12 sm:px-8">
+                <div
+                    className="auth-login-card-animate w-full max-w-[440px] rounded-[28px] border border-white/25 px-8 py-10 shadow-2xl shadow-black/45 sm:px-11 sm:py-12"
+                    style={{
+                        background: "rgba(30, 27, 75, 0.42)",
+                        backdropFilter: "blur(18px)",
+                        WebkitBackdropFilter: "blur(18px)",
+                    }}
+                >
+                    {children}
                 </div>
             </div>
         </div>

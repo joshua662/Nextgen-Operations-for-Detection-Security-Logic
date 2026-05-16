@@ -17,7 +17,7 @@ const ResidentLoginPage = () => {
         setLoading(true);
         setError("");
         try {
-            await residentLogin(plate, contact);
+            await residentLogin({ plate_number: plate, contact_number: contact });
             navigate("/resident/home");
         } catch {
             setError("Invalid plate number or contact number.");

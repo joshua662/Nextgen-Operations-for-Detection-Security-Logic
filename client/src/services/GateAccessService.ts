@@ -50,8 +50,8 @@ const GateAccessService = {
     toggleGate: (gate_status: string) => AxiosInstance.put("/gate/toggle", { gate_status }),
     verifyPlate: (data: FormData) => AxiosInstance.post("/gate/verify", data),
 
-    residentLogin: (plate_number: string, contact_number: string) =>
-        AxiosInstance.post("/auth/resident/login", { plate_number, contact_number }),
+    residentLogin: (payload: Record<string, string>) =>
+        AxiosInstance.post("/auth/resident/login", payload),
     residentRegister: (data: Record<string, unknown>) => AxiosInstance.post("/auth/resident/register", data),
     updateProfile: (data: Record<string, unknown>) => AxiosInstance.put("/auth/profile", data),
 };

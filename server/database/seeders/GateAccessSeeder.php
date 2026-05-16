@@ -7,6 +7,7 @@ use App\Models\SystemStatus;
 use App\Models\User;
 use App\Models\Gender;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class GateAccessSeeder extends Seeder
 {
@@ -41,6 +42,9 @@ class GateAccessSeeder extends Seeder
                 'car_model' => 'Toyota Vios',
                 'car_color' => 'White',
                 'address' => 'Block 1 Lot 5, Green Valley Subdivision',
+                'username' => 'msantos1',
+                'email' => 'maria.santos@paramount116.test',
+                'password' => 'resident',
             ],
             [
                 'first_name' => 'Juan',
@@ -50,12 +54,15 @@ class GateAccessSeeder extends Seeder
                 'car_model' => 'Honda Civic',
                 'car_color' => 'Black',
                 'address' => 'Block 3 Lot 12, Green Valley Subdivision',
+                'username' => 'jreyes01',
+                'email' => 'juan.reyes@paramount116.test',
+                'password' => 'resident',
             ],
         ];
 
         foreach ($residents as $data) {
-            $resident = User::firstOrCreate(
-                ['plate_number' => $data['plate_number']],
+            $resident = User::updateOrCreate(
+                ['plate_number' => strtoupper($data['plate_number'])],
                 [
                     'role' => 'resident',
                     'first_name' => $data['first_name'],
@@ -63,6 +70,9 @@ class GateAccessSeeder extends Seeder
                     'gender_id' => $genderId,
                     'birth_date' => '1985-06-15',
                     'age' => 40,
+                    'username' => $data['username'],
+                    'email' => $data['email'],
+                    'password' => Hash::make($data['password']),
                     'contact_number' => $data['contact_number'],
                     'address' => $data['address'],
                     'car_model' => $data['car_model'],

@@ -14,9 +14,14 @@ const RegisterPage = () => {
     }
 
     return (
-        <AuthPageLayout welcomeTitle="Join Us" welcomeSubtitle="Create your gate access account today.">
+        <AuthPageLayout>
             <ToastMessage message={message} isFailed={isFailed} isVisible={isVisible} onClose={closeToastMessage} />
-            <AuthForm message={showToastMessage} defaultMode="register" />
+            <AuthForm
+                message={showToastMessage}
+                defaultRegistrationOpen
+                loginHeadline="Join the portal"
+                loginSubtitle="Open registration below, or sign in if you already have gate access."
+            />
         </AuthPageLayout>
     );
 };
