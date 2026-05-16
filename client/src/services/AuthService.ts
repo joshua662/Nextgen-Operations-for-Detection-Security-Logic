@@ -11,9 +11,27 @@ interface AdminRegisterData {
   last_name: string;
   gender: string;
   birth_date: string;
-  username: string;
+  email?: string;
+  role: string;
   password: string;
   password_confirmation: string;
+}
+
+interface ResidentRegisterData {
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  gender: string;
+  birth_date: string;
+  email: string;
+  role: string;
+  password: string;
+  password_confirmation: string;
+  contact_number: string;
+  address: string;
+  plate_number: string;
+  car_model: string;
+  car_color: string;
 }
 
 const AuthService = {
@@ -23,6 +41,10 @@ const AuthService = {
   },
   adminRegister: async (data: AdminRegisterData) => {
     const response = await AxiosInstance.post("/auth/admin/register", data);
+    return response;
+  },
+  residentRegister: async (data: ResidentRegisterData) => {
+    const response = await AxiosInstance.post("/auth/resident/register", data);
     return response;
   },
   logout: async () => {

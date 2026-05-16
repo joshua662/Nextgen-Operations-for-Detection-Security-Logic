@@ -5,6 +5,7 @@ import SubmitButton from "../../../components/Button/SubmitButton";
 import { useAuth } from "../../../contexts/AuthContext";
 import GenderService from "../../../services/GenderService";
 import RegistrationModal from "./RegistrationModal";
+import logoSrc from "../../../assets/img/pdp-logo-invert.png";
 import { emptyAdminForm, emptyResidentForm, type UserRole } from "./authTypes";
 
 interface AuthFormProps {
@@ -18,16 +19,11 @@ interface AuthFormProps {
 
 
 const SparkleGlyph = () => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-white" aria-hidden>
-        <path
-            d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-        />
-        <circle cx="12" cy="12" r="3.2" fill="currentColor" opacity="0.35" />
-        <circle cx="12" cy="12" r="1.4" fill="currentColor" />
-    </svg>
+    <img
+        src={logoSrc}
+        alt="Pueblo de Panay"
+        className="max-h-28 w-auto object-contain drop-shadow-md"
+    />
 );
 
 const AuthForm = ({
@@ -165,10 +161,8 @@ const AuthForm = ({
     return (
         <div className="w-full">
             <div className="mb-8 flex flex-col items-center text-center">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-white/10 backdrop-blur-sm">
-                    <SparkleGlyph />
-                </div>
-                <h2 className="text-[1.65rem] font-semibold tracking-tight text-white">{loginHeadline}</h2>
+                <SparkleGlyph />
+                <h2 className="mt-4 text-[1.65rem] font-semibold tracking-tight text-white">{loginHeadline}</h2>
                 <p className="mt-2 max-w-[20rem] text-sm leading-relaxed text-violet-200/88">{loginSubtitle}</p>
             </div>
 
