@@ -13,6 +13,7 @@
     birth_date?: string;
     age?: string | number;
     username?: string;
+    email?: string;
     contact_number?: string;
     address?: string;
     plate_number?: string;

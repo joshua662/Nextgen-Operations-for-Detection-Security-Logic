@@ -16,7 +16,7 @@ const LoginPage = () => {
     return (
         <AuthPageLayout>
             <ToastMessage message={message} isFailed={isFailed} isVisible={isVisible} onClose={closeToastMessage} />
-            <AuthForm message={showToastMessage} defaultMode="login" />
+            <AuthForm message={showToastMessage} />
         </AuthPageLayout>
     );
 };

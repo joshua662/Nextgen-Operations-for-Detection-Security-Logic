@@ -42,6 +42,7 @@ class DatabaseSeeder extends Seeder
             'birth_date' => $birthDate,
             'age' => $age,
             'username' => 'johndoe',
+            'email' => 'security.admin@paramount116.test',
             'password' => 'johndoe',
         ]);
 

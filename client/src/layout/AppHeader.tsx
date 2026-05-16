@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useHeader } from "../contexts/HeaderContext";
 import { useSidebar } from "../contexts/SidebarContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -135,7 +135,7 @@ const AppHeader = () => {
         </div>
       </Modal>
 
-      <nav className="fixed top-0 z-50 w-full border-b border-white/20 bg-white dark:bg-gray-800">
+      <nav className="fixed top-0 z-50 w-full border-b border-slate-800 bg-slate-950 text-white">
         <div className="px-3 py-3 lg:px-5 lg:pl-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center justify-start rtl:justify-end">
@@ -162,16 +162,14 @@ const AppHeader = () => {
                   />
                 </svg>
               </button>
-              <a href="https://flowbite.com" className="ms-2 flex md:me-24">
-                <img
-                  src="https://flowbite.com/docs/images/logo.svg"
-                  className="me-3 h-6 brightness-0 invert"
-                  alt="FlowBite Logo"
-                />
+              <Link to="/" className="ms-2 flex items-center gap-2 md:me-24">
+                <div className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
+                  G
+                </div>
                 <span className="self-center whitespace-nowrap text-lg font-semibold text-white">
-                  Flowbite
+                  Gate Security
                 </span>
-              </a>
+              </Link>
             </div>
             <div className="flex items-center">
               <div className="relative ms-3 flex items-center">
@@ -179,7 +177,7 @@ const AppHeader = () => {
                   type="button"
                   onClick={toggleUserMenu}
                   className="flex rounded-full ring-[3px] ring-neutral/40 transition hover:ring-accent/70 focus:outline-none focus:ring-4 focus:ring-accent/50"
-                  aria-expanded={isOpen}
+                  aria-expanded={isOpen ? "true" : "false"}
                   aria-haspopup="dialog"
                 >
                   <span className="sr-only">Open profile</span>

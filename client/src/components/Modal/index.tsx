@@ -10,6 +10,8 @@ interface ModalProps {
   isFullScreen?: boolean;
   backdropClassName?: string;
   bodyClassName?: string;
+  /** Fade backdrop + scale-in dialog panel when opened */
+  animateEnter?: boolean;
 }
 
 const Modal: FC<ModalProps> = ({
@@ -21,6 +23,7 @@ const Modal: FC<ModalProps> = ({
   isFullScreen,
   backdropClassName,
   bodyClassName,
+  animateEnter,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -69,15 +72,12 @@ const Modal: FC<ModalProps> = ({
       >
         {!isFullScreen && (
           <div
-            className={
-              backdropClassName ??
-              "fixed inset-0 h-full w-full bg-neutral/30 backdrop-blur-md"
-            }
+            className={`${backdropClassName ?? "fixed inset-0 h-full w-full bg-neutral/30 backdrop-blur-md"} ${animateEnter ? "auth-modal-backdrop-in" : ""}`}
           />
         )}
         <div
           ref={modalRef}
-          className={`${contentClasses} ${className}`}
+          className={`${contentClasses} ${className} ${animateEnter ? "auth-modal-panel-in" : ""}`}
           onClick={(e) => e.stopPropagation()}
         >
           {showCloseButton && <ModalCloseButton onClose={onClose} />}

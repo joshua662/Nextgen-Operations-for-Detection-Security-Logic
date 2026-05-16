@@ -9,6 +9,7 @@ export interface GateUser {
     birth_date?: string;
     age?: number | string;
     username?: string;
+    email?: string;
     contact_number?: string;
     address?: string;
     plate_number?: string;

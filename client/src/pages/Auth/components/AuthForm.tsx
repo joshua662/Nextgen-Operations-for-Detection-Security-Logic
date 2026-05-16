@@ -1,43 +1,49 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import AuthField from "./AuthField";
 import SubmitButton from "../../../components/Button/SubmitButton";
 import { useAuth } from "../../../contexts/AuthContext";
 import GenderService from "../../../services/GenderService";
-
-type UserRole = "admin" | "resident";
-type AuthMode = "login" | "register";
+import RegistrationModal from "./RegistrationModal";
+import { emptyAdminForm, emptyResidentForm, type UserRole } from "./authTypes";
 
 interface AuthFormProps {
     message: (message: string, isFailed: boolean) => void;
-    defaultMode?: AuthMode;
     defaultRole?: UserRole;
+    /** When true (e.g. `/register` route), open the registration modal on mount. */
+    defaultRegistrationOpen?: boolean;
+    loginHeadline?: string;
+    loginSubtitle?: string;
 }
 
-const emptyResidentForm = () => ({
-    first_name: "", middle_name: "", last_name: "", gender: "", birth_date: "",
-    contact_number: "", address: "", plate_number: "", car_model: "", car_color: "",
-});
 
-const emptyAdminForm = () => ({
-    first_name: "", middle_name: "", last_name: "", gender: "", birth_date: "",
-    username: "", password: "", password_confirmation: "",
-});
+const SparkleGlyph = () => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-white" aria-hidden>
+        <path
+            d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+        />
+        <circle cx="12" cy="12" r="3.2" fill="currentColor" opacity="0.35" />
+        <circle cx="12" cy="12" r="1.4" fill="currentColor" />
+    </svg>
+);
 
-const pillBtn = (active: boolean) =>
-    `flex-1 py-2 text-xs font-semibold uppercase tracking-wide rounded-xl transition-all ${
-        active
-            ? "bg-white/20 text-white shadow-inner border border-white/25"
-            : "text-violet-200/70 hover:text-white hover:bg-white/5"
-    }`;
-
-const AuthForm = ({ message, defaultMode = "login", defaultRole = "admin" }: AuthFormProps) => {
+const AuthForm = ({
+    message,
+    defaultRole = "admin",
+    defaultRegistrationOpen = false,
+    loginHeadline = "Welcome back!",
+    loginSubtitle = "Sign in to reach your gate dashboard and stay on top of access activity.",
+}: AuthFormProps) => {
     const [role, setRole] = useState<UserRole>(defaultRole);
-    const [mode, setMode] = useState<AuthMode>(defaultMode);
-    const [loading, setLoading] = useState(false);
+    const [registrationOpen, setRegistrationOpen] = useState(defaultRegistrationOpen);
+    const [loginLoading, setLoginLoading] = useState(false);
+    const [registerLoading, setRegisterLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
+    const [usePlateLogin, setUsePlateLogin] = useState(false);
     const [genders, setGenders] = useState<{ gender_id: number; gender: string }[]>([]);
-
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [plateNumber, setPlateNumber] = useState("");
@@ -50,14 +56,31 @@ const AuthForm = ({ message, defaultMode = "login", defaultRole = "admin" }: Aut
     const navigate = useNavigate();
 
     useEffect(() => {
-        setMode(defaultMode);
-    }, [defaultMode]);
+        if (defaultRegistrationOpen) {
+            setRegistrationOpen(true);
+        }
+    }, [defaultRegistrationOpen]);
 
     useEffect(() => {
-        if (mode === "register") {
-            GenderService.loadPublicGenders().then((r) => setGenders(r.data.genders ?? []));
-        }
-    }, [mode, role]);
+        if (!registrationOpen) return;
+        let cancelled = false;
+        GenderService.loadPublicGenders()
+            .then((r) => {
+                if (!cancelled) {
+                    const list = r.data?.genders;
+                    setGenders(Array.isArray(list) ? list : []);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setGenders([]);
+                    message("Could not load gender options. Check your API URL and network connection.", true);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [registrationOpen, message]);
 
     const handleApiError = (error: unknown) => {
         const err = error as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } };
@@ -69,156 +92,225 @@ const AuthForm = ({ message, defaultMode = "login", defaultRole = "admin" }: Aut
         } else if (err.response?.status === 401) {
             setFieldErrors({});
             message(err.response.data?.message || "Invalid credentials.", true);
+        } else if (err.response?.data?.message && typeof err.response.data.message === "string") {
+            message(err.response.data.message, true);
         } else {
             message("Something went wrong. Please try again.", true);
         }
     };
 
-    const handleSubmit = async (e: FormEvent) => {
+    const handleLoginSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        setLoading(true);
+        setLoginLoading(true);
         setFieldErrors({});
 
         try {
-            if (role === "admin" && mode === "login") {
+            if (role === "admin") {
                 await login(username, password);
                 message("Login successful.", false);
                 setTimeout(() => navigate("/dashboard"), 800);
-            } else if (role === "admin" && mode === "register") {
-                await adminRegister(adminForm);
-                message("Admin account created.", false);
-                setTimeout(() => navigate("/dashboard"), 800);
-            } else if (role === "resident" && mode === "login") {
-                await residentLogin(plateNumber, contactNumber);
+            } else if (usePlateLogin) {
+                await residentLogin({ plate_number: plateNumber, contact_number: contactNumber });
                 message("Login successful.", false);
                 setTimeout(() => navigate("/resident/home"), 800);
             } else {
-                await residentRegister({ ...residentForm, gender: residentForm.gender });
-                message("Registration successful.", false);
+                await residentLogin({ username, password });
+                message("Login successful.", false);
                 setTimeout(() => navigate("/resident/home"), 800);
             }
         } catch (error) {
             handleApiError(error);
         } finally {
-            setLoading(false);
+            setLoginLoading(false);
         }
     };
 
-    const isLogin = mode === "login";
+    const handleRegister = async () => {
+        setRegisterLoading(true);
+        setFieldErrors({});
+        try {
+            if (role === "admin") {
+                const payload: Record<string, unknown> = { ...adminForm, gender: adminForm.gender };
+                if (!String(payload.email ?? "").trim()) {
+                    delete payload.email;
+                }
+                await adminRegister(payload);
+                message("Admin account created.", false);
+                setAdminForm(emptyAdminForm());
+                setRegistrationOpen(false);
+                setTimeout(() => navigate("/dashboard"), 800);
+            } else {
+                await residentRegister({
+                    ...residentForm,
+                    gender: residentForm.gender,
+                    plate_number: residentForm.plate_number.trim().replace(/\s+/g, " ").toUpperCase(),
+                });
+                message("Registration successful.", false);
+                setResidentForm(emptyResidentForm());
+                setRegistrationOpen(false);
+                setTimeout(() => navigate("/resident/home"), 800);
+            }
+        } catch (error) {
+            handleApiError(error);
+        } finally {
+            setRegisterLoading(false);
+        }
+    };
+
+    const openRegistration = () => {
+        setRegistrationOpen(true);
+        setFieldErrors({});
+    };
 
     return (
         <div className="w-full">
-            <h2 className="text-2xl font-bold text-white mb-1 text-center lg:text-left">
-                {isLogin ? "Sign In" : "Create Account"}
-            </h2>
-            <p className="text-sm text-violet-200/70 mb-6 text-center lg:text-left">
-                Gate Access System
-            </p>
-
-            <div className="flex rounded-2xl bg-black/20 p-1 mb-4 border border-white/10">
-                <button type="button" onClick={() => { setRole("admin"); setFieldErrors({}); }} className={pillBtn(role === "admin")}>
-                    Admin
-                </button>
-                <button type="button" onClick={() => { setRole("resident"); setFieldErrors({}); }} className={pillBtn(role === "resident")}>
-                    Resident
-                </button>
+            <div className="mb-8 flex flex-col items-center text-center">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-white/10 backdrop-blur-sm">
+                    <SparkleGlyph />
+                </div>
+                <h2 className="text-[1.65rem] font-semibold tracking-tight text-white">{loginHeadline}</h2>
+                <p className="mt-2 max-w-[20rem] text-sm leading-relaxed text-violet-200/88">{loginSubtitle}</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="max-h-[52vh] overflow-y-auto pr-1 scrollbar-thin">
-                {role === "admin" && isLogin && (
+
+            <form onSubmit={handleLoginSubmit} className="max-h-[46vh] overflow-y-auto pr-0.5 scrollbar-thin">
+                {role === "admin" && (
                     <>
-                        <AuthField label="Username" name="username" value={username} onChange={(e) => setUsername(e.target.value)} errors={fieldErrors.username} required autoFocus />
-                        <AuthField label="Password" name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} errors={fieldErrors.password} required />
+                        <AuthField
+                            label="Username"
+                            name="username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            errors={fieldErrors.username}
+                            required
+                            autoFocus
+                        />
+                        <AuthField
+                            label="Password"
+                            name="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            errors={fieldErrors.password}
+                            required
+                            passwordToggle
+                        />
                     </>
                 )}
 
-                {role === "admin" && !isLogin && (
+                {role === "resident" && (
                     <>
-                        <AuthField label="First Name" name="first_name" value={adminForm.first_name} onChange={(e) => setAdminForm({ ...adminForm, first_name: e.target.value })} errors={fieldErrors.first_name} required />
-                        <AuthField label="Middle Name" name="middle_name" value={adminForm.middle_name} onChange={(e) => setAdminForm({ ...adminForm, middle_name: e.target.value })} />
-                        <AuthField label="Last Name" name="last_name" value={adminForm.last_name} onChange={(e) => setAdminForm({ ...adminForm, last_name: e.target.value })} errors={fieldErrors.last_name} required />
-                        <AuthField label="Gender" name="gender" value={adminForm.gender} onChange={(e) => setAdminForm({ ...adminForm, gender: e.target.value })} errors={fieldErrors.gender} required>
-                            <option value="">Select gender</option>
-                            {genders.map((g) => <option key={g.gender_id} value={g.gender_id} className="bg-violet-900">{g.gender}</option>)}
-                        </AuthField>
-                        <AuthField label="Birth Date" name="birth_date" type="date" value={adminForm.birth_date} onChange={(e) => setAdminForm({ ...adminForm, birth_date: e.target.value })} errors={fieldErrors.birth_date} required />
-                        <AuthField label="Username" name="username" value={adminForm.username} onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })} errors={fieldErrors.username} required />
-                        <AuthField label="Password" name="password" type="password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} errors={fieldErrors.password} required />
-                        <AuthField label="Confirm Password" name="password_confirmation" type="password" value={adminForm.password_confirmation} onChange={(e) => setAdminForm({ ...adminForm, password_confirmation: e.target.value })} errors={fieldErrors.password_confirmation} required />
+                        {!usePlateLogin ? (
+                            <>
+                                <AuthField
+                                    label="Username"
+                                    name="username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    errors={fieldErrors.username}
+                                    required
+                                    autoFocus
+                                />
+                                <AuthField
+                                    label="Password"
+                                    name="password"
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    errors={fieldErrors.password}
+                                    required
+                                    passwordToggle
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <AuthField
+                                    label="Plate Number"
+                                    name="plate_number"
+                                    value={plateNumber}
+                                    onChange={(e) => setPlateNumber(e.target.value)}
+                                    errors={fieldErrors.plate_number}
+                                    required
+                                    autoFocus
+                                />
+                                <AuthField
+                                    label="Contact Number"
+                                    name="contact_number"
+                                    value={contactNumber}
+                                    onChange={(e) => setContactNumber(e.target.value)}
+                                    errors={fieldErrors.contact_number}
+                                    required
+                                />
+                            </>
+                        )}
+                        <p className="mb-1 text-center text-[11px] leading-snug text-violet-200/80">
+                            <button
+                                type="button"
+                                className="underline underline-offset-2 hover:text-white"
+                                onClick={() => {
+                                    setUsePlateLogin(!usePlateLogin);
+                                    setFieldErrors({});
+                                }}
+                            >
+                                {usePlateLogin
+                                    ? "Sign in with username & password instead"
+                                    : "Sign in with plate number & contact instead"}
+                            </button>
+                        </p>
                     </>
                 )}
 
-                {role === "resident" && isLogin && (
-                    <>
-                        <AuthField label="Plate Number" name="plate_number" value={plateNumber} onChange={(e) => setPlateNumber(e.target.value)} errors={fieldErrors.plate_number} required autoFocus />
-                        <AuthField label="Contact Number" name="contact_number" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} errors={fieldErrors.contact_number} required />
-                    </>
-                )}
-
-                {role === "resident" && !isLogin && (
-                    <>
-                        <AuthField label="First Name" name="first_name" value={residentForm.first_name} onChange={(e) => setResidentForm({ ...residentForm, first_name: e.target.value })} errors={fieldErrors.first_name} required />
-                        <AuthField label="Middle Name" name="middle_name" value={residentForm.middle_name} onChange={(e) => setResidentForm({ ...residentForm, middle_name: e.target.value })} />
-                        <AuthField label="Last Name" name="last_name" value={residentForm.last_name} onChange={(e) => setResidentForm({ ...residentForm, last_name: e.target.value })} errors={fieldErrors.last_name} required />
-                        <AuthField label="Gender" name="gender" value={residentForm.gender} onChange={(e) => setResidentForm({ ...residentForm, gender: e.target.value })} errors={fieldErrors.gender} required>
-                            <option value="">Select gender</option>
-                            {genders.map((g) => <option key={g.gender_id} value={g.gender_id} className="bg-violet-900">{g.gender}</option>)}
-                        </AuthField>
-                        <AuthField label="Birthdate" name="birth_date" type="date" value={residentForm.birth_date} onChange={(e) => setResidentForm({ ...residentForm, birth_date: e.target.value })} errors={fieldErrors.birth_date} required />
-                        <AuthField label="Contact Number" name="contact_number" value={residentForm.contact_number} onChange={(e) => setResidentForm({ ...residentForm, contact_number: e.target.value })} errors={fieldErrors.contact_number} required />
-                        <AuthField label="Address" name="address" value={residentForm.address} onChange={(e) => setResidentForm({ ...residentForm, address: e.target.value })} errors={fieldErrors.address} required />
-                        <AuthField label="Plate Number" name="plate_number" value={residentForm.plate_number} onChange={(e) => setResidentForm({ ...residentForm, plate_number: e.target.value })} errors={fieldErrors.plate_number} required />
-                        <AuthField label="Car Model" name="car_model" value={residentForm.car_model} onChange={(e) => setResidentForm({ ...residentForm, car_model: e.target.value })} errors={fieldErrors.car_model} required />
-                        <AuthField label="Car Color" name="car_color" value={residentForm.car_color} onChange={(e) => setResidentForm({ ...residentForm, car_color: e.target.value })} errors={fieldErrors.car_color} required />
-                    </>
-                )}
-
-                {isLogin && (
-                    <label className="flex items-center gap-2.5 mb-6 cursor-pointer select-none">
+                <div className="mb-6 mt-2 flex items-center justify-between gap-3">
+                    <label className="flex cursor-pointer select-none items-center gap-2.5">
                         <input
                             type="checkbox"
                             checked={rememberMe}
                             onChange={(e) => setRememberMe(e.target.checked)}
-                            className="h-4 w-4 rounded border-white/30 bg-white/10 text-violet-500 focus:ring-violet-400/50 focus:ring-offset-0"
+                            className="h-4 w-4 rounded border-white/35 bg-white/15 text-violet-500 accent-violet-500 focus:ring-violet-400/40 focus:ring-offset-0"
                         />
-                        <span className="text-sm text-violet-100/90">Remember me</span>
+                        <span className="text-sm text-violet-100/95">Remember me</span>
                     </label>
-                )}
+                    <button
+                        type="button"
+                        className="text-xs font-medium text-violet-200/95 underline-offset-4 hover:text-white hover:underline"
+                    >
+                        Forgot password?
+                    </button>
+                </div>
 
                 <SubmitButton
-                    className="w-full !rounded-full !py-3.5 !text-sm !font-bold !uppercase !tracking-widest !shadow-lg !shadow-violet-900/40 !border-0"
-                    newClassName="inline-flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold uppercase tracking-widest text-white cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed bg-gradient-to-r from-violet-500 via-fuchsia-500 to-violet-600 hover:from-violet-400 hover:via-fuchsia-400 hover:to-violet-500 transition-all shadow-lg shadow-violet-900/50"
-                    label={isLogin ? "Sign In" : "Create Account"}
-                    loading={loading}
-                    loadingLabel={isLogin ? "Signing in..." : "Creating account..."}
+                    className="w-full rounded-full border-0 py-3.5 text-sm font-semibold shadow-lg shadow-black/25"
+                    newClassName="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white py-3.5 text-sm font-semibold tracking-wide text-slate-900 shadow-lg shadow-black/20 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    label="Log In"
+                    loading={loginLoading}
+                    loadingLabel="Signing in..."
                 />
             </form>
 
-            <p className="text-center text-sm text-violet-100/80 mt-6">
-                {isLogin ? (
-                    <>
-                        Don&apos;t have an account?{" "}
-                        <Link to="/register" className="text-white font-semibold underline underline-offset-2 hover:text-violet-200">
-                            Sign Up
-                        </Link>
-                    </>
-                ) : (
-                    <>
-                        Already have an account?{" "}
-                        <Link to="/login" className="text-white font-semibold underline underline-offset-2 hover:text-violet-200">
-                            Sign In
-                        </Link>
-                    </>
-                )}
+            <p className="mt-8 text-center text-sm text-violet-200/90">
+                Don&apos;t have an account?{" "}
+                <button
+                    type="button"
+                    className="font-semibold text-white underline underline-offset-[3px] transition hover:text-violet-100"
+                    onClick={openRegistration}
+                >
+                    Registration
+                </button>
             </p>
 
-            {isLogin && (
-                <p className="text-center mt-4">
-                    <button type="button" className="text-xs text-violet-200/50 hover:text-violet-100 transition-colors">
-                        Forgot Password
-                    </button>
-                </p>
-            )}
+            <RegistrationModal
+                isOpen={registrationOpen}
+                onClose={() => setRegistrationOpen(false)}
+                role={role}
+                adminForm={adminForm}
+                setAdminForm={setAdminForm}
+                residentForm={residentForm}
+                setResidentForm={setResidentForm}
+                genders={genders}
+                fieldErrors={fieldErrors}
+                loading={registerLoading}
+                onRegister={handleRegister}
+            />
         </div>
     );
 };

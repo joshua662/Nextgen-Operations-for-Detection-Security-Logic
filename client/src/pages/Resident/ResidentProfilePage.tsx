@@ -11,6 +11,7 @@ const ResidentProfilePage = () => {
     const [genders, setGenders] = useState<{ gender_id: number; gender: string }[]>([]);
     const [form, setForm] = useState({
         first_name: "", middle_name: "", last_name: "", gender: "", birth_date: "",
+        email: "", username: "",
         contact_number: "", address: "", plate_number: "", car_model: "", car_color: "",
     });
     const [message, setMessage] = useState("");
@@ -23,6 +24,7 @@ const ResidentProfilePage = () => {
             setForm({
                 first_name: u.first_name, middle_name: u.middle_name ?? "", last_name: u.last_name,
                 gender: String(u.gender?.gender_id ?? ""), birth_date: u.birth_date ?? "",
+                email: u.email ?? "", username: u.username ?? "",
                 contact_number: u.contact_number ?? "", address: u.address ?? "",
                 plate_number: u.plate_number ?? "", car_model: u.car_model ?? "", car_color: u.car_color ?? "",
             });
@@ -58,6 +60,8 @@ const ResidentProfilePage = () => {
                     {genders.map((g) => <option key={g.gender_id} value={g.gender_id}>{g.gender}</option>)}
                 </FloatingLabelSelect>
                 <FloatingLabelInput label="Age (via Birthdate)" name="birth_date" type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} required />
+                <FloatingLabelInput type="email" label="Email" name="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                <FloatingLabelInput type="text" label="Portal username" name="username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
                 <FloatingLabelInput type="text" label="Contact Number" name="contact_number" value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} required />
                 <FloatingLabelInput type="text" label="Address" name="address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
                 <FloatingLabelInput type="text" label="Plate Number" name="plate_number" value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value })} required />
