@@ -6,9 +6,9 @@ import GateAccessService from "../services/GateAccessService";
 interface AuthContextType {
   user: UserDetails | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<UserDetails>;
   adminRegister: (data: Record<string, unknown>) => Promise<void>;
-  residentLogin: (credentials: Record<string, string>) => Promise<void>;
+  residentLogin: (credentials: Record<string, string>) => Promise<UserDetails>;
   residentRegister: (data: Record<string, unknown>) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: boolean;
@@ -24,9 +24,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const login = async (username: string, password: string) => {
     const res = await AuthService.login({ username, password });
     if (res.status === 200) {
+      const session: UserDetails = {
+        user: res.data.user,
+        token: res.data.token,
+      };
       localStorage.setItem("token", res.data.token);
-      setUser(res.data);
-      return;
+      setUser(session);
+      return session;
     }
     throw new Error("Login failed.");
   };
@@ -44,9 +48,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const residentLogin = async (credentials: Record<string, string>) => {
     const res = await GateAccessService.residentLogin(credentials);
     if (res.status === 200) {
+      const session: UserDetails = {
+        user: res.data.user,
+        token: res.data.token,
+      };
       localStorage.setItem("token", res.data.token);
-      setUser(res.data);
-      return;
+      setUser(session);
+      return session;
     }
     throw new Error("Login failed.");
   };

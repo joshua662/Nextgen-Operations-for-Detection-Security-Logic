@@ -14,6 +14,7 @@ const GenderMainPage = () => {
 
   const {
     message: toastMessage,
+    isFailed: toastIsFailed,
     isVisible: toastMessageIsVisible,
     showToastMessage,
     closeToastMessage,
@@ -61,6 +62,7 @@ const GenderMainPage = () => {
     <>
       <ToastMessage
         message={toastMessage}
+        isFailed={toastIsFailed}
         isVisible={toastMessageIsVisible}
         onClose={closeToastMessage}
       />

@@ -5,33 +5,21 @@ interface LoginData {
   password: string;
 }
 
-interface AdminRegisterData {
-  first_name: string;
-  middle_name?: string;
-  last_name: string;
-  gender: string;
-  birth_date: string;
-  email?: string;
-  role: string;
-  password: string;
-  password_confirmation: string;
-}
-
-interface ResidentRegisterData {
+interface AdmissionRegisterData {
   first_name: string;
   middle_name?: string;
   last_name: string;
   gender: string;
   birth_date: string;
   email: string;
-  role: string;
-  password: string;
-  password_confirmation: string;
-  contact_number: string;
-  address: string;
-  plate_number: string;
-  car_model: string;
-  car_color: string;
+  username?: string;
+  password?: string;
+  password_confirmation?: string;
+  contact_number?: string;
+  address?: string;
+  plate_number?: string;
+  car_model?: string;
+  car_color?: string;
 }
 
 const AuthService = {
@@ -39,11 +27,11 @@ const AuthService = {
     const response = await AxiosInstance.post("/auth/login", data);
     return response;
   },
-  adminRegister: async (data: AdminRegisterData) => {
+  adminRegister: async (data: AdmissionRegisterData) => {
     const response = await AxiosInstance.post("/auth/admin/register", data);
     return response;
   },
-  residentRegister: async (data: ResidentRegisterData) => {
+  residentRegister: async (data: AdmissionRegisterData) => {
     const response = await AxiosInstance.post("/auth/resident/register", data);
     return response;
   },
