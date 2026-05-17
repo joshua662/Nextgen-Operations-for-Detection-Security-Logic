@@ -14,15 +14,24 @@ const RegisterPage = () => {
     }
 
     return (
-        <AuthPageLayout>
-            <ToastMessage message={message} isFailed={isFailed} isVisible={isVisible} onClose={closeToastMessage} />
-            <AuthForm
-                message={showToastMessage}
-                defaultRegistrationOpen
-                loginHeadline="Join the portal"
-                loginSubtitle="Open registration below, or sign in if you already have gate access."
+        <>
+            <ToastMessage
+                message={message}
+                isFailed={isFailed}
+                isVisible={isVisible}
+                onClose={closeToastMessage}
+                overlay
+                size="large"
             />
-        </AuthPageLayout>
+            <AuthPageLayout>
+                <AuthForm
+                    message={showToastMessage}
+                    defaultRegistrationOpen
+                    loginHeadline="Join the portal"
+                    loginSubtitle="Open registration below, or sign in if you already have gate access."
+                />
+            </AuthPageLayout>
+        </>
     );
 };
 

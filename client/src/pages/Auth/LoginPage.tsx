@@ -14,10 +14,19 @@ const LoginPage = () => {
     }
 
     return (
-        <AuthPageLayout>
-            <ToastMessage message={message} isFailed={isFailed} isVisible={isVisible} onClose={closeToastMessage} />
-            <AuthForm message={showToastMessage} />
-        </AuthPageLayout>
+        <>
+            <ToastMessage
+                message={message}
+                isFailed={isFailed}
+                isVisible={isVisible}
+                onClose={closeToastMessage}
+                overlay
+                size="large"
+            />
+            <AuthPageLayout>
+                <AuthForm message={showToastMessage} />
+            </AuthPageLayout>
+        </>
     );
 };
 

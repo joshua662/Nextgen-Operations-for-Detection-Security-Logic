@@ -13,6 +13,7 @@ export const useToastMessage = (initialMessage: string, initialIsFailed: boolean
 
     const closeToastMessage = useCallback(() => {
         setMessage('')
+        setIsFailed(false)
         setIsVisible(false)
     }, [])
 

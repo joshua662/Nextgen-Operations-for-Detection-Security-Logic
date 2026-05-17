@@ -11,12 +11,12 @@ const UserMainPage = () => {
     const { isOpen: isAddUserFormModalOpen, openModal: openAddUserFormModal, closeModal: closeAddUserFormModal } = useModal(false);
     const { isOpen: isEditUserFormModalOpen, selectedUser: selectedUserForEdit, openModal: openEditUserFormModal, closeModal: closeEditUserFormModal } = useModal(false)
     const {isOpen: isDeletedUserFormModalOpen, selectedUser: selectedUserForDeleted, openModal: openDeleteUserFormModal, closeModal: closeDeleteUserForModal, } = useModal(false);
-    const { message: toastMessage, isVisible: toastMessageIsVisible, showToastMessage, closeToastMessage } = useToastMessage("", false, false);
+    const { message: toastMessage, isFailed: toastIsFailed, isVisible: toastMessageIsVisible, showToastMessage, closeToastMessage } = useToastMessage("", false, false);
     const { refresh, handleRefresh } = useRefresh(false);
 
     return (
         <>
-            <ToastMessage message={toastMessage} isVisible={toastMessageIsVisible} onClose={closeToastMessage} />
+            <ToastMessage message={toastMessage} isFailed={toastIsFailed} isVisible={toastMessageIsVisible} onClose={closeToastMessage} />
             <AddUserFormModal isOpen={isAddUserFormModalOpen} refreshKey={handleRefresh} onClose={closeAddUserFormModal} onUserAdded={showToastMessage} />
             <EditUserFormModal user={selectedUserForEdit} onUserUpdated={showToastMessage} refreshKey={handleRefresh} isOpen={isEditUserFormModalOpen} onClose={closeEditUserFormModal} />
             <DeleteUserFormModal user={selectedUserForDeleted} onUserDeleted={showToastMessage} refreshKey={handleRefresh} isOpen={isDeletedUserFormModalOpen} onClose={closeDeleteUserForModal} />
