@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\ActivityLog;
 use App\Models\GateLog;
 use App\Models\SystemStatus;
 use App\Models\User;
@@ -106,5 +107,33 @@ class GateAccessSeeder extends Seeder
                 'status' => 'unauthorized',
             ]
         );
+
+        if ($admin) {
+            ActivityLog::firstOrCreate(
+                [
+                    'user_id' => $admin->user_id,
+                    'event_type' => 'admin_portal_login_success',
+                    'username_attempted' => $admin->username,
+                ],
+                [
+                    'ip_address' => '127.0.0.1',
+                    'user_agent' => 'Seeder',
+                    'context' => ['channel' => 'admin_portal', 'role' => 'admin', 'seed' => true],
+                ]
+            );
+
+            ActivityLog::firstOrCreate(
+                [
+                    'user_id' => null,
+                    'event_type' => 'admin_portal_login_failure',
+                    'username_attempted' => "admin' OR '1'='1",
+                ],
+                [
+                    'ip_address' => '127.0.0.1',
+                    'user_agent' => 'Demo SQLi attempt (safe — stored as literal text only)',
+                    'context' => ['channel' => 'admin_portal', 'seed' => true],
+                ]
+            );
+        }
     }
 }

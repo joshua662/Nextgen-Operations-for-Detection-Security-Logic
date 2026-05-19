@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\ResidentGateAccessWelcomeMail;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -93,12 +94,16 @@ class AuthController extends Controller
             ->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
+            ActivityLogService::loginFailureAdminPortal($request, $validated['username']);
+
             return response()->json([
                 'message' => 'The provided credentials are incorrect.',
             ], 401);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        ActivityLogService::loginSuccessAdminPortal($request, $user);
 
         return response()->json([
             'user' => $user,
@@ -121,6 +126,12 @@ class AuthController extends Controller
                 ->first();
 
             if (! $user || ! Hash::check($validated['password'], $user->password)) {
+                ActivityLogService::residentPortalFailure(
+                    $request,
+                    $validated['username'],
+                    'invalid_username_password',
+                );
+
                 return response()->json([
                     'message' => 'The provided credentials are incorrect.',
                 ], 401);
@@ -141,6 +152,12 @@ class AuthController extends Controller
                 ->first();
 
             if (! $user) {
+                ActivityLogService::residentPortalFailure(
+                    $request,
+                    $normalizedPlate,
+                    'invalid_plate_contact',
+                );
+
                 return response()->json([
                     'message' => 'Invalid plate number or contact number.',
                 ], 401);
@@ -148,6 +165,8 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        ActivityLogService::residentPortalSuccess($request, $user);
 
         return response()->json([
             'user' => $user,
@@ -247,7 +266,9 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        ActivityLogService::logout($request, $user);
+        $user->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Logged Out Successfully',

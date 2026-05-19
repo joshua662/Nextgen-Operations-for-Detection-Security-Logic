@@ -9,6 +9,7 @@ const AppSidebar = () => {
         { path: '/dashboard', text: 'Dashboard' },
         { path: '/residents', text: 'Residents' },
         { path: '/gate-logs', text: 'Gate Logs' },
+        { path: '/activity-logs', text: 'Activity Logs' },
         { path: '/reports', text: 'Reports' },
         { path: '/notifications', text: 'Notifications' },
         { path: '/update-requests', text: 'Update Requests' },
