@@ -20,6 +20,13 @@ const GateAccessService = {
         if (filters.search) params.append("search", filters.search);
         return AxiosInstance.get(`/gate-log/loadGateLogs?${params}`);
     },
+
+    loadActivityLogs: (page: number, filters: { event_type?: string; search?: string } = {}) => {
+        const params = new URLSearchParams({ page: String(page) });
+        if (filters.event_type) params.append("event_type", filters.event_type);
+        if (filters.search) params.append("search", filters.search);
+        return AxiosInstance.get(`/activity-log/loadActivityLogs?${params}`);
+    },
     myGateLogs: (page: number) => AxiosInstance.get(`/gate-log/my-logs?page=${page}`),
     exportCsv: (filters: { direction?: string; status?: string } = {}) => {
         const params = new URLSearchParams();

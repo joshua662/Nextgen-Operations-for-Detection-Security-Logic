@@ -85,6 +85,11 @@ class User extends Authenticatable
         return $this->hasMany(UpdateRequest::class, 'user_id', 'user_id');
     }
 
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class, 'user_id', 'user_id');
+    }
+
     public function getOwnerNameAttribute(): string
     {
         $name = trim("{$this->first_name} {$this->middle_name} {$this->last_name}");

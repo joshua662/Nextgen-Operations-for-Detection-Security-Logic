@@ -19,7 +19,7 @@ const GateLogsPage = () => {
 
     return (
         <div className="p-4 sm:p-6">
-            <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Gate Logs</h1>
+            <h1 className="text-2xl font-bold mb-6 text-gray-900 white-bg-100:text-white">Gate Logs</h1>
             <div className="flex flex-wrap gap-3 mb-4">
                 <select className="border rounded-lg px-3 py-2 text-sm" value={direction} onChange={(e) => setDirection(e.target.value)}>
                     <option value="">All Directions</option>
@@ -34,9 +34,9 @@ const GateLogsPage = () => {
                 <input className="border rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]" placeholder="Search plate or owner" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             {loading ? <Spinner size="md" /> : (
-                <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl border">
+                <div className="overflow-x-auto bg-white white-bg-100:bg-gray-800 rounded-xl border">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50 dark:bg-gray-700">
+                        <thead className="bg-gray-50 white-bg-100:bg-gray-700">
                             <tr>
                                 <th className="p-3 text-left">Plate</th>
                                 <th>Owner</th>

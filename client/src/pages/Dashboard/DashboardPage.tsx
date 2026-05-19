@@ -47,7 +47,7 @@ const DashboardPage = () => {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+            <div className="bg-white white:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                 <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">Recent Gate Activity</h2>
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">

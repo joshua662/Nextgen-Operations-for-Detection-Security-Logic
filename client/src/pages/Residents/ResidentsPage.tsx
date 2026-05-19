@@ -60,15 +60,15 @@ const ResidentsPage = () => {
     return (
         <div className="p-4 sm:p-6">
             <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Residents Management</h1>
+                <h1 className="text-2xl font-bold text-gray-900 white-bg-100:text-white">Residents Management</h1>
                 <button type="button" onClick={() => { setEditing(null); setForm(emptyForm()); setModalOpen(true); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Add Resident</button>
             </div>
             {message && <p className="mb-4 text-green-600 text-sm">{message}</p>}
             <FloatingLabelInput type="text" label="Search plate or name" value={search} onChange={(e) => setSearch(e.target.value)} name="search" />
             {loading ? <Spinner size="md" /> : (
-                <div className="mt-4 overflow-x-auto bg-white dark:bg-gray-800 rounded-xl border">
+                <div className="mt-4 overflow-x-auto bg-white white-bg-100:bg-gray-800 rounded-xl border">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50 dark:bg-gray-700"><tr>
+                        <thead className="bg-gray-50 white-bg-100:bg-gray-700"><tr>
                             <th className="p-3 text-left">Name</th><th>Username</th><th>Plate</th><th>Contact</th><th>Car</th><th>Actions</th>
                         </tr></thead>
                         <tbody>

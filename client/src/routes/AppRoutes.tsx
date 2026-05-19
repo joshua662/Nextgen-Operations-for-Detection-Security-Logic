@@ -10,6 +10,7 @@ import RegisterPage from "../pages/Auth/RegisterPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import ResidentsPage from "../pages/Residents/ResidentsPage";
 import GateLogsPage from "../pages/GateLogs/GateLogsPage";
+import ActivityLogsPage from "../pages/ActivityLogs/ActivityLogsPage";
 import ReportsPage from "../pages/Reports/ReportsPage";
 import NotificationsPage from "../pages/Notifications/NotificationsPage";
 import UpdateRequestsPage from "../pages/UpdateRequests/UpdateRequestsPage";
@@ -45,6 +46,7 @@ const AppRoutes = () => {
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/residents" element={<ResidentsPage />} />
                     <Route path="/gate-logs" element={<GateLogsPage />} />
+                    <Route path="/activity-logs" element={<ActivityLogsPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/notifications" element={<NotificationsPage />} />
                     <Route path="/update-requests" element={<UpdateRequestsPage />} />
