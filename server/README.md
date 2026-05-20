@@ -7,6 +7,10 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Email (Gmail SMTP)
+
+Registration credentials are sent to each user’s **registration email**. Configure any Gmail sender in `.env` — see **[docs/MAIL_SETUP.md](docs/MAIL_SETUP.md)**.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

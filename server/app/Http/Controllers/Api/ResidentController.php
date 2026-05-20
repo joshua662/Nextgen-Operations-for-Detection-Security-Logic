@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\ResidentGateAccessWelcomeMail;
 use App\Models\User;
+use App\Services\MailService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class ResidentController extends Controller
@@ -65,20 +64,7 @@ class ResidentController extends Controller
 
         $user->load('gender');
 
-        $mailError = null;
-
-        $credentialsMailbox = env('MAIL_CREDENTIALS_TO', env('MAIL_USERNAME', $user->email));
-
-        try {
-            Mail::to($credentialsMailbox)->send(new ResidentGateAccessWelcomeMail(
-                $user,
-                $plainPassword,
-                config('gate.portal_url'),
-            ));
-        } catch (\Throwable $e) {
-            report($e);
-            $mailError = $e->getMessage();
-        }
+        $mailError = MailService::sendPortalCredentials($user, $plainPassword);
 
         return response()->json([
             'message' => $mailError
@@ -86,7 +72,7 @@ class ResidentController extends Controller
                 : 'Resident successfully saved. Welcome email sent.',
             'mail_sent' => $mailError === null,
             'mail_error' => $mailError,
-            'mail_recipient' => env('MAIL_CREDENTIALS_TO', env('MAIL_USERNAME')),
+            'mail_recipient' => $user->email,
         ], 200);
     }
 
