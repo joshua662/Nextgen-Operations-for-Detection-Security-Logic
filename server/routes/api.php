@@ -17,6 +17,7 @@ Route::controller(AuthController::class)->prefix('/auth')->group(function () {
     Route::post('/admin/register', 'adminRegister');
     Route::post('/resident/login', 'residentLogin');
     Route::post('/resident/register', 'residentRegister');
+    Route::post('/smtp-test', 'smtpTest');
 });
 
 Route::get('/gender/publicGenders', [GenderController::class, 'loadGenders']);

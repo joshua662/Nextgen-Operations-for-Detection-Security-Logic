@@ -9,7 +9,7 @@ import ToastMessage from "../../../components/ToastMessage/ToastMessage";
 import logoSrc from "../../../assets/img/pdp-logo-invert.png";
 import AuthService from "../../../services/AuthService";
 import GateAccessService from "../../../services/GateAccessService";
-import { emptyAdmissionForm, type IssuedCredentials } from "./authTypes";
+import { emptyAdmissionForm } from "./authTypes";
 
 interface AuthFormProps {
     message?: (message: string, isFailed: boolean) => void;
@@ -43,7 +43,6 @@ const AuthForm = ({
     const [admissionForm, setAdmissionForm] = useState(emptyAdmissionForm);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
     const [registrationSuccess, setRegistrationSuccess] = useState(false);
-    const [issuedCredentials, setIssuedCredentials] = useState<IssuedCredentials | null>(null);
 
     // ── Toast state ──────────────────────────────────────────────────────────
     const [toast, setToast] = useState({ visible: false, message: "", failed: false });
@@ -106,11 +105,6 @@ const AuthForm = ({
         }
     };
 
-    const applyIssuedCredentials = (creds: IssuedCredentials) => {
-        setUsername(creds.username);
-        setPassword(creds.password);
-    };
-
     const navigateAfterLogin = (session: { user?: { role?: string } }) => {
         const destination = session.user?.role === "resident" ? "/resident/home" : "/dashboard";
         setTimeout(() => navigate(destination), 1200);
@@ -142,7 +136,6 @@ const AuthForm = ({
         setRegisterLoading(true);
         setFieldErrors({});
         setRegistrationSuccess(false);
-        setIssuedCredentials(null);
 
         const payload = {
             first_name: admissionForm.first_name.trim(),
@@ -159,19 +152,9 @@ const AuthForm = ({
                 ? await AuthService.adminRegister(payload)
                 : await GateAccessService.residentRegister(payload);
 
-            const credentials = res.data?.credentials as IssuedCredentials | undefined;
-            if (credentials) {
-                setIssuedCredentials(credentials);
-                applyIssuedCredentials(credentials);
-            }
             setRegistrationSuccess(true);
             setAdmissionForm(emptyAdmissionForm());
-            showToast(
-                credentials
-                    ? `Account saved. Sign in with username "${credentials.username}" and the password sent to your email.`
-                    : (res.data?.message ?? "Registration successful."),
-                false,
-            );
+            showToast(res.data?.message ?? "Registration successful.", false);
         } catch (error) {
             handleApiError(error);
         } finally {
@@ -183,24 +166,11 @@ const AuthForm = ({
         setRegistrationOpen(true);
         setFieldErrors({});
         setRegistrationSuccess(false);
-        setIssuedCredentials(null);
     };
 
     const handleRegistrationClose = () => {
-        if (issuedCredentials) {
-            applyIssuedCredentials(issuedCredentials);
-        }
         setRegistrationOpen(false);
         setRegistrationSuccess(false);
-        setIssuedCredentials(null);
-    };
-
-    const handleCredentialsSent = () => {
-        if (issuedCredentials) {
-            applyIssuedCredentials(issuedCredentials);
-        }
-        setRegistrationSuccess(false);
-        setIssuedCredentials(null);
     };
 
     return (
@@ -291,8 +261,6 @@ const AuthForm = ({
                 loading={registerLoading}
                 onRegister={handleRegister}
                 registrationSuccess={registrationSuccess}
-                issuedCredentials={issuedCredentials}
-                onCredentialsSent={handleCredentialsSent}
             />
         </div>
     );

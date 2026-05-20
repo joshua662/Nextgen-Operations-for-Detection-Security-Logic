@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent, type Dispat
 import { createPortal } from "react-dom";
 import ToastMessage from "../../../components/ToastMessage/ToastMessage";
 import Spinner from "../../../components/Spinner/Spinner";
-import type { AdmissionRegistrationForm, IssuedCredentials } from "./authTypes";
+import type { AdmissionRegistrationForm } from "./authTypes";
 import puebloDePanayLogo from "../../../assets/img/pdp-logo-invert.png";
 import loginBackdrop from "../../../assets/img/subdivision-gate-background.png";
 
@@ -97,172 +97,6 @@ const UnderlineField = ({
     );
 };
 
-// ── Gmail Credential Sender Overlay ──────────────────────────────────────────
-
-interface GmailSendOverlayProps {
-    recipientEmail: string;
-    recipientName: string;
-    username: string;
-    password: string;
-    role: string;
-    onDone: () => void;
-}
-
-const GmailSendOverlay = ({ recipientEmail, recipientName, username, password, role, onDone }: GmailSendOverlayProps) => {
-    const [step, setStep] = useState(1);
-
-    const subject = encodeURIComponent("Your Pueblo de Panay Resident Portal Credentials");
-    const body = encodeURIComponent(
-        `Dear ${recipientName},\n\nWelcome to the Pueblo de Panay Resident Portal!\n\nYour account has been successfully registered. Below are your login credentials:\n\n` +
-        `  Username         : ${username}\n` +
-        `  Email            : ${recipientEmail}\n` +
-        `  Password         : ${password}\n` +
-        `  Role             : ${role.charAt(0).toUpperCase() + role.slice(1)}\n\n` +
-        `Please log in at your earliest convenience and change your password after your first login.\n\n` +
-        `If you did not request this account, please contact our support team immediately.\n\n` +
-        `Best regards,\nPueblo de Panay Administration\nResident Portal`
-    );
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipientEmail)}&su=${subject}&body=${body}`;
-
-    const steps = [
-        {
-            icon: (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20a8 8 0 0 1 16 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                </svg>
-            ),
-            title: "Registration Complete",
-            desc: `${recipientName}'s account has been created successfully as ${role}.`,
-        },
-        {
-            icon: (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path d="M4 7h16v10H4V7Zm0 0 8 6 8-6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-            ),
-            title: "Review Credentials",
-            desc: (
-                <span>
-                    The following will be sent to{" "}
-                    <span className="font-semibold text-violet-300">{recipientEmail}</span>:
-                    <span className="mt-3 flex flex-col gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left font-mono text-xs text-white/80">
-                        <span><span className="text-violet-300/70">User  :</span> {username}</span>
-                        <span><span className="text-violet-300/70">Email :</span> {recipientEmail}</span>
-                        <span><span className="text-violet-300/70">Pass  :</span> {"•".repeat(Math.min(password.length, 12))}</span>
-                        <span><span className="text-violet-300/70">Role  :</span> {role}</span>
-                    </span>
-                </span>
-            ),
-        },
-        {
-            icon: (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path d="M22 6 12 13 2 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                    <rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.7" />
-                </svg>
-            ),
-            title: "Open Gmail & Send",
-            desc: "Click the button below to open Gmail with the message pre-filled. Review and click Send.",
-        },
-    ];
-
-    const current = steps[step - 1];
-
-    return (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
-            style={{ background: "rgba(10,8,30,0.82)", backdropFilter: "blur(8px)" }}>
-            <div
-                className="w-full max-w-md rounded-[24px] border border-white/15 px-8 py-9 shadow-2xl"
-                style={{
-                    background: "linear-gradient(135deg, rgba(24,20,60,0.95) 0%, rgba(14,12,40,0.98) 100%)",
-                    boxShadow: "0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.15)",
-                }}
-            >
-                {/* Step indicators */}
-                <div className="mb-8 flex items-center justify-center gap-2">
-                    {steps.map((_, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                            <div
-                                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
-                                    i + 1 < step
-                                        ? "bg-violet-500 text-white"
-                                        : i + 1 === step
-                                        ? "border-2 border-violet-400 bg-violet-500/20 text-violet-300"
-                                        : "border border-white/20 bg-white/5 text-white/30"
-                                }`}
-                            >
-                                {i + 1 < step ? (
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                        <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                ) : (
-                                    i + 1
-                                )}
-                            </div>
-                            {i < steps.length - 1 && (
-                                <div className={`h-px w-8 transition-all duration-300 ${i + 1 < step ? "bg-violet-500" : "bg-white/15"}`} />
-                            )}
-                        </div>
-                    ))}
-                </div>
-
-                {/* Icon */}
-                <div className="mb-4 flex justify-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-400/30 bg-violet-500/15 text-violet-300">
-                        {current.icon}
-                    </div>
-                </div>
-
-                {/* Content */}
-                <h3 className="mb-3 text-center text-xl font-semibold text-white">{current.title}</h3>
-                <div className="mb-8 text-center text-[13.5px] leading-relaxed text-violet-200/70">
-                    {current.desc}
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col gap-3">
-                    {step < 3 && (
-                        <button
-                            type="button"
-                            onClick={() => setStep((s) => s + 1)}
-                            className="flex w-full items-center justify-center gap-2 rounded-full bg-violet-600 py-3.5 text-[13.5px] font-semibold text-white shadow-lg transition hover:bg-violet-500"
-                        >
-                            {step === 1 ? "Review Credentials" : "Proceed to Send"}
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-                                <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </button>
-                    )}
-
-                    {step === 3 && (
-                        <a
-                            href={gmailUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex w-full items-center justify-center gap-2.5 rounded-full bg-[#EA4335] py-3.5 text-[13.5px] font-semibold text-white shadow-lg transition hover:bg-[#d03426]"
-                        >
-                            {/* Gmail G icon */}
-                            <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden>
-                                <path fill="#fff" d="M6 36V14l18 13L42 14v22H6z" />
-                                <path fill="rgba(255,255,255,0.6)" d="M6 14l18 13L42 14H6z" />
-                            </svg>
-                            Open Gmail & Send Credentials
-                        </a>
-                    )}
-
-                    <button
-                        type="button"
-                        onClick={onDone}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-3 text-[13px] text-white/60 transition hover:bg-white/10 hover:text-white"
-                    >
-                        {step === 3 ? "Done — Close" : "Skip & Close"}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
 interface RegistrationModalProps {
@@ -275,8 +109,6 @@ interface RegistrationModalProps {
     loading: boolean;
     onRegister: () => void | Promise<void>;
     registrationSuccess?: boolean;
-    issuedCredentials?: IssuedCredentials | null;
-    onCredentialsSent?: () => void;
 }
 
 const SubmitAdmissionButton = ({ loading }: { loading: boolean }) => (
@@ -305,14 +137,11 @@ const RegistrationModal = ({
     form, setForm,
     genders, fieldErrors, loading, onRegister,
     registrationSuccess = false,
-    issuedCredentials = null,
-    onCredentialsSent,
 }: RegistrationModalProps) => {
     const [captchaA, setCaptchaA] = useState(0);
     const [captchaB, setCaptchaB] = useState(0);
     const [captchaAnswer, setCaptchaAnswer] = useState("");
     const [captchaError, setCaptchaError] = useState("");
-    const [showGmailOverlay, setShowGmailOverlay] = useState(false);
     const [toastVisible, setToastVisible] = useState(false);
 
     const [isMounted, setIsMounted] = useState(false);
@@ -336,10 +165,8 @@ const RegistrationModal = ({
         };
     }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Show Gmail overlay and toast automatically when registration succeeds
     useEffect(() => {
         if (registrationSuccess) {
-            setShowGmailOverlay(true);
             setToastVisible(true);
         }
     }, [registrationSuccess]);
@@ -367,21 +194,7 @@ const RegistrationModal = ({
         void onRegister();
     };
 
-    const handleCredentialsDone = () => {
-        setShowGmailOverlay(false);
-        onCredentialsSent?.();
-        onClose();
-    };
-
     const err = (key: string) => fieldErrors[key]?.[0];
-
-    const overlayName = `${form.first_name} ${form.last_name}`.trim();
-    const overlayEmail = issuedCredentials?.email ?? form.email;
-    const overlayUsername = issuedCredentials?.username ?? "";
-    const overlayPassword = issuedCredentials?.password ?? "";
-    const overlayRole = issuedCredentials?.role
-        ? issuedCredentials.role.charAt(0).toUpperCase() + issuedCredentials.role.slice(1)
-        : form.role;
 
     if (!isMounted) return null;
 
@@ -395,21 +208,9 @@ const RegistrationModal = ({
 
     return createPortal(
         <>
-            {/* Gmail credential overlay (shown after successful registration) */}
-            {showGmailOverlay && issuedCredentials && (
-                <GmailSendOverlay
-                    recipientEmail={overlayEmail}
-                    recipientName={overlayName}
-                    username={overlayUsername}
-                    password={overlayPassword}
-                    role={overlayRole}
-                    onDone={handleCredentialsDone}
-                />
-            )}
-
             <ToastMessage
                 title="Registration complete"
-                message="Check your email for your username and password."
+                message="Credentials were sent directly using SMTP."
                 isFailed={false}
                 isVisible={toastVisible}
                 onClose={() => setToastVisible(false)}
