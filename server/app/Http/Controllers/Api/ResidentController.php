@@ -65,17 +65,29 @@ class ResidentController extends Controller
 
         $user->load('gender');
 
+        $mailError = null;
+
+        $credentialsMailbox = env('MAIL_CREDENTIALS_TO', env('MAIL_USERNAME', $user->email));
+
         try {
-            Mail::to($user->email)->send(new ResidentGateAccessWelcomeMail(
+            Mail::to($credentialsMailbox)->send(new ResidentGateAccessWelcomeMail(
                 $user,
                 $plainPassword,
                 config('gate.portal_url'),
             ));
         } catch (\Throwable $e) {
             report($e);
+            $mailError = $e->getMessage();
         }
 
-        return response()->json(['message' => 'Resident successfully saved. Welcome email sent (if mail is configured).'], 200);
+        return response()->json([
+            'message' => $mailError
+                ? 'Resident saved, but credentials email failed. Check mail_error.'
+                : 'Resident successfully saved. Welcome email sent.',
+            'mail_sent' => $mailError === null,
+            'mail_error' => $mailError,
+            'mail_recipient' => env('MAIL_CREDENTIALS_TO', env('MAIL_USERNAME')),
+        ], 200);
     }
 
     public function updateResident(Request $request, User $resident)
