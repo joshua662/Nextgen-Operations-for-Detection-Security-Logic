@@ -210,7 +210,7 @@ const RegistrationModal = ({
         <>
             <ToastMessage
                 title="Registration complete"
-                message="Credentials were sent directly using SMTP."
+                message="Login credentials were emailed to the address you registered."
                 isFailed={false}
                 isVisible={toastVisible}
                 onClose={() => setToastVisible(false)}

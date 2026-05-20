@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\ResidentGateAccessWelcomeMail;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\MailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -53,21 +52,7 @@ class AuthController extends Controller
 
     private function sendPortalCredentials(User $user, string $plainPassword): ?string
     {
-        $credentialsMailbox = env('MAIL_CREDENTIALS_TO', env('MAIL_USERNAME', $user->email));
-
-        try {
-            Mail::to($credentialsMailbox)->send(new ResidentGateAccessWelcomeMail(
-                $user,
-                $plainPassword,
-                config('gate.portal_url'),
-            ));
-
-            return null;
-        } catch (\Throwable $e) {
-            report($e);
-
-            return $e->getMessage();
-        }
+        return MailService::sendPortalCredentials($user, $plainPassword);
     }
 
     private function registrationResponse(
@@ -83,7 +68,7 @@ class AuthController extends Controller
             'message' => $message,
             'mail_sent' => $mailError === null,
             'mail_error' => $mailError,
-            'mail_recipient' => env('MAIL_CREDENTIALS_TO', env('MAIL_USERNAME')),
+            'mail_recipient' => $user->email,
             'user' => $user,
         ], 201);
     }
@@ -284,39 +269,30 @@ class AuthController extends Controller
             'to' => ['nullable', 'email', 'max:255'],
         ]);
 
-        $to = $validated['to'] ?? env('MAIL_CREDENTIALS_TO', env('MAIL_USERNAME'));
+        $result = MailService::sendSmtpTest($validated['to'] ?? null);
 
-        if (! $to) {
-            return response()->json([
-                'message' => 'SMTP test failed. Configure MAIL_CREDENTIALS_TO or MAIL_USERNAME in .env.',
-            ], 422);
-        }
-
-        try {
-            Mail::raw(
-                'SMTP test successful. Your Nextgen Operations backend can send emails via Gmail SMTP.',
-                function ($message) use ($to) {
-                    $message
-                        ->to($to)
-                        ->subject('SMTP Test - Nextgen Operations');
-                }
-            );
-
-            return response()->json([
-                'message' => 'SMTP test email sent successfully.',
-                'mail_sent' => true,
-                'mail_recipient' => $to,
-            ], 200);
-        } catch (\Throwable $e) {
-            report($e);
-
+        if (! $result['recipient']) {
             return response()->json([
                 'message' => 'SMTP test failed.',
                 'mail_sent' => false,
-                'mail_recipient' => $to,
-                'mail_error' => $e->getMessage(),
-            ], 500);
+                'mail_error' => $result['error'],
+            ], 422);
         }
+
+        if ($result['ok']) {
+            return response()->json([
+                'message' => 'SMTP test email sent successfully.',
+                'mail_sent' => true,
+                'mail_recipient' => $result['recipient'],
+            ], 200);
+        }
+
+        return response()->json([
+            'message' => 'SMTP test failed.',
+            'mail_sent' => false,
+            'mail_recipient' => $result['recipient'],
+            'mail_error' => $result['error'],
+        ], 500);
     }
 
     public function logout(Request $request)
