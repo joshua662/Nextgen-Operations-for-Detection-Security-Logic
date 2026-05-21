@@ -9,7 +9,25 @@
 
 ## Email (Gmail SMTP)
 
-Registration credentials are sent to each user’s **registration email**. Configure any Gmail sender in `.env` — see **[docs/MAIL_SETUP.md](docs/MAIL_SETUP.md)**.
+Registration credentials are sent through Gmail SMTP to the email address entered for the newly registered user.
+
+Set these values in `server/.env`:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_SCHEME=null
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-gmail-address@gmail.com
+MAIL_PASSWORD=your-gmail-app-password
+MAIL_FROM_ADDRESS="your-gmail-address@gmail.com"
+MAIL_FROM_NAME="Nextgen Operations"
+MAIL_CREDENTIALS_TO=your-gmail-address@gmail.com
+```
+
+Use any Gmail account you own for `MAIL_USERNAME` and an app password for `MAIL_PASSWORD`. This Gmail account is only the sender. The recipient for registration credentials is the user email entered in the registration form.
+
+Use `POST /api/auth/smtp-test` to verify the connection. Include `{ "to": "another-account@gmail.com" }` to test any recipient Gmail address. If the request body omits `to`, the app sends the test message to `MAIL_CREDENTIALS_TO`, then falls back to `MAIL_USERNAME`.
 
 ## About Laravel
 

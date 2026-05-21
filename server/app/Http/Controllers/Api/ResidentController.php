@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ResidentGateAccessWelcomeMail;
 use App\Models\User;
-use App\Services\MailService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class ResidentController extends Controller
@@ -64,15 +65,32 @@ class ResidentController extends Controller
 
         $user->load('gender');
 
-        $mailError = MailService::sendPortalCredentials($user, $plainPassword);
+        $mailError = null;
+
+        $credentialsMailbox = $user->email;
+
+        if (! filter_var($credentialsMailbox, FILTER_VALIDATE_EMAIL)) {
+            $mailError = 'The registered resident does not have a valid email address.';
+        } else {
+            try {
+                Mail::to($credentialsMailbox)->send(new ResidentGateAccessWelcomeMail(
+                    $user,
+                    $plainPassword,
+                    config('gate.portal_url'),
+                ));
+            } catch (\Throwable $e) {
+                report($e);
+                $mailError = $e->getMessage();
+            }
+        }
 
         return response()->json([
             'message' => $mailError
                 ? 'Resident saved, but credentials email failed. Check mail_error.'
-                : 'Resident successfully saved. Welcome email sent.',
+                : 'Resident successfully saved. Credentials email sent to the resident email address.',
             'mail_sent' => $mailError === null,
             'mail_error' => $mailError,
-            'mail_recipient' => $user->email,
+            'mail_recipient' => $credentialsMailbox,
         ], 200);
     }
 
