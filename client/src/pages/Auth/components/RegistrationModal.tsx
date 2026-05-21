@@ -210,7 +210,7 @@ const RegistrationModal = ({
         <>
             <ToastMessage
                 title="Registration complete"
-                message="Login credentials were emailed to the address you registered."
+                message="Credentials were sent to the registered email address."
                 isFailed={false}
                 isVisible={toastVisible}
                 onClose={() => setToastVisible(false)}

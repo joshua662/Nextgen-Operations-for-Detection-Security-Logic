@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ResidentGateAccessWelcomeMail;
 use App\Models\User;
 use App\Services\ActivityLogService;
-use App\Services\MailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -50,9 +51,39 @@ class AuthController extends Controller
         return [$username, $password];
     }
 
+    private function configuredCredentialsRecipients(): array
+    {
+        $configuredRecipients = env('MAIL_CREDENTIALS_TO')
+            ?: env('MAIL_USERNAME');
+
+        return collect(explode(',', (string) $configuredRecipients))
+            ->map(fn (string $email) => trim($email))
+            ->filter(fn (string $email) => filter_var($email, FILTER_VALIDATE_EMAIL))
+            ->values()
+            ->all();
+    }
+
     private function sendPortalCredentials(User $user, string $plainPassword): ?string
     {
-        return MailService::sendPortalCredentials($user, $plainPassword);
+        $credentialsMailbox = $user->email;
+
+        if (! filter_var($credentialsMailbox, FILTER_VALIDATE_EMAIL)) {
+            return 'The registered user does not have a valid email address.';
+        }
+
+        try {
+            Mail::to($credentialsMailbox)->send(new ResidentGateAccessWelcomeMail(
+                $user,
+                $plainPassword,
+                config('gate.portal_url'),
+            ));
+
+            return null;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $e->getMessage();
+        }
     }
 
     private function registrationResponse(
@@ -204,7 +235,7 @@ class AuthController extends Controller
             $plainPassword,
             $mailError
                 ? 'Registration successful, but sending credentials email failed. Check mail_error.'
-                : 'Registration successful. Login credentials have been sent to your email address.',
+                : 'Registration successful. Login credentials have been sent to the registered email address.',
             $mailError,
         );
     }
@@ -258,7 +289,7 @@ class AuthController extends Controller
             $plainPassword,
             $mailError
                 ? 'Registration successful, but sending credentials email failed. Check mail_error.'
-                : 'Registration successful. Login credentials have been sent to your email address.',
+                : 'Registration successful. Login credentials have been sent to the registered email address.',
             $mailError,
         );
     }
@@ -269,30 +300,41 @@ class AuthController extends Controller
             'to' => ['nullable', 'email', 'max:255'],
         ]);
 
-        $result = MailService::sendSmtpTest($validated['to'] ?? null);
+        $recipients = isset($validated['to'])
+            ? [$validated['to']]
+            : $this->configuredCredentialsRecipients();
 
-        if (! $result['recipient']) {
+        if ($recipients === []) {
             return response()->json([
-                'message' => 'SMTP test failed.',
-                'mail_sent' => false,
-                'mail_error' => $result['error'],
+                'message' => 'SMTP test failed. Configure a valid MAIL_CREDENTIALS_TO or MAIL_USERNAME in .env.',
             ], 422);
         }
 
-        if ($result['ok']) {
+        try {
+            Mail::raw(
+                'SMTP test successful. Your Nextgen Operations backend can send emails via Gmail SMTP.',
+                function ($message) use ($recipients) {
+                    $message
+                        ->to($recipients)
+                        ->subject('SMTP Test - Nextgen Operations');
+                }
+            );
+
             return response()->json([
                 'message' => 'SMTP test email sent successfully.',
                 'mail_sent' => true,
-                'mail_recipient' => $result['recipient'],
+                'mail_recipient' => $recipients,
             ], 200);
-        }
+        } catch (\Throwable $e) {
+            report($e);
 
-        return response()->json([
-            'message' => 'SMTP test failed.',
-            'mail_sent' => false,
-            'mail_recipient' => $result['recipient'],
-            'mail_error' => $result['error'],
-        ], 500);
+            return response()->json([
+                'message' => 'SMTP test failed.',
+                'mail_sent' => false,
+                'mail_recipient' => $recipients,
+                'mail_error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function logout(Request $request)
