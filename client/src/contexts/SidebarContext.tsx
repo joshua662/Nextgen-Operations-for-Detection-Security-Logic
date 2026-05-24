@@ -24,7 +24,7 @@ export const useSidebar = () => {
 }
 
 export const SidebarProvider: FC<{ children: ReactNode }> = ({ children }) => {
-    const [isOpen, setIsOpen] = useState(true)
+    const [isOpen, setIsOpen] = useState(false)
 
     const toggleSidebar = () => {
         setIsOpen((prev) => !prev)

@@ -1,135 +1,325 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import GenderService from "../../services/GenderService";
 import type { ResidentRow } from "../../interfaces/GateInterface";
-import FloatingLabelInput from "../../components/Input/FloatingLabelInput";
-import FloatingLabelSelect from "../../components/Select/FloatingLabelSelect";
-import SubmitButton from "../../components/Button/SubmitButton";
 import Spinner from "../../components/Spinner/Spinner";
-import Modal from "../../components/Modal";
 
-const emptyForm = () => ({
-    first_name: "", middle_name: "", last_name: "", gender: "", birth_date: "",
-    email: "", username: "", password: "", password_confirmation: "",
-    contact_number: "", address: "", plate_number: "", car_model: "", car_color: "",
+type ResidentForm = {
+    first_name: string;
+    middle_name: string;
+    last_name: string;
+    gender: string;
+    birth_date: string;
+    email: string;
+    username: string;
+    password: string;
+    password_confirmation: string;
+    contact_number: string;
+    address: string;
+    plate_number: string;
+    car_model: string;
+    car_color: string;
+};
+
+const emptyForm = (): ResidentForm => ({
+    first_name: "",
+    middle_name: "",
+    last_name: "",
+    gender: "",
+    birth_date: "",
+    email: "",
+    username: "",
+    password: "",
+    password_confirmation: "",
+    contact_number: "",
+    address: "",
+    plate_number: "",
+    car_model: "",
+    car_color: "",
 });
 
 const ResidentsPage = () => {
     const [residents, setResidents] = useState<ResidentRow[]>([]);
     const [genders, setGenders] = useState<{ gender_id: number; gender: string }[]>([]);
     const [search, setSearch] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<ResidentRow | null>(null);
     const [editing, setEditing] = useState<ResidentRow | null>(null);
     const [form, setForm] = useState(emptyForm());
     const [message, setMessage] = useState("");
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await GateAccessService.loadResidents(1, search);
-            setResidents(res.data.residents.data ?? []);
-        } finally {
-            setLoading(false);
-        }
-    }, [search]);
-
-    useEffect(() => { void load(); }, [load]);
-    useEffect(() => {
-        GenderService.loadGenders().then((r) => setGenders(r.data.genders ?? []));
+    const loadResidents = useCallback((query: string) => {
+        GateAccessService.loadResidents(1, query)
+            .then((res) => setResidents(res.data.residents.data ?? []))
+            .finally(() => setLoading(false));
     }, []);
 
-    const handleSave = async (e: FormEvent) => {
-        e.preventDefault();
+    useEffect(() => {
+        loadResidents("");
+        GenderService.loadGenders().then((res) => setGenders(res.data.genders ?? []));
+    }, [loadResidents]);
+
+    useEffect(() => {
+        const handle = window.setTimeout(() => {
+            setLoading(true);
+            loadResidents(search);
+        }, 250);
+
+        return () => window.clearTimeout(handle);
+    }, [loadResidents, search]);
+
+    const openCreate = () => {
+        setEditing(null);
+        setForm(emptyForm());
+        setModalOpen(true);
+    };
+
+    const openEdit = (resident: ResidentRow) => {
+        setEditing(resident);
+        setForm({
+            first_name: resident.first_name ?? "",
+            middle_name: resident.middle_name ?? "",
+            last_name: resident.last_name ?? "",
+            gender: String(resident.gender?.gender_id ?? ""),
+            birth_date: resident.birth_date ?? "",
+            email: resident.email ?? "",
+            username: resident.username ?? "",
+            password: "",
+            password_confirmation: "",
+            contact_number: resident.contact_number ?? "",
+            address: resident.address ?? "",
+            plate_number: resident.plate_number ?? "",
+            car_model: resident.car_model ?? "",
+            car_color: resident.car_color ?? "",
+        });
+        setModalOpen(true);
+    };
+
+    const handleSave = async (event: FormEvent) => {
+        event.preventDefault();
         const payload: Record<string, string | undefined> = { ...form, gender: form.gender };
+
+        if (editing && !payload.password?.trim()) {
+            delete payload.password;
+            delete payload.password_confirmation;
+        }
+
         if (editing) {
-            if (!payload.password?.trim()) {
-                delete payload.password;
-                delete payload.password_confirmation;
-            }
             await GateAccessService.updateResident(editing.user_id, payload);
             setMessage("Resident updated.");
         } else {
             await GateAccessService.storeResident(payload);
             setMessage("Resident added.");
         }
+
         setModalOpen(false);
-        void load();
+        setLoading(true);
+        loadResidents(search);
+    };
+
+    const deleteResident = async () => {
+        if (!deleteTarget) return;
+
+        await GateAccessService.destroyResident(deleteTarget.user_id);
+        setMessage("Resident deleted.");
+        setDeleteTarget(null);
+        setLoading(true);
+        loadResidents(search);
     };
 
     return (
-        <div className="p-4 sm:p-6">
-            <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 white-bg-100:text-white">Residents Management</h1>
-                <button type="button" onClick={() => { setEditing(null); setForm(emptyForm()); setModalOpen(true); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Add Resident</button>
+        <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Residents Management</h2>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Manage resident profiles and information</p>
+                </div>
+                <button type="button" onClick={openCreate} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                    Add New Resident
+                </button>
             </div>
-            {message && <p className="mb-4 text-green-600 text-sm">{message}</p>}
-            <FloatingLabelInput type="text" label="Search plate or name" value={search} onChange={(e) => setSearch(e.target.value)} name="search" />
-            {loading ? <Spinner size="md" /> : (
-                <div className="mt-4 overflow-x-auto bg-white white-bg-100:bg-gray-800 rounded-xl border">
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50 white-bg-100:bg-gray-700"><tr>
-                            <th className="p-3 text-left">Name</th><th>Username</th><th>Plate</th><th>Contact</th><th>Car</th><th>Actions</th>
-                        </tr></thead>
-                        <tbody>
-                            {residents.map((r) => (
-                                <tr key={r.user_id} className="border-t">
-                                    <td className="p-3">{r.last_name}, {r.first_name}</td>
-                                    <td className="p-3 font-mono text-xs">{r.username ?? "—"}</td>
-                                    <td className="p-3 font-mono">{r.plate_number}</td>
-                                    <td className="p-3">{r.contact_number}</td>
-                                    <td className="p-3">{r.car_model} ({r.car_color})</td>
-                                    <td className="p-3 space-x-2">
-                                        <button type="button" className="text-blue-600" onClick={() => { setEditing(r); setForm({
-                                            first_name: r.first_name, middle_name: r.middle_name ?? "", last_name: r.last_name,
-                                            gender: String(r.gender?.gender_id ?? ""), birth_date: r.birth_date ?? "",
-                                            email: r.email ?? "", username: r.username ?? "", password: "", password_confirmation: "",
-                                            contact_number: r.contact_number ?? "", address: r.address ?? "",
-                                            plate_number: r.plate_number ?? "", car_model: r.car_model ?? "", car_color: r.car_color ?? "",
-                                        }); setModalOpen(true); }}>Edit</button>
-                                        <button type="button" className="text-red-600" onClick={async () => { if (confirm("Delete?")) { await GateAccessService.destroyResident(r.user_id); void load(); } }}>Delete</button>
-                                    </td>
+
+            {message && (
+                <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200">{message}</div>
+            )}
+
+            <div className="space-y-4">
+                <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search by name, plate number, or contact..."
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 transition focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                />
+
+                {loading ? <div className="flex justify-center p-8"><Spinner size="md" /></div> : (
+                    <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+                        <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                            <thead className="bg-zinc-50 dark:bg-zinc-900">
+                                <tr>
+                                    <Head>Name</Head>
+                                    <Head>Plate Number</Head>
+                                    <Head>Contact</Head>
+                                    <Head>Address</Head>
+                                    <Head>Car Info</Head>
+                                    <Head>Actions</Head>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-700 dark:bg-zinc-800">
+                                {residents.length > 0 ? residents.map((resident) => (
+                                    <tr key={resident.user_id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
+                                        <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{fullName(resident)}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 font-mono text-zinc-900 dark:text-zinc-100">{resident.plate_number || "-"}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{resident.contact_number || "-"}</td>
+                                        <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{limitText(resident.address || "-", 30)}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{resident.car_model || resident.car_color ? `${resident.car_model || "N/A"} - ${resident.car_color || "N/A"}` : "N/A"}</td>
+                                        <td className="whitespace-nowrap px-6 py-4">
+                                            <div className="flex gap-2">
+                                                <button type="button" onClick={() => openEdit(resident)} className="rounded px-2 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20">Edit</button>
+                                                <button type="button" onClick={() => setDeleteTarget(resident)} className="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">Delete</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">No residents found</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            {modalOpen && (
+                <ResidentModal
+                    editing={editing}
+                    form={form}
+                    genders={genders}
+                    setForm={setForm}
+                    onClose={() => setModalOpen(false)}
+                    onSubmit={handleSave}
+                />
+            )}
+
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex min-h-screen items-center justify-center px-4 py-10 text-center">
+                        <button type="button" aria-label="Close delete modal" onClick={() => setDeleteTarget(null)} className="fixed inset-0 bg-white/80 backdrop-blur-sm dark:bg-zinc-900/80" />
+                        <div className="relative w-full max-w-md rounded-2xl bg-white px-8 py-10 shadow-2xl dark:bg-zinc-800">
+                            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                                <TrashIcon />
+                            </div>
+                            <h3 className="mb-8 text-xl font-medium text-zinc-900 dark:text-zinc-100">
+                                Are you sure you want to delete <strong>{fullName(deleteTarget)}</strong>?
+                            </h3>
+                            <div className="space-y-4">
+                                <button type="button" onClick={deleteResident} className="w-full rounded-lg bg-red-600 px-6 py-3 font-medium text-white shadow-sm transition hover:bg-red-700">Yes, Delete</button>
+                                <button type="button" onClick={() => setDeleteTarget(null)} className="w-full text-sm font-medium text-zinc-900 transition hover:text-zinc-600 dark:text-zinc-100 dark:hover:text-zinc-300">Keep Resident</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
-            <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} showCloseButton>
-                <h2 className="text-lg font-semibold mb-4 px-4 pt-2">{editing ? "Edit Resident" : "Add Resident"}</h2>
-                <form onSubmit={handleSave} className="space-y-3 px-4 pb-4 max-h-[70vh] overflow-y-auto">
-                    <FloatingLabelInput type="text" label="First Name" name="first_name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required />
-                    <FloatingLabelInput type="text" label="Middle Name" name="middle_name" value={form.middle_name} onChange={(e) => setForm({ ...form, middle_name: e.target.value })} />
-                    <FloatingLabelInput type="text" label="Last Name" name="last_name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required />
-                    <FloatingLabelSelect label="Gender" name="gender" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} required>
-                        <option value="">Select</option>
-                        {genders.map((g) => <option key={g.gender_id} value={g.gender_id}>{g.gender}</option>)}
-                    </FloatingLabelSelect>
-                    <FloatingLabelInput label="Birthdate" name="birth_date" type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} required />
-                    <FloatingLabelInput type="email" label="Email" name="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-                    <FloatingLabelInput type="text" label="Portal username" name="username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
-                    {!editing ? (
-                        <>
-                            <FloatingLabelInput type="password" label="Password" name="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-                            <FloatingLabelInput type="password" label="Confirm password" name="password_confirmation" value={form.password_confirmation} onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} required />
-                        </>
-                    ) : (
-                        <>
-                            <p className="text-xs text-gray-500">Leave password blank to keep current. Min 6 characters.</p>
-                            <FloatingLabelInput type="password" label="New password (optional)" name="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-                            <FloatingLabelInput type="password" label="Confirm new password" name="password_confirmation" value={form.password_confirmation} onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} />
-                        </>
-                    )}
-                    <FloatingLabelInput type="text" label="Contact Number" name="contact_number" value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} required />
-                    <FloatingLabelInput type="text" label="Address" name="address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
-                    <FloatingLabelInput type="text" label="Plate Number" name="plate_number" value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value })} required />
-                    <FloatingLabelInput type="text" label="Car Model" name="car_model" value={form.car_model} onChange={(e) => setForm({ ...form, car_model: e.target.value })} required />
-                    <FloatingLabelInput type="text" label="Car Color" name="car_color" value={form.car_color} onChange={(e) => setForm({ ...form, car_color: e.target.value })} required />
-                    <SubmitButton label="Save" />
-                </form>
-            </Modal>
         </div>
     );
 };
+
+const ResidentModal = ({
+    editing,
+    form,
+    genders,
+    setForm,
+    onClose,
+    onSubmit,
+}: {
+    editing: ResidentRow | null;
+    form: ResidentForm;
+    genders: { gender_id: number; gender: string }[];
+    setForm: (form: ResidentForm) => void;
+    onClose: () => void;
+    onSubmit: (event: FormEvent) => void;
+}) => (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-screen items-center justify-center px-4 py-10">
+            <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-white/80 backdrop-blur-sm dark:bg-zinc-900/80" />
+            <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-800">
+                <div className="mb-6 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${editing ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"}`}>
+                            {editing ? <EditIcon /> : <PlusIcon />}
+                        </div>
+                        <h3 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{editing ? "Edit Resident" : "Add New Resident"}</h3>
+                    </div>
+                    <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">x</button>
+                </div>
+
+                <form onSubmit={onSubmit} className="max-h-[72vh] space-y-5 overflow-y-auto pr-1">
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <Field label="First Name" value={form.first_name} onChange={(value) => setForm({ ...form, first_name: value })} required />
+                        <Field label="Middle Name" value={form.middle_name} onChange={(value) => setForm({ ...form, middle_name: value })} />
+                        <Field label="Last Name" value={form.last_name} onChange={(value) => setForm({ ...form, last_name: value })} required />
+                        <label className="block">
+                            <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Gender *</span>
+                            <select value={form.gender} onChange={(event) => setForm({ ...form, gender: event.target.value })} required className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100">
+                                <option value="">Select</option>
+                                {genders.map((gender) => <option key={gender.gender_id} value={gender.gender_id}>{gender.gender}</option>)}
+                            </select>
+                        </label>
+                        <Field label="Birthdate" type="date" value={form.birth_date} onChange={(value) => setForm({ ...form, birth_date: value })} required />
+                        <Field label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} required />
+                        <Field label="Portal Username" value={form.username} onChange={(value) => setForm({ ...form, username: value })} required />
+                        <Field label="Contact Number" value={form.contact_number} onChange={(value) => setForm({ ...form, contact_number: value })} required />
+                        <Field label="Plate Number" value={form.plate_number} onChange={(value) => setForm({ ...form, plate_number: value.toUpperCase() })} required mono />
+                        <Field label="Car Model" value={form.car_model} onChange={(value) => setForm({ ...form, car_model: value })} required />
+                        <Field label="Car Color" value={form.car_color} onChange={(value) => setForm({ ...form, car_color: value })} required />
+                    </div>
+
+                    <Field label="Address" value={form.address} onChange={(value) => setForm({ ...form, address: value })} required textarea />
+
+                    {!editing ? (
+                        <div className="grid gap-5 md:grid-cols-2">
+                            <Field label="Password" type="password" value={form.password} onChange={(value) => setForm({ ...form, password: value })} required />
+                            <Field label="Confirm Password" type="password" value={form.password_confirmation} onChange={(value) => setForm({ ...form, password_confirmation: value })} required />
+                        </div>
+                    ) : (
+                        <div className="grid gap-5 md:grid-cols-2">
+                            <Field label="Password (leave blank to keep current)" type="password" value={form.password} onChange={(value) => setForm({ ...form, password: value })} />
+                            <Field label="Confirm New Password" type="password" value={form.password_confirmation} onChange={(value) => setForm({ ...form, password_confirmation: value })} />
+                        </div>
+                    )}
+
+                    <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-700 sm:flex-row sm:justify-end">
+                        <button type="button" onClick={onClose} className="px-6 py-3 text-sm font-medium text-zinc-900 transition hover:text-zinc-600 dark:text-zinc-100 dark:hover:text-zinc-300">Cancel</button>
+                        <button type="submit" className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">{editing ? "Update Resident" : "Create Resident"}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+);
+
+const Field = ({ label, value, onChange, type = "text", required, textarea, mono }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; textarea?: boolean; mono?: boolean }) => (
+    <label className="block">
+        <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}{required ? " *" : ""}</span>
+        {textarea ? (
+            <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} required={required} className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100" />
+        ) : (
+            <input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} className={`w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100 ${mono ? "font-mono uppercase" : ""}`} />
+        )}
+    </label>
+);
+
+const Head = ({ children }: { children: string }) => (
+    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{children}</th>
+);
+
+const fullName = (resident: ResidentRow) => [resident.first_name, resident.middle_name, resident.last_name].filter(Boolean).join(" ");
+const limitText = (value: string, limit: number) => value.length > limit ? `${value.slice(0, limit)}...` : value;
+
+const IconSvg = ({ children }: { children: ReactNode }) => <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">{children}</svg>;
+const EditIcon = () => <IconSvg><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" /></IconSvg>;
+const PlusIcon = () => <IconSvg><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></IconSvg>;
+const TrashIcon = () => <IconSvg><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7m5 4v6m4-6v6M4 7h16m-5 0V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3" /></IconSvg>;
 
 export default ResidentsPage;

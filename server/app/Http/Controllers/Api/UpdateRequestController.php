@@ -27,20 +27,40 @@ class UpdateRequestController extends Controller
 
     public function storeRequest(Request $request)
     {
-        $validated = $request->validate([
-            'first_name' => ['nullable', 'max:55'],
-            'middle_name' => ['nullable', 'max:55'],
-            'last_name' => ['nullable', 'max:55'],
-            'gender' => ['nullable', 'exists:tbl_genders,gender_id'],
-            'birth_date' => ['nullable', 'date'],
-            'contact_number' => ['nullable', 'max:20'],
-            'address' => ['nullable', 'max:255'],
-            'plate_number' => ['nullable', 'max:20'],
-            'car_model' => ['nullable', 'max:55'],
-            'car_color' => ['nullable', 'max:55'],
-        ]);
+        $requestType = $request->input('request_type', 'profile_update');
 
-        $changes = array_filter($validated, fn ($v) => $v !== null && $v !== '');
+        if ($requestType === 'guest_access') {
+            $validated = $request->validate([
+                'request_type' => ['required', 'in:guest_access'],
+                'guest_name' => ['required', 'max:155'],
+                'guest_age' => ['nullable', 'integer', 'min:1', 'max:150'],
+                'guest_contact_number' => ['required', 'max:20'],
+                'guest_address' => ['nullable', 'max:255'],
+                'guest_plate_number' => ['required', 'max:20'],
+                'guest_car_model' => ['required', 'max:55'],
+                'guest_car_color' => ['nullable', 'max:55'],
+                'access_date' => ['required', 'date'],
+                'access_reason' => ['required', 'max:500'],
+            ]);
+
+            $validated['guest_plate_number'] = strtoupper($validated['guest_plate_number']);
+            $changes = array_filter($validated, fn ($v) => $v !== null && $v !== '');
+        } else {
+            $validated = $request->validate([
+                'first_name' => ['nullable', 'max:55'],
+                'middle_name' => ['nullable', 'max:55'],
+                'last_name' => ['nullable', 'max:55'],
+                'gender' => ['nullable', 'exists:tbl_genders,gender_id'],
+                'birth_date' => ['nullable', 'date'],
+                'contact_number' => ['nullable', 'max:20'],
+                'address' => ['nullable', 'max:255'],
+                'plate_number' => ['nullable', 'max:20'],
+                'car_model' => ['nullable', 'max:55'],
+                'car_color' => ['nullable', 'max:55'],
+            ]);
+
+            $changes = array_filter($validated, fn ($v) => $v !== null && $v !== '');
+        }
 
         if (empty($changes)) {
             return response()->json(['message' => 'No changes submitted.'], 422);
@@ -59,7 +79,9 @@ class UpdateRequestController extends Controller
         );
 
         return response()->json([
-            'message' => 'Update request submitted for admin review.',
+            'message' => $requestType === 'guest_access'
+                ? 'Guest access request submitted for admin review.'
+                : 'Update request submitted for admin review.',
             'request' => $updateRequest,
         ], 200);
     }
@@ -82,7 +104,7 @@ class UpdateRequestController extends Controller
 
         $resident = User::find($updateRequest->user_id);
 
-        if ($validated['status'] === 'approved' && $resident) {
+        if ($validated['status'] === 'approved' && $resident && (($updateRequest->requested_changes['request_type'] ?? 'profile_update') !== 'guest_access')) {
             $changes = $updateRequest->requested_changes;
 
             if (isset($changes['plate_number'])) {
@@ -103,10 +125,14 @@ class UpdateRequestController extends Controller
 
         Notification::create([
             'user_id' => $updateRequest->user_id,
-            'title' => 'Update Request ' . ucfirst($validated['status']),
+            'title' => (($updateRequest->requested_changes['request_type'] ?? 'profile_update') === 'guest_access' ? 'Guest Access ' : 'Update Request ') . ucfirst($validated['status']),
             'message' => $validated['status'] === 'approved'
-                ? 'Your profile update has been approved and applied.'
-                : 'Your profile update request was rejected.' . ($validated['admin_notes'] ? ' Note: ' . $validated['admin_notes'] : ''),
+                ? ((($updateRequest->requested_changes['request_type'] ?? 'profile_update') === 'guest_access')
+                    ? 'Your guest access request has been approved.'
+                    : 'Your profile update has been approved and applied.')
+                : ((($updateRequest->requested_changes['request_type'] ?? 'profile_update') === 'guest_access')
+                    ? 'Your guest access request was rejected.'
+                    : 'Your profile update request was rejected.') . ($validated['admin_notes'] ? ' Note: ' . $validated['admin_notes'] : ''),
             'type' => 'update_request',
         ]);
 
