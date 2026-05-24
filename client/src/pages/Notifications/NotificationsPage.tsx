@@ -8,36 +8,60 @@ const NotificationsPage = () => {
     const [loading, setLoading] = useState(true);
 
     const load = () => {
-        setLoading(true);
         GateAccessService.loadNotifications(1)
             .then((res) => setItems(res.data.notifications.data ?? []))
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => {
+        load();
+    }, []);
 
     const markAll = async () => {
+        setLoading(true);
         await GateAccessService.markAllNotificationsRead();
         load();
     };
 
+    const markRead = async (id: number) => {
+        setLoading(true);
+        await GateAccessService.markNotificationRead(id);
+        load();
+    };
+
     return (
-        <div className="p-4 sm:p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
-                <button type="button" onClick={markAll} className="text-sm text-blue-600">Mark all read</button>
+        <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Notifications</h2>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">View system alerts and important notifications</p>
+                </div>
+                {items.some((item) => !item.is_read) && (
+                    <button type="button" onClick={markAll} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">Mark all as read</button>
+                )}
             </div>
-            {loading ? <Spinner size="md" /> : (
-                <ul className="space-y-3">
-                    {items.map((n) => (
-                        <li key={n.notification_id} className={`p-4 rounded-xl border ${n.is_read ? "bg-gray-50 dark:bg-gray-800" : "bg-blue-50 dark:bg-blue-900/20 border-blue-200"}`}>
-                            <p className="font-semibold text-gray-900 dark:text-white">{n.title}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{n.message}</p>
-                            <p className="text-xs text-gray-400 mt-2">{new Date(n.created_at).toLocaleString()}</p>
-                        </li>
-                    ))}
-                    {items.length === 0 && <p className="text-gray-500">No notifications.</p>}
-                </ul>
+
+            {loading ? <div className="flex justify-center p-8"><Spinner size="md" /></div> : (
+                <div className="space-y-4">
+                    {items.length > 0 ? items.map((notification) => (
+                        <div key={notification.notification_id} className={`rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 ${notification.is_read ? "bg-white dark:bg-zinc-800" : "bg-blue-50 dark:bg-blue-900/20"}`}>
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{notification.title}</h3>
+                                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{notification.message}</p>
+                                    <p className="mt-2 text-xs text-zinc-500">{new Date(notification.created_at).toLocaleString()}</p>
+                                </div>
+                                {!notification.is_read && (
+                                    <button type="button" onClick={() => markRead(notification.notification_id)} className="shrink-0 rounded px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/30">
+                                        Mark as Read
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )) : (
+                        <div className="rounded-xl border border-zinc-200 py-8 text-center text-zinc-500 dark:border-zinc-700">No notifications</div>
+                    )}
+                </div>
             )}
         </div>
     );

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\GateLog;
 use App\Models\Notification;
 use App\Models\SystemStatus;
+use App\Models\UpdateRequest;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -49,16 +50,40 @@ class GateService
             ->whereRaw('UPPER(REPLACE(plate_number, " ", "")) = ?', [$normalizedPlate])
             ->first();
 
-        $authorized = (bool) $resident;
+        $guestRequest = null;
+
+        if (! $resident) {
+            $guestRequest = UpdateRequest::with('resident')
+                ->where('status', 'approved')
+                ->whereDate('created_at', '<=', now())
+                ->get()
+                ->first(function (UpdateRequest $request) use ($normalizedPlate) {
+                    $changes = $request->requested_changes ?? [];
+
+                    if (($changes['request_type'] ?? null) !== 'guest_access') {
+                        return false;
+                    }
+
+                    $guestPlate = strtoupper(preg_replace('/\s+/', '', $changes['guest_plate_number'] ?? ''));
+                    $accessDate = $changes['access_date'] ?? null;
+
+                    return $guestPlate === $normalizedPlate
+                        && $accessDate
+                        && date('Y-m-d', strtotime($accessDate)) === now()->toDateString();
+                });
+        }
+
+        $authorized = (bool) ($resident || $guestRequest);
         $status = $authorized ? 'authorized' : 'unauthorized';
         $captureFile = self::storeCapture($image);
+        $guestChanges = $guestRequest?->requested_changes ?? [];
 
         $log = GateLog::create([
-            'user_id' => $resident?->user_id,
+            'user_id' => $resident?->user_id ?? $guestRequest?->user_id,
             'plate_number' => $normalizedPlate,
-            'owner_name' => $resident?->owner_name,
-            'car_model' => $resident?->car_model,
-            'car_color' => $resident?->car_color,
+            'owner_name' => $resident?->owner_name ?? ($guestChanges['guest_name'] ?? null),
+            'car_model' => $resident?->car_model ?? ($guestChanges['guest_car_model'] ?? null),
+            'car_color' => $resident?->car_color ?? ($guestChanges['guest_car_color'] ?? null),
             'direction' => strtoupper($direction),
             'status' => $status,
             'capture_image' => $captureFile,
@@ -78,12 +103,21 @@ class GateService
                 'gate_open'
             );
 
-            self::notifyUser(
-                $resident,
-                'Gate Access',
-                'Gate opened at ' . now()->format('g:i A') . " ({$direction}).",
-                'gate_open'
-            );
+            if ($resident) {
+                self::notifyUser(
+                    $resident,
+                    'Gate Access',
+                    'Gate opened at ' . now()->format('g:i A') . " ({$direction}).",
+                    'gate_open'
+                );
+            } elseif ($guestRequest?->resident) {
+                self::notifyUser(
+                    $guestRequest->resident,
+                    'Guest Gate Access',
+                    'Approved guest plate ' . $normalizedPlate . ' passed the gate at ' . now()->format('g:i A') . " ({$direction}).",
+                    'gate_open'
+                );
+            }
         } else {
             self::notifyAdmins(
                 'Unauthorized Attempt',

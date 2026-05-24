@@ -1,11 +1,44 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import type { DashboardOverview, GateLog } from "../../interfaces/GateInterface";
 import Spinner from "../../components/Spinner/Spinner";
+import { useAuth } from "../../contexts/AuthContext";
+import ResidentsPage from "../Residents/ResidentsPage";
+import GateLogsPage from "../GateLogs/GateLogsPage";
+import UpdateRequestsPage from "../UpdateRequests/UpdateRequestsPage";
+import ReportsPage from "../Reports/ReportsPage";
+
+type QuickActionKey = "residents" | "gate-logs" | "update-requests" | "reports";
+
+const QUICK_ACTIONS: {
+    key: QuickActionKey;
+    label: string;
+    primary?: boolean;
+}[] = [
+    {
+        key: "residents",
+        label: "Manage Residents",
+        primary: true,
+    },
+    {
+        key: "gate-logs",
+        label: "View Gate Logs",
+    },
+    {
+        key: "update-requests",
+        label: "Review Requests",
+    },
+    {
+        key: "reports",
+        label: "View Reports",
+    },
+];
 
 const DashboardPage = () => {
+    const { user } = useAuth();
     const [data, setData] = useState<DashboardOverview | null>(null);
     const [loading, setLoading] = useState(true);
+    const [activeQuickAction, setActiveQuickAction] = useState<QuickActionKey | null>(null);
 
     useEffect(() => {
         GateAccessService.dashboardOverview()
@@ -13,88 +46,205 @@ const DashboardPage = () => {
             .finally(() => setLoading(false));
     }, []);
 
+    useEffect(() => {
+        if (!activeQuickAction) return;
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setActiveQuickAction(null);
+        };
+
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
+    }, [activeQuickAction]);
+
     if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
-    if (!data) return <p className="p-6 text-gray-500">Unable to load dashboard.</p>;
+    if (!data) return <p className="text-zinc-500">Unable to load dashboard.</p>;
+
+    const displayName = [user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ") || "Admin";
 
     return (
-        <div className="p-4 sm:p-6 space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Gate Security Dashboard</h1>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard label="Gate Status" value={data.gate_status.toUpperCase()} accent={data.gate_status === "open" ? "green" : "red"} />
-                <StatCard label="Authorized Today" value={String(data.stats.authorized_entries)} accent="blue" />
-                <StatCard label="Unauthorized Today" value={String(data.stats.unauthorized_attempts)} accent="amber" />
-                <StatCard label="Total Residents" value={String(data.stats.total_residents)} accent="slate" />
+        <div className="flex h-full w-full flex-1 flex-col gap-6 rounded-xl">
+            <div>
+                <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Welcome, {displayName}!</h1>
+                <p className="mt-1 text-zinc-600 dark:text-zinc-400">Gate Security System - Admin Dashboard</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h2 className="font-semibold mb-3 text-gray-900 dark:text-white">Live Camera Feed (ESP32-CAM)</h2>
-                    <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center overflow-hidden">
-                        {data.camera_stream_url ? (
-                            <img src={data.camera_stream_url} alt="Gate camera" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                        ) : null}
-                        <p className="text-gray-400 text-sm absolute">Stream: {data.camera_status} | Sensor: {data.sensor_status}</p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <StatCard label="Total Residents" value={data.stats.total_residents} />
+                <StatCard label="Today's Entries" value={data.stats.authorized_entries} />
+                <StatCard label="Pending Requests" value={data.stats.pending_update_requests} />
+                <StatCard label="Unauthorized Today" value={data.stats.unauthorized_attempts} danger />
+            </div>
+
+            <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
+                <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">Quick Actions</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {QUICK_ACTIONS.map((action) => (
+                        <QuickActionButton
+                            key={action.key}
+                            primary={action.primary}
+                            onClick={() => setActiveQuickAction(action.key)}
+                        >
+                            {action.label}
+                        </QuickActionButton>
+                    ))}
+                </div>
+            </section>
+
+            {activeQuickAction && (
+                <QuickActionModal
+                    action={QUICK_ACTIONS.find((action) => action.key === activeQuickAction) ?? QUICK_ACTIONS[0]}
+                    onClose={() => setActiveQuickAction(null)}
+                />
+            )}
+
+            <div className="grid gap-6 lg:grid-cols-3">
+                <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800 lg:col-span-2">
+                    <h2 className="mb-3 font-semibold text-zinc-900 dark:text-zinc-100">Live Camera Feed</h2>
+                    <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-zinc-900">
+                        {data.camera_stream_url && (
+                            <img
+                                src={data.camera_stream_url}
+                                alt="Gate camera"
+                                className="h-full w-full object-cover"
+                                onError={(event) => { event.currentTarget.style.display = "none"; }}
+                            />
+                        )}
+                        <p className="absolute rounded bg-black/50 px-3 py-1 text-sm text-zinc-200">
+                            Stream: {data.camera_status} | Sensor: {data.sensor_status} | Gate: {data.gate_status}
+                        </p>
                     </div>
-                </div>
+                </section>
 
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-                    <h2 className="font-semibold text-gray-900 dark:text-white">System Health</h2>
-                    <HealthRow label="Camera" status={data.camera_status} />
-                    <HealthRow label="Sensors" status={data.sensor_status} />
-                    <HealthRow label="Pending Updates" status={String(data.stats.pending_update_requests)} />
-                    <HealthRow label="Unread Alerts" status={String(data.stats.unread_notifications)} />
-                </div>
+                <section className="h-fit rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-800">
+                    <h2 className="mb-4 font-semibold text-zinc-900 dark:text-zinc-100">System Health</h2>
+                    <div className="space-y-3">
+                        <HealthRow label="Camera" status={data.camera_status} />
+                        <HealthRow label="Sensors" status={data.sensor_status} />
+                        <HealthRow label="Gate" status={data.gate_status} />
+                        <HealthRow label="Pending Updates" status={String(data.stats.pending_update_requests)} />
+                        <HealthRow label="Unread Alerts" status={String(data.stats.unread_notifications)} />
+                    </div>
+                </section>
             </div>
 
-            <div className="bg-white white:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">Recent Gate Activity</h2>
+            <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
+                <div className="border-b border-zinc-200 px-6 py-4 dark:border-zinc-700">
+                    <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">Recent Gate Activity</h2>
+                </div>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                        <thead><tr className="text-left text-gray-500 border-b"><th className="pb-2">Plate</th><th>Owner</th><th>Dir</th><th>Status</th><th>Time</th></tr></thead>
-                        <tbody>
-                            {data.recent_logs.map((log: GateLog) => (
-                                <tr key={log.gate_log_id} className="border-b border-gray-100 dark:border-gray-700">
-                                    <td className="py-2 font-mono">{log.plate_number}</td>
-                                    <td>{log.owner_name ?? "—"}</td>
-                                    <td>{log.direction}</td>
-                                    <td><StatusBadge status={log.status} /></td>
-                                    <td>{new Date(log.logged_at).toLocaleString()}</td>
+                    <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                        <thead className="bg-zinc-50 dark:bg-zinc-900">
+                            <tr>
+                                <Head>Plate Number</Head>
+                                <Head>Owner Name</Head>
+                                <Head>Direction</Head>
+                                <Head>Status</Head>
+                                <Head>Timestamp</Head>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-700 dark:bg-zinc-800">
+                            {data.recent_logs.length > 0 ? data.recent_logs.map((log: GateLog) => (
+                                <tr key={log.gate_log_id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
+                                    <td className="px-6 py-4 font-mono text-zinc-900 dark:text-zinc-100">{log.plate_number}</td>
+                                    <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{log.owner_name ?? "N/A"}</td>
+                                    <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{log.direction}</td>
+                                    <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
+                                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{new Date(log.logged_at).toLocaleString()}</td>
                                 </tr>
-                            ))}
+                            )) : (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">No recent gate activity</td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
         </div>
     );
 };
 
-const StatCard = ({ label, value, accent }: { label: string; value: string; accent: string }) => {
-    const colors: Record<string, string> = {
-        green: "border-green-500 bg-green-50 dark:bg-green-900/20",
-        red: "border-red-500 bg-red-50 dark:bg-red-900/20",
-        blue: "border-blue-500 bg-blue-50 dark:bg-blue-900/20",
-        amber: "border-amber-500 bg-amber-50 dark:bg-amber-900/20",
-        slate: "border-gray-400 bg-gray-50 dark:bg-gray-900/20",
-    };
-    return (
-        <div className={`rounded-xl border-l-4 p-4 ${colors[accent] ?? colors.slate}`}>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-        </div>
-    );
-};
-
-const HealthRow = ({ label, status }: { label: string; status: string }) => (
-    <div className="flex justify-between text-sm">
-        <span className="text-gray-600 dark:text-gray-400">{label}</span>
-        <span className="font-medium text-gray-900 dark:text-white capitalize">{status}</span>
+const StatCard = ({ label, value, danger }: { label: string; value: number; danger?: boolean }) => (
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-900">
+        <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{label}</h3>
+        <p className={`mt-2 text-3xl font-bold ${danger ? "text-red-600 dark:text-red-400" : "text-zinc-900 dark:text-zinc-100"}`}>{value}</p>
     </div>
 );
 
+const QuickActionModal = ({ action, onClose }: { action: (typeof QUICK_ACTIONS)[number]; onClose: () => void }) => (
+    <div
+        className="fixed inset-0 z-50 bg-black/60 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quick-action-title"
+        onClick={onClose}
+    >
+        <div
+            className="mx-auto flex h-[calc(100vh-2rem)] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-800"
+            onClick={(event) => event.stopPropagation()}
+        >
+            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-700">
+                <div>
+                    <h2 id="quick-action-title" className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{action.label}</h2>
+                </div>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-white"
+                    aria-label="Close popup"
+                >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-white p-5 dark:bg-zinc-800">
+                <QuickActionContent actionKey={action.key} />
+            </div>
+        </div>
+    </div>
+);
+
+const QuickActionContent = ({ actionKey }: { actionKey: QuickActionKey }) => {
+    if (actionKey === "residents") return <ResidentsPage />;
+    if (actionKey === "gate-logs") return <GateLogsPage />;
+    if (actionKey === "update-requests") return <UpdateRequestsPage />;
+    return <ReportsPage />;
+};
+
+const QuickActionButton = ({ children, onClick, primary }: { children: ReactNode; onClick: () => void; primary?: boolean }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${
+            primary
+                ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+                : "border border-zinc-300 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-700"
+        }`}
+    >
+        {children}
+    </button>
+);
+
+const HealthRow = ({ label, status }: { label: string; status: string }) => (
+    <div className="flex justify-between gap-4 text-sm">
+        <span className="text-zinc-600 dark:text-zinc-400">{label}</span>
+        <span className="font-medium capitalize text-zinc-900 dark:text-zinc-100">{status}</span>
+    </div>
+);
+
+const Head = ({ children }: { children: string }) => (
+    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{children}</th>
+);
+
 const StatusBadge = ({ status }: { status: string }) => (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${status === "authorized" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+    <span className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
+        status === "authorized"
+            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
+            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+    }`}>
         {status}
     </span>
 );
