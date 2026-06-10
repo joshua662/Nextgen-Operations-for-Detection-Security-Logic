@@ -58,7 +58,7 @@ const AuthForm = ({
     const closeToast = () => setToast((t) => ({ ...t, visible: false }));
     // ─────────────────────────────────────────────────────────────────────────
 
-    const { login } = useAuth();
+    const { login, securityGuardRegister } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -128,7 +128,7 @@ const AuthForm = ({
 
     const handleRegister = async () => {
         if (!admissionForm.role) {
-            setFieldErrors({ role: ["Please select Admin or Resident."] });
+            setFieldErrors({ role: ["Please select Security Guard or Resident."] });
             showToast("Please select a role.", true);
             return;
         }
@@ -147,9 +147,9 @@ const AuthForm = ({
         };
 
         try {
-            const isAdmin = admissionForm.role === "Admin";
-            const res = isAdmin
-                ? await AuthService.adminRegister(payload)
+            const isSecurityGuard = admissionForm.role === "Security Guard";
+            const res = isSecurityGuard
+                ? await securityGuardRegister(payload as any)
                 : await GateAccessService.residentRegister(payload);
 
             setRegistrationSuccess(true);

@@ -455,7 +455,7 @@ const RegistrationModal = ({
                                         <span className="mr-1 text-red-400">*</span>Role
                                     </span>
                                     <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2">
-                                        {["Admin", "Resident"].map((r) => (
+                                        {["Security Guard", "Resident"].map((r) => (
                                             <label key={r} className="flex cursor-pointer items-center gap-2 text-[14.5px] text-violet-100/90">
                                                 <input
                                                     type="radio" name="adm_role"
