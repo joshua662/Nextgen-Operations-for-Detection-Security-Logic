@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::controller(AuthController::class)->prefix('/auth')->group(function () {
     Route::post('/login', 'login');
+    Route::post('/admin/login', 'adminLogin');
     Route::post('/admin/register', 'adminRegister');
+    Route::post('/security-guard/register', 'securityGuardRegister');
     Route::post('/resident/login', 'residentLogin');
     Route::post('/resident/register', 'residentRegister');
     Route::post('/smtp-test', 'smtpTest');
@@ -39,7 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/destroyGender/{gender}', 'destroyGender');
     });
 
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:admin,security_guard')->group(function () {
         Route::controller(UserController::class)->prefix('/user')->group(function () {
             Route::get('/loadUsers', 'loadUsers');
             Route::post('/storeUser', 'storeUser');

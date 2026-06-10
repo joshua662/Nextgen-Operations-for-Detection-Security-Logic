@@ -104,6 +104,53 @@ class AuthController extends Controller
         ], 201);
     }
 
+    private function portalRoleDeniedMessage(string $role, string $expectedPortal): string
+    {
+        return match ($role) {
+            'admin' => 'This account is for the Admin monitoring portal. Please sign in through the Admin Panel.',
+            'resident' => 'This account is for the Resident portal. Please use the resident sign-in page.',
+            'security_guard' => 'This account is for the Security Guard portal. Please sign in through the Client portal.',
+            default => "This account cannot access the {$expectedPortal}.",
+        };
+    }
+
+    private function authenticatePortalUser(
+        Request $request,
+        string $username,
+        string $password,
+        string $expectedRole,
+        string $portalLabel,
+        callable $onFailure,
+        callable $onSuccess,
+    ) {
+        $user = User::with(['gender'])
+            ->where('username', $username)
+            ->where('is_deleted', false)
+            ->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
+            $onFailure($request, $username);
+
+            return response()->json([
+                'message' => 'The provided credentials are incorrect.',
+            ], 401);
+        }
+
+        if ($user->role !== $expectedRole) {
+            return response()->json([
+                'message' => $this->portalRoleDeniedMessage($user->role, $portalLabel),
+            ], 403);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+        $onSuccess($request, $user);
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+        ], 200);
+    }
+
     public function login(Request $request)
     {
         $validated = $request->validate([
@@ -114,25 +161,47 @@ class AuthController extends Controller
         $user = User::with(['gender'])
             ->where('username', $validated['username'])
             ->where('is_deleted', false)
-            ->whereIn('role', ['admin', 'resident'])
             ->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             ActivityLogService::loginFailureAdminPortal($request, $validated['username']);
+            return response()->json(['message' => 'The provided credentials are incorrect.'], 401);
+        }
 
-            return response()->json([
-                'message' => 'The provided credentials are incorrect.',
-            ], 401);
+        if (! in_array($user->role, ['security_guard', 'resident'])) {
+            return response()->json(['message' => 'This account cannot access the Client portal.'], 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        ActivityLogService::loginSuccessAdminPortal($request, $user);
+        if ($user->role === 'resident') {
+            ActivityLogService::residentPortalSuccess($request, $user);
+        } else {
+            ActivityLogService::loginSuccessAdminPortal($request, $user);
+        }
 
         return response()->json([
             'user' => $user,
             'token' => $token,
         ], 200);
+    }
+
+    public function adminLogin(Request $request)
+    {
+        $validated = $request->validate([
+            'username' => ['required', 'string', 'min:6', 'max:12'],
+            'password' => ['required', 'string', 'min:6', 'max:12'],
+        ]);
+
+        return $this->authenticatePortalUser(
+            $request,
+            $validated['username'],
+            $validated['password'],
+            'admin',
+            'Admin monitoring portal',
+            [ActivityLogService::class, 'loginFailureAdminPortal'],
+            [ActivityLogService::class, 'loginSuccessAdminPortal'],
+        );
     }
 
     public function residentLogin(Request $request)
@@ -198,7 +267,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function adminRegister(Request $request)
+    private function registerPortalUser(Request $request, string $role)
     {
         $validated = $request->validate([
             'first_name' => ['required', 'max:55'],
@@ -215,7 +284,7 @@ class AuthController extends Controller
         $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
 
         $user = User::create([
-            'role' => 'admin',
+            'role' => $role,
             'first_name' => $validated['first_name'],
             'middle_name' => $validated['middle_name'] ?? null,
             'last_name' => $validated['last_name'],
@@ -238,6 +307,16 @@ class AuthController extends Controller
                 : 'Registration successful. Login credentials have been sent to the registered email address.',
             $mailError,
         );
+    }
+
+    public function adminRegister(Request $request)
+    {
+        return $this->registerPortalUser($request, 'admin');
+    }
+
+    public function securityGuardRegister(Request $request)
+    {
+        return $this->registerPortalUser($request, 'security_guard');
     }
 
     public function residentRegister(Request $request)

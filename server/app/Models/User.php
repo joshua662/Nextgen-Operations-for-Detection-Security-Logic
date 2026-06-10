@@ -99,11 +99,21 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin' || $this->role === null;
+        return $this->role === 'admin';
+    }
+
+    public function isSecurityGuard(): bool
+    {
+        return $this->role === 'security_guard';
     }
 
     public function isResident(): bool
     {
         return $this->role === 'resident';
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->isAdmin() || $this->isSecurityGuard();
     }
 }
