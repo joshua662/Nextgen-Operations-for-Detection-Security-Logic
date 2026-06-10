@@ -15,24 +15,24 @@ const QUICK_ACTIONS: {
     label: string;
     primary?: boolean;
 }[] = [
-    {
-        key: "residents",
-        label: "Manage Residents",
-        primary: true,
-    },
-    {
-        key: "gate-logs",
-        label: "View Gate Logs",
-    },
-    {
-        key: "update-requests",
-        label: "Review Requests",
-    },
-    {
-        key: "reports",
-        label: "View Reports",
-    },
-];
+        {
+            key: "residents",
+            label: "Manage Residents",
+            primary: true,
+        },
+        {
+            key: "gate-logs",
+            label: "View Gate Logs",
+        },
+        {
+            key: "update-requests",
+            label: "Review Requests",
+        },
+        {
+            key: "reports",
+            label: "View Reports",
+        },
+    ];
 
 const DashboardPage = () => {
     const { user } = useAuth();
@@ -66,7 +66,7 @@ const DashboardPage = () => {
         <div className="flex h-full w-full flex-1 flex-col gap-6 rounded-xl">
             <div>
                 <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Welcome, {displayName}!</h1>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">Gate Security System - Admin Dashboard</p>
+                <p className="mt-1 text-zinc-600 dark:text-zinc-400">Gate Security System - Security Guard Dashboard</p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -218,11 +218,10 @@ const QuickActionButton = ({ children, onClick, primary }: { children: ReactNode
     <button
         type="button"
         onClick={onClick}
-        className={`inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${
-            primary
+        className={`inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${primary
                 ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
                 : "border border-zinc-300 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-700"
-        }`}
+            }`}
     >
         {children}
     </button>
@@ -240,11 +239,10 @@ const Head = ({ children }: { children: string }) => (
 );
 
 const StatusBadge = ({ status }: { status: string }) => (
-    <span className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
-        status === "authorized"
+    <span className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${status === "authorized"
             ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
             : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
-    }`}>
+        }`}>
         {status}
     </span>
 );

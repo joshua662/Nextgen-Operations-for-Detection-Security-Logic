@@ -27,8 +27,8 @@ const AuthService = {
     const response = await AxiosInstance.post("/auth/login", data);
     return response;
   },
-  adminRegister: async (data: AdmissionRegisterData) => {
-    const response = await AxiosInstance.post("/auth/admin/register", data);
+  securityGuardRegister: async (data: AdmissionRegisterData) => {
+    const response = await AxiosInstance.post("/auth/security-guard/register", data);
     return response;
   },
   residentRegister: async (data: AdmissionRegisterData) => {

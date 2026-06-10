@@ -7,7 +7,7 @@ interface AuthContextType {
   user: UserDetails | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<UserDetails>;
-  adminRegister: (data: Record<string, unknown>) => Promise<void>;
+  securityGuardRegister: (payload: Record<string, string>) => Promise<UserDetails>;
   residentLogin: (credentials: Record<string, string>) => Promise<UserDetails>;
   residentRegister: (data: Record<string, unknown>) => Promise<void>;
   logout: () => Promise<void>;
@@ -24,6 +24,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const login = async (username: string, password: string) => {
     const res = await AuthService.login({ username, password });
     if (res.status === 200) {
+      if (res.data.user?.role === 'admin') {
+        throw new Error("Admins cannot access the client portal.");
+      }
       const session: UserDetails = {
         user: res.data.user,
         token: res.data.token,
@@ -35,14 +38,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     throw new Error("Login failed.");
   };
 
-  const adminRegister = async (data: Record<string, unknown>) => {
-    const res = await AuthService.adminRegister(data as unknown as Parameters<typeof AuthService.adminRegister>[0]);
-    if (res.status === 200 || res.status === 201) {
-      localStorage.setItem("token", res.data.token);
-      setUser({ user: res.data.user, token: res.data.token });
-      return;
-    }
-    throw new Error("Registration failed.");
+  const securityGuardRegister = async (payload: Record<string, string>) => {
+    const res = await AuthService.securityGuardRegister(payload as any);
+    return res.data;
   };
 
   const residentLogin = async (credentials: Record<string, string>) => {
@@ -95,7 +93,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const res = await AuthService.me();
 
         if (res.status === 200) {
-          setUser(res.data);
+          if (res.data?.user?.role === 'admin') {
+            localStorage.removeItem("token");
+            setUser(null);
+          } else {
+            setUser(res.data);
+          }
         } else {
           localStorage.removeItem("token");
           setUser(null);
@@ -125,7 +128,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       user,
       loading,
       login,
-      adminRegister,
+      securityGuardRegister,
       residentLogin,
       residentRegister,
       logout,
