@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from "react";
-import loginBackdrop from "../../assets/img/subdivision-gate-background.png";
+const loginBackdrop = "/assets/subdivision-gate-background.png";
 
 interface AuthPageLayoutProps {
     children: ReactNode;

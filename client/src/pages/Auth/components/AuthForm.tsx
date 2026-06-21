@@ -7,7 +7,6 @@ import GenderService from "../../../services/GenderService";
 import RegistrationModal from "./RegistrationModal";
 import ToastMessage from "../../../components/ToastMessage/ToastMessage";
 import logoSrc from "../../../assets/img/pdp-logo-invert.png";
-import AuthService from "../../../services/AuthService";
 import GateAccessService from "../../../services/GateAccessService";
 import { emptyAdmissionForm } from "./authTypes";
 
@@ -154,7 +153,8 @@ const AuthForm = ({
 
             setRegistrationSuccess(true);
             setAdmissionForm(emptyAdmissionForm());
-            showToast(res.data?.message ?? "Registration successful.", false);
+            const successMsg = (res as any)?.data?.message ?? "Registration successful.";
+            showToast(successMsg, false);
         } catch (error) {
             handleApiError(error);
         } finally {
