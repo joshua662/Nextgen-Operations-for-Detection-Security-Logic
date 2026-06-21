@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useGuards } from '../../hooks/useGuards'
+import GuardDetailsModal from './GuardDetails'
 
 const GuardsList = () => {
   const [search, setSearch] = useState('')
   const { guards, loading, error } = useGuards(search)
+  const [selectedGuardId, setSelectedGuardId] = useState<number | null>(null)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       <div>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Security Guards</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -46,12 +47,13 @@ const GuardsList = () => {
                     <td className="px-4 py-3 font-mono text-xs">{guard.username}</td>
                     <td className="px-4 py-3">{guard.email ?? 'N/A'}</td>
                     <td className="px-4 py-3">
-                      <Link
-                        to={`/guards/${guard.user_id}`}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGuardId(guard.user_id)}
                         className="font-medium text-violet-600 hover:text-violet-500"
                       >
                         View details
-                      </Link>
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -65,6 +67,10 @@ const GuardsList = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedGuardId !== null && (
+        <GuardDetailsModal id={selectedGuardId} onClose={() => setSelectedGuardId(null)} />
       )}
     </div>
   )

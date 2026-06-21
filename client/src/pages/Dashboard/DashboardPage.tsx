@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
-import type { DashboardOverview, GateLog } from "../../interfaces/GateInterface";
+import type { DashboardOverview } from "../../interfaces/GateInterface";
 import Spinner from "../../components/Spinner/Spinner";
 import { useAuth } from "../../contexts/AuthContext";
 import ResidentsPage from "../Residents/ResidentsPage";
@@ -128,39 +128,6 @@ const DashboardPage = () => {
                 </section>
             </div>
 
-            <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
-                <div className="border-b border-zinc-200 px-6 py-4 dark:border-zinc-700">
-                    <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">Recent Gate Activity</h2>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                        <thead className="bg-zinc-50 dark:bg-zinc-900">
-                            <tr>
-                                <Head>Plate Number</Head>
-                                <Head>Owner Name</Head>
-                                <Head>Direction</Head>
-                                <Head>Status</Head>
-                                <Head>Timestamp</Head>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-700 dark:bg-zinc-800">
-                            {data.recent_logs.length > 0 ? data.recent_logs.map((log: GateLog) => (
-                                <tr key={log.gate_log_id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
-                                    <td className="px-6 py-4 font-mono text-zinc-900 dark:text-zinc-100">{log.plate_number}</td>
-                                    <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{log.owner_name ?? "N/A"}</td>
-                                    <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{log.direction}</td>
-                                    <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
-                                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{new Date(log.logged_at).toLocaleString()}</td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">No recent gate activity</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
         </div>
     );
 };
@@ -234,17 +201,6 @@ const HealthRow = ({ label, status }: { label: string; status: string }) => (
     </div>
 );
 
-const Head = ({ children }: { children: string }) => (
-    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{children}</th>
-);
-
-const StatusBadge = ({ status }: { status: string }) => (
-    <span className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${status === "authorized"
-            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
-            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
-        }`}>
-        {status}
-    </span>
-);
+// removed StatusBadge and Head
 
 export default DashboardPage;

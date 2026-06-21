@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import type { ActivityLog } from "../../interfaces/ActivityLogInterface";
 import Spinner from "../../components/Spinner/Spinner";
+import type { GateLog } from "../../interfaces/GateInterface";
 
 const EVENT_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "All events" },
@@ -14,9 +15,18 @@ const EVENT_OPTIONS: { value: string; label: string }[] = [
 
 const ActivityLogsPage = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [gateLogs, setGateLogs] = useState<GateLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingGate, setLoadingGate] = useState(true);
   const [eventType, setEventType] = useState("");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    GateAccessService.loadGateLogs(1)
+      .then((res) => setGateLogs(res.data.logs?.data || res.data.data || []))
+      .catch(() => setGateLogs([]))
+      .finally(() => setLoadingGate(false));
+  }, []);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -28,23 +38,7 @@ const ActivityLogsPage = () => {
     return () => window.clearTimeout(handle);
   }, [eventType, search]);
 
-  const stats = useMemo(() => {
-    return logs.reduce(
-      (totals, log) => {
-        const isFailure = log.event_type.includes("failure");
-        const isAdmin = log.event_type.includes("admin");
-        const isResident = log.event_type.includes("resident");
-
-        return {
-          total: totals.total + 1,
-          failed: totals.failed + (isFailure ? 1 : 0),
-          admin: totals.admin + (isAdmin ? 1 : 0),
-          resident: totals.resident + (isResident ? 1 : 0),
-        };
-      },
-      { total: 0, failed: 0, admin: 0, resident: 0 },
-    );
-  }, [logs]);
+  // stats removed
 
   return (
     <div className="space-y-6">
@@ -53,16 +47,9 @@ const ActivityLogsPage = () => {
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Review admin and resident login activity</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Stat label="Visible Events" value={stats.total} />
-        <Stat label="Failed Logins" value={stats.failed} tone="red" />
-        <Stat label="Admin Events" value={stats.admin} />
-        <Stat label="Resident Events" value={stats.resident} />
-      </div>
-
       <div className="flex flex-wrap gap-4">
         <input
-          className="min-w-[220px] flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+          className="min-w-[220px] flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-[#1a1a1a] dark:text-zinc-100"
           placeholder="Search username, event, or IP..."
           value={search}
           onChange={(event) => {
@@ -71,7 +58,7 @@ const ActivityLogsPage = () => {
           }}
         />
         <select
-          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-[#1a1a1a] dark:text-zinc-100"
           value={eventType}
           onChange={(event) => {
             setLoading(true);
@@ -89,74 +76,115 @@ const ActivityLogsPage = () => {
       {loading ? (
         <div className="flex justify-center p-8"><Spinner size="md" /></div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
-          <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-            <thead className="bg-zinc-50 dark:bg-zinc-900">
+        <div className="overflow-x-auto rounded border border-[#2a2a2a] bg-[#1c1c1c]">
+          <table className="w-full whitespace-nowrap text-left text-sm text-gray-300">
+            <thead className="border-b border-[#2a2a2a] bg-[#1c1c1c] text-xs font-semibold uppercase tracking-wider text-gray-400">
               <tr>
-                <Head>Time</Head>
-                <Head>Event</Head>
-                <Head>Identifier</Head>
-                <Head>User</Head>
-                <Head>IP Address</Head>
-                <Head>Context</Head>
+                <th className="px-6 py-4">Time</th>
+                <th className="px-6 py-4">Event</th>
+                <th className="px-6 py-4">Identifier</th>
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">IP Address</th>
+                <th className="px-6 py-4">Context</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-700 dark:bg-zinc-800">
+            <tbody className="divide-y divide-[#2a2a2a]">
               {logs.length > 0 ? logs.map((log) => (
-                <tr key={log.activity_log_id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
-                  <td className="whitespace-nowrap px-6 py-4 text-zinc-600 dark:text-zinc-400">{new Date(log.created_at).toLocaleString()}</td>
+                <tr key={log.activity_log_id} className="transition-colors hover:bg-white/5">
+                  <td className="px-6 py-4 text-[#b89e74]">{new Date(log.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'medium' })}</td>
                   <td className="px-6 py-4"><EventBadge eventType={log.event_type} /></td>
-                  <td className="max-w-[220px] break-all px-6 py-4 font-mono text-xs text-zinc-900 dark:text-zinc-100">{log.username_attempted ?? "N/A"}</td>
-                  <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">
+                  <td className="max-w-[220px] break-all px-6 py-4 text-xs text-gray-300">{log.username_attempted ?? "N/A"}</td>
+                  <td className="px-6 py-4 text-gray-200">
                     {log.user ? `${log.user.first_name} ${log.user.last_name}` : "N/A"}
-                    {log.user?.role && <span className="ml-2 text-xs capitalize text-zinc-500 dark:text-zinc-400">{log.user.role}</span>}
+                    {log.user?.role && <span className="ml-2 text-xs capitalize text-gray-500">{log.user.role.replace('_', ' ')}</span>}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 font-mono text-xs text-zinc-900 dark:text-zinc-100">{log.ip_address ?? "N/A"}</td>
-                  <td className="max-w-xs truncate px-6 py-4 text-xs text-zinc-600 dark:text-zinc-400" title={formatContext(log.context)}>
+                  <td className="px-6 py-4 font-mono text-xs text-[#b89e74]">{log.ip_address ?? "N/A"}</td>
+                  <td className="max-w-xs truncate px-6 py-4 font-mono text-xs text-gray-400" title={formatContext(log.context)}>
                     {formatContext(log.context)}
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">No activity logs found</td>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">No activity logs found</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* Recent Gate Activity Section Transferred from Dashboard */}
+      <div className="mt-12">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Recent Gate Activity</h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Overview of the latest vehicle logs at the gate.</p>
+        </div>
+
+        {loadingGate ? (
+           <div className="flex justify-center p-8"><Spinner size="md" /></div>
+        ) : (
+          <div className="overflow-x-auto rounded border border-[#2a2a2a] bg-[#1c1c1c]">
+            <table className="w-full whitespace-nowrap text-left text-sm text-gray-300">
+              <thead className="border-b border-[#2a2a2a] bg-[#1c1c1c] text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <tr>
+                  <th className="px-6 py-4">Plate Number</th>
+                  <th className="px-6 py-4">Owner Name</th>
+                  <th className="px-6 py-4">Direction</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2a2a2a]">
+                {gateLogs.length > 0 ? gateLogs.slice(0, 10).map((log) => (
+                  <tr key={log.gate_log_id} className="transition-colors hover:bg-white/5">
+                    <td className="px-6 py-4 font-mono text-gray-200">{log.plate_number}</td>
+                    <td className="px-6 py-4 text-gray-300">{log.owner_name ?? "N/A"}</td>
+                    <td className="px-6 py-4 text-gray-300 capitalize">{log.direction}</td>
+                    <td className="px-6 py-4"><GateStatusBadge status={log.status} /></td>
+                    <td className="px-6 py-4 text-[#b89e74]">{new Date(log.logged_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'medium' })}</td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">No recent gate activity</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-const Stat = ({ label, value, tone }: { label: string; value: number; tone?: "red" }) => (
-  <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
-    <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{label}</h3>
-    <p className={`mt-2 text-3xl font-bold ${tone === "red" ? "text-red-600 dark:text-red-400" : "text-zinc-900 dark:text-zinc-100"}`}>{value}</p>
-  </div>
-);
-
-const Head = ({ children }: { children: string }) => (
-  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{children}</th>
-);
+// removed unused Stat and Head components
 
 const EventBadge = ({ eventType }: { eventType: string }) => {
   const isFailure = eventType.includes("failure");
   const isLogout = eventType === "logout";
   const label = eventType.replaceAll("_", " ");
 
-  const tone = isFailure
-    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
-    : isLogout
-      ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200"
-      : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
+  let tone = "";
+  if (isFailure) {
+    tone = "bg-[#3f2125] text-[#f87171] border border-[#52292f]";
+  } else if (isLogout) {
+    tone = "bg-[#333333] text-gray-300 border border-[#4a4a4a]";
+  } else {
+    tone = "bg-[#133021] text-[#4ade80] border border-[#1e442d]";
+  }
 
-  return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium capitalize ${tone}`}>{label}</span>;
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize ${tone}`}>{label}</span>;
+};
+
+const GateStatusBadge = ({ status }: { status: string }) => {
+  const tone = status === "authorized"
+    ? "bg-[#133021] text-[#4ade80] border border-[#1e442d]"
+    : "bg-[#3f2125] text-[#f87171] border border-[#52292f]";
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize ${tone}`}>{status}</span>;
 };
 
 const formatContext = (context: ActivityLog["context"]) => {
-  if (!context || Object.keys(context).length === 0) return "N/A";
-
+  if (!context || Object.keys(context).length === 0) return "{}";
   return JSON.stringify(context);
 };
 
