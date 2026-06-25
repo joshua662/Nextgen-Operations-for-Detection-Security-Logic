@@ -53,10 +53,17 @@ const GateAccessService = {
     submitUpdateRequest: (data: Record<string, unknown>) => AxiosInstance.post("/update-request/submit", data),
     reviewUpdateRequest: (id: number, data: { status: string; admin_notes?: string }) =>
         AxiosInstance.put(`/update-request/review/${id}`, data),
-
     toggleGate: (gate_status: string) => AxiosInstance.put("/gate/toggle", { gate_status }),
+    updateSystemHealth: (data: {
+        camera_status?: string;
+        entrance_camera_status?: string;
+        exit_camera_status?: string;
+        sensor_status?: string;
+        camera_stream_url?: string;
+        entrance_camera_stream_url?: string;
+        exit_camera_stream_url?: string;
+    }) => AxiosInstance.put("/gate/system-health", data),
     verifyPlate: (data: FormData) => AxiosInstance.post("/gate/verify", data),
-
     residentLogin: (payload: Record<string, string>) =>
         AxiosInstance.post("/auth/resident/login", payload),
     residentRegister: (data: Record<string, unknown>) => AxiosInstance.post("/auth/resident/register", data),

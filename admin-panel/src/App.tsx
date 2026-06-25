@@ -45,10 +45,12 @@ const ChevronUpDownIcon = () => (
   </svg>
 )
 
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-3.5 rounded-[10px] px-3.5 py-3 text-[14.5px] font-medium transition-colors ${
+const navLinkClass = (isCollapsed: boolean) => ({ isActive }: { isActive: boolean }) =>
+  `flex items-center transition-all duration-200 ${
+    isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3.5 px-3.5 py-2.5'
+  } rounded-[10px] text-[14.5px] font-medium ${
     isActive
-      ? 'bg-[#3c3c3c] text-white'
+      ? 'bg-[#3c3c3c] text-white shadow-inner'
       : 'text-zinc-300 hover:bg-[#2a2a2a] hover:text-white'
   }`
 
@@ -56,6 +58,7 @@ const ProtectedLayout = () => {
   const { user, loading, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const navigate = useNavigate()
 
   if (loading) {
@@ -110,80 +113,114 @@ const ProtectedLayout = () => {
         />
       )}
 
-      {/* Sidebar - Dark Theme matching screenshot */}
+      {/* Sidebar - Collapsible Dark Grey Theme */}
       <aside
-        className={`fixed top-0 left-0 z-40 flex h-screen w-[260px] flex-col bg-[#18181b] transition-transform ${
+        className={`fixed top-0 left-0 z-40 flex h-screen flex-col bg-[#18181b] transition-all duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
+        } lg:translate-x-0 ${isCollapsed ? 'w-[76px]' : 'w-[260px]'}`}
       >
-        <div className="flex h-[76px] items-center px-6 border-b border-white/5">
-          <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-white text-lg font-extrabold text-black">
-            G
-          </div>
-          <span className="ml-3.5 text-lg font-bold text-white tracking-wide">Gate Security</span>
+        <div className="hidden border-b border-white/5 p-4 lg:flex items-center h-[76px] shrink-0">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={`flex items-center focus:outline-none cursor-pointer transition-all ${
+              isCollapsed ? 'justify-center w-full' : 'gap-3.5'
+            }`}
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-white text-lg font-extrabold text-black shadow-md">
+              G
+            </div>
+            {!isCollapsed && (
+              <span className="truncate font-bold text-white text-lg tracking-wide text-start animate-fade-in">
+                Gate Security
+              </span>
+            )}
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-6">
-          <p className="mb-4 px-2 text-[12.5px] font-bold uppercase tracking-widest text-zinc-500">
-            Platform
-          </p>
+          {!isCollapsed ? (
+            <p className="mb-4 px-2 text-[12.5px] font-bold uppercase tracking-widest text-zinc-500 animate-fade-in">
+              Platform
+            </p>
+          ) : (
+            <div className="border-b border-white/5 my-3 mx-2 animate-fade-in" />
+          )}
           <ul className="space-y-1.5">
             <li>
-              <NavLink to="/" end onClick={closeSidebar} className={navLinkClass}>
-                <HomeIcon />
-                Dashboard
+              <NavLink to="/" end onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Dashboard" : undefined}>
+                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                  <HomeIcon />
+                </span>
+                {!isCollapsed && <span>Dashboard</span>}
               </NavLink>
             </li>
             <li>
-              <NavLink to="/reports" onClick={closeSidebar} className={navLinkClass}>
-                <ChartBarIcon />
-                Activity Logs
+              <NavLink to="/reports" onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Activity Logs" : undefined}>
+                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                  <ChartBarIcon />
+                </span>
+                {!isCollapsed && <span>Activity Logs</span>}
               </NavLink>
             </li>
             <li>
-              <NavLink to="/notifications" onClick={closeSidebar} className={navLinkClass}>
-                <BellIcon />
-                Notifications
+              <NavLink to="/notifications" onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Notifications" : undefined}>
+                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                  <BellIcon />
+                </span>
+                {!isCollapsed && <span>Notifications</span>}
               </NavLink>
             </li>
             <li>
-              <NavLink to="/guards" onClick={closeSidebar} className={navLinkClass}>
-                <UsersIcon />
-                Staff Users
+              <NavLink to="/guards" onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Staff Users" : undefined}>
+                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                  <UsersIcon />
+                </span>
+                {!isCollapsed && <span>Staff Users</span>}
               </NavLink>
             </li>
             <li>
-              <NavLink to="/settings" onClick={closeSidebar} className={navLinkClass}>
-                <TagIcon />
-                Genders
+              <NavLink to="/settings" onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Genders" : undefined}>
+                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                  <TagIcon />
+                </span>
+                {!isCollapsed && <span>Genders</span>}
               </NavLink>
             </li>
           </ul>
         </div>
         
-        <div className="border-t border-white/5 p-4">
+        <div className={`border-t border-white/5 ${isCollapsed ? 'p-2 flex justify-center' : 'p-4'}`}>
           <button 
             type="button"
             onClick={() => setProfileOpen(true)}
-            title="Click to view profile"
-            className="flex w-full items-center gap-3.5 rounded-xl p-2.5 text-left transition hover:bg-[#2a2a2a]"
+            title={isCollapsed ? `${userName} (${user.email || 'admin@pdp.com'})` : "Click to view profile"}
+            className={`flex items-center transition hover:bg-[#2a2a2a] cursor-pointer ${
+              isCollapsed ? 'h-10 w-10 justify-center rounded-lg bg-zinc-800 text-white' : 'w-full gap-3.5 rounded-xl p-2.5 text-left'
+            }`}
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#333333] text-sm font-bold tracking-wider text-white">
+            <div className={`flex shrink-0 items-center justify-center text-sm font-bold text-white ${
+              isCollapsed ? '' : 'h-11 w-11 rounded-xl bg-zinc-800 tracking-wider'
+            }`}>
               {userInitials}
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-bold text-white">{userName}</p>
-              <p className="truncate text-[13px] text-zinc-400">{user.email || 'admin@pdp.com'}</p>
-            </div>
-            <div className="text-zinc-400">
-              <ChevronUpDownIcon />
-            </div>
+            {!isCollapsed && (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-bold text-white">{userName}</p>
+                  <p className="truncate text-[13px] text-zinc-400">{user.email || 'admin@pdp.com'}</p>
+                </div>
+                <div className="text-zinc-400">
+                  <ChevronUpDownIcon />
+                </div>
+              </>
+            )}
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="min-h-screen pt-14 lg:ml-[260px] lg:pt-0">
+      <main className={`min-h-screen pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-[76px]' : 'lg:ml-[260px]'}`}>
         <div className="flex h-full w-full flex-1 flex-col gap-4 p-4 lg:p-8">
           <Outlet />
         </div>
