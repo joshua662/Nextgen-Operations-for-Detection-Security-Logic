@@ -40,37 +40,51 @@ class GateService
         return $log;
     }
 
-    public static function verifyPlate(string $plateNumber, string $direction, ?UploadedFile $image = null): array
+    public static function verifyAccess(?string $plateNumber, ?string $rfidCardUid, string $direction, ?UploadedFile $image = null): array
     {
-        $normalizedPlate = strtoupper(preg_replace('/\s+/', '', $plateNumber));
-
-        $resident = User::with('gender')
-            ->where('role', 'resident')
-            ->where('is_deleted', false)
-            ->whereRaw('UPPER(REPLACE(plate_number, " ", "")) = ?', [$normalizedPlate])
-            ->first();
-
+        $resident = null;
         $guestRequest = null;
+        $normalizedPlate = null;
 
-        if (! $resident) {
-            $guestRequest = UpdateRequest::with('resident')
-                ->where('status', 'approved')
-                ->whereDate('created_at', '<=', now())
-                ->get()
-                ->first(function (UpdateRequest $request) use ($normalizedPlate) {
-                    $changes = $request->requested_changes ?? [];
+        if ($rfidCardUid) {
+            // Find resident by RFID Card UID
+            $resident = User::with('gender')
+                ->where('role', 'resident')
+                ->where('is_deleted', false)
+                ->where('rfid_card_uid', $rfidCardUid)
+                ->first();
+        }
 
-                    if (($changes['request_type'] ?? null) !== 'guest_access') {
-                        return false;
-                    }
+        // If no resident is found by RFID, and a plate number is provided, search by plate number
+        if (! $resident && $plateNumber) {
+            $normalizedPlate = strtoupper(preg_replace('/\s+/', '', $plateNumber));
 
-                    $guestPlate = strtoupper(preg_replace('/\s+/', '', $changes['guest_plate_number'] ?? ''));
-                    $accessDate = $changes['access_date'] ?? null;
+            $resident = User::with('gender')
+                ->where('role', 'resident')
+                ->where('is_deleted', false)
+                ->whereRaw('UPPER(REPLACE(plate_number, " ", "")) = ?', [$normalizedPlate])
+                ->first();
 
-                    return $guestPlate === $normalizedPlate
-                        && $accessDate
-                        && date('Y-m-d', strtotime($accessDate)) === now()->toDateString();
-                });
+            if (! $resident) {
+                $guestRequest = UpdateRequest::with('resident')
+                    ->where('status', 'approved')
+                    ->whereDate('created_at', '<=', now())
+                    ->get()
+                    ->first(function (UpdateRequest $request) use ($normalizedPlate) {
+                        $changes = $request->requested_changes ?? [];
+
+                        if (($changes['request_type'] ?? null) !== 'guest_access') {
+                            return false;
+                        }
+
+                        $guestPlate = strtoupper(preg_replace('/\s+/', '', $changes['guest_plate_number'] ?? ''));
+                        $accessDate = $changes['access_date'] ?? null;
+
+                        return $guestPlate === $normalizedPlate
+                            && $accessDate
+                            && date('Y-m-d', strtotime($accessDate)) === now()->toDateString();
+                    });
+            }
         }
 
         $authorized = (bool) ($resident || $guestRequest);
@@ -78,9 +92,20 @@ class GateService
         $captureFile = self::storeCapture($image);
         $guestChanges = $guestRequest?->requested_changes ?? [];
 
+        // For RFID scans, if we matched a resident, grab their registered plate. 
+        // Otherwise, store a placeholder like "RFID:UID" or the actual plate if provided.
+        $logPlate = $normalizedPlate;
+        if (! $logPlate) {
+            if ($resident && $resident->plate_number) {
+                $logPlate = strtoupper(preg_replace('/\s+/', '', $resident->plate_number));
+            } else {
+                $logPlate = $rfidCardUid ? 'RFID:' . strtoupper($rfidCardUid) : 'UNKNOWN';
+            }
+        }
+
         $log = GateLog::create([
             'user_id' => $resident?->user_id ?? $guestRequest?->user_id,
-            'plate_number' => $normalizedPlate,
+            'plate_number' => $logPlate,
             'owner_name' => $resident?->owner_name ?? ($guestChanges['guest_name'] ?? null),
             'car_model' => $resident?->car_model ?? ($guestChanges['guest_car_model'] ?? null),
             'car_color' => $resident?->car_color ?? ($guestChanges['guest_car_color'] ?? null),
@@ -96,10 +121,12 @@ class GateService
             'sensor_status' => 'online',
         ]);
 
+        $displayIdentifier = $normalizedPlate ?: ($rfidCardUid ? 'RFID ' . $rfidCardUid : 'UNKNOWN');
+
         if ($authorized) {
             self::notifyAdmins(
                 'Gate Opened',
-                "Authorized {$direction} entry for plate {$normalizedPlate}.",
+                "Authorized {$direction} entry for {$displayIdentifier}.",
                 'gate_open'
             );
 
@@ -114,29 +141,31 @@ class GateService
                 self::notifyUser(
                     $guestRequest->resident,
                     'Guest Gate Access',
-                    'Approved guest plate ' . $normalizedPlate . ' passed the gate at ' . now()->format('g:i A') . " ({$direction}).",
+                    'Approved guest plate ' . $logPlate . ' passed the gate at ' . now()->format('g:i A') . " ({$direction}).",
                     'gate_open'
                 );
             }
         } else {
             self::notifyAdmins(
                 'Unauthorized Attempt',
-                "Unauthorized {$direction} attempt detected for plate {$normalizedPlate}.",
+                "Unauthorized {$direction} attempt detected for {$displayIdentifier}.",
                 'unauthorized'
             );
 
-            $linkedResident = User::where('role', 'resident')
-                ->where('is_deleted', false)
-                ->whereRaw('UPPER(REPLACE(plate_number, " ", "")) = ?', [$normalizedPlate])
-                ->first();
+            if ($normalizedPlate) {
+                $linkedResident = User::where('role', 'resident')
+                    ->where('is_deleted', false)
+                    ->whereRaw('UPPER(REPLACE(plate_number, " ", "")) = ?', [$normalizedPlate])
+                    ->first();
 
-            if ($linkedResident) {
-                self::notifyUser(
-                    $linkedResident,
-                    'Security Alert',
-                    "Unauthorized attempt detected with your plate ({$normalizedPlate}).",
-                    'unauthorized'
-                );
+                if ($linkedResident) {
+                    self::notifyUser(
+                        $linkedResident,
+                        'Security Alert',
+                        "Unauthorized attempt detected with your plate ({$normalizedPlate}).",
+                        'unauthorized'
+                    );
+                }
             }
         }
 
@@ -145,6 +174,11 @@ class GateService
             'gate_status' => $system->fresh()->gate_status,
             'log' => self::formatLog($log),
         ];
+    }
+
+    public static function verifyPlate(string $plateNumber, string $direction, ?UploadedFile $image = null): array
+    {
+        return self::verifyAccess($plateNumber, null, $direction, $image);
     }
 
     public static function notifyUser(User $user, string $title, string $message, string $type): void

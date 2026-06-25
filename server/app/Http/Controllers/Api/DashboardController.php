@@ -39,9 +39,13 @@ class DashboardController extends Controller
 
         return response()->json([
             'gate_status' => $system->gate_status,
-            'camera_status' => $system->camera_status,
+            'camera_status' => $system->entrance_camera_status ?? $system->camera_status,
+            'entrance_camera_status' => $system->entrance_camera_status ?? $system->camera_status,
+            'exit_camera_status' => $system->exit_camera_status ?? 'offline',
             'sensor_status' => $system->sensor_status,
-            'camera_stream_url' => $system->camera_stream_url,
+            'camera_stream_url' => $system->entrance_camera_stream_url ?? $system->camera_stream_url,
+            'entrance_camera_stream_url' => $system->entrance_camera_stream_url ?? $system->camera_stream_url,
+            'exit_camera_stream_url' => $system->exit_camera_stream_url,
             'stats' => [
                 'authorized_entries' => $authorizedToday,
                 'unauthorized_attempts' => $unauthorizedToday,

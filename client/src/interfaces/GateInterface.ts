@@ -34,8 +34,12 @@ export interface GateLog {
 export interface DashboardOverview {
     gate_status: 'open' | 'closed';
     camera_status: 'online' | 'offline';
+    entrance_camera_status: 'online' | 'offline';
+    exit_camera_status: 'online' | 'offline';
     sensor_status: 'online' | 'offline';
     camera_stream_url?: string;
+    entrance_camera_stream_url?: string;
+    exit_camera_stream_url?: string;
     stats: {
         authorized_entries: number;
         unauthorized_attempts: number;

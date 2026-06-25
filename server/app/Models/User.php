@@ -41,6 +41,7 @@ class User extends Authenticatable
         'plate_number',
         'car_model',
         'car_color',
+        'rfid_card_uid',
         'is_deleted',
     ];
 
