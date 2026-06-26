@@ -32,7 +32,7 @@ API_PASSWORD = "password123"    # Replace with the corresponding password
 
 # Camera Setup
 # Entrance ESP32-CAM stream (used for LPR at gate entry)
-ENTRANCE_CAMERA_SOURCE = "http://192.168.2.104:81/stream"
+ENTRANCE_CAMERA_SOURCE = "http://192.168.2.105:81/stream"
 # Exit ESP32-CAM stream (monitoring only on guard dashboard)
 EXIT_CAMERA_SOURCE = "http://192.168.2.105:81/stream"
 # Active camera for LPR processing

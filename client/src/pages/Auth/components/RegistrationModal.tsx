@@ -470,6 +470,31 @@ const RegistrationModal = ({
                                     {err("role") && <p className="mt-1.5 text-xs text-red-400">{err("role")}</p>}
                                 </div>
 
+                                {form.role === "Resident" && (
+                                    <div className="grid gap-x-16 gap-y-0 md:grid-cols-2">
+                                        <UnderlineField
+                                            label="Contact Number"
+                                            name="adm_contact"
+                                            placeholder="e.g. 09171234567"
+                                            value={form.contact_number}
+                                            onChange={(e) => setForm({ ...form, contact_number: e.target.value })}
+                                            required
+                                            error={err("contact_number")}
+                                            trailingIcon="phone"
+                                        />
+                                        <UnderlineField
+                                            label="Plate Number"
+                                            name="adm_plate"
+                                            placeholder="e.g. ABC1234"
+                                            value={form.plate_number}
+                                            onChange={(e) => setForm({ ...form, plate_number: e.target.value.toUpperCase() })}
+                                            required
+                                            error={err("plate_number")}
+                                            trailingIcon="plate"
+                                        />
+                                    </div>
+                                )}
+
                                 <p className="mb-2 text-center text-[12.5px] leading-relaxed text-violet-200/65">
                                     Your username and password will be generated automatically and sent to the email address above.
                                 </p>

@@ -11,6 +11,7 @@ interface AuthContextType {
   residentLogin: (credentials: Record<string, string>) => Promise<UserDetails>;
   residentRegister: (data: Record<string, unknown>) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   isAdmin: boolean;
   isResident: boolean;
 }
@@ -65,6 +66,19 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       return;
     }
     throw new Error("Registration failed.");
+  };
+
+  const refreshUser = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const res = await AuthService.me();
+    if (res.status === 200 && res.data?.user?.role !== "admin") {
+      setUser((prev) => ({
+        user: res.data.user,
+        token: prev?.token ?? token,
+      }));
+    }
   };
 
   const logout = async () => {
@@ -132,6 +146,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       residentLogin,
       residentRegister,
       logout,
+      refreshUser,
       isAdmin: role === 'admin',
       isResident: role === 'resident',
     }}>

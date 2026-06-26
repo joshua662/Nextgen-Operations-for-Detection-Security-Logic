@@ -84,9 +84,5 @@ export const adminNavItems: NavItem[] = [
 
 export const residentNavItems: NavItem[] = [
     { path: "/resident/home", label: "Dashboard", icon: <HomeIcon /> },
-    { path: "/resident/profile", label: "My Profile", icon: <UserIcon /> },
-    { path: "/resident/logs", label: "Gate Logs", icon: <ClipboardIcon /> },
-    { path: "/resident/notifications", label: "Notifications", icon: <BellIcon /> },
-    { path: "/resident/updates", label: "Update Requests", icon: <DocumentCheckIcon /> },
     { path: "/resident/help", label: "Help & Support", icon: <HelpIcon /> },
 ];

@@ -1,4 +1,5 @@
 import { useAuth } from "../contexts/AuthContext";
+import SidebarHoverLabel from "../components/Sidebar/SidebarHoverLabel";
 
 const getInitials = (firstName?: string, lastName?: string) => {
     const first = firstName?.charAt(0) ?? "";
@@ -39,16 +40,16 @@ const UserProfileMenu = ({ onViewProfile, variant = "sidebar", isCollapsed = fal
     if (variant === "sidebar") {
         if (isCollapsed) {
             return (
-                <div className="flex justify-center w-full">
+                <SidebarHoverLabel label={fullName || "My Profile"} isCollapsed={isCollapsed} className="w-full flex justify-center">
                     <button
                         type="button"
                         onClick={onViewProfile}
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700 text-sm font-bold text-zinc-900 dark:text-white transition hover:bg-zinc-300 dark:hover:bg-zinc-600 cursor-pointer"
-                        title={fullName || "My Profile"}
+                        aria-label={fullName || "My Profile"}
                     >
                         {initials}
                     </button>
-                </div>
+                </SidebarHoverLabel>
             );
         }
 

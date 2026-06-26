@@ -8,6 +8,8 @@ export type AdmissionRegistrationForm = {
     birth_date: string;
     email: string;
     role: string;
+    contact_number: string;
+    plate_number: string;
 };
 
 export type IssuedCredentials = {
@@ -25,6 +27,8 @@ export const emptyAdmissionForm = (): AdmissionRegistrationForm => ({
     birth_date: "",
     email: "",
     role: "",
+    contact_number: "",
+    plate_number: "",
 });
 
 /** @deprecated Use AdmissionRegistrationForm for the admission modal */

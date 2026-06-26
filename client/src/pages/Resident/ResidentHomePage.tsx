@@ -1,34 +1,123 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
-import type { GateLog, NotificationItem } from "../../interfaces/GateInterface";
+import type { GateLog, NotificationItem, UpdateRequestItem } from "../../interfaces/GateInterface";
 import { useAuth } from "../../contexts/AuthContext";
 import Spinner from "../../components/Spinner/Spinner";
+
+type ResidentModal = "notifications" | "logs" | "guest" | null;
+
+type GuestForm = {
+    guest_name: string;
+    guest_age: string;
+    guest_contact_number: string;
+    guest_address: string;
+    guest_plate_number: string;
+    guest_car_model: string;
+    guest_car_color: string;
+    access_date: string;
+    access_reason: string;
+};
+
+const blankGuestForm: GuestForm = {
+    guest_name: "",
+    guest_age: "",
+    guest_contact_number: "",
+    guest_address: "",
+    guest_plate_number: "",
+    guest_car_model: "",
+    guest_car_color: "",
+    access_date: "",
+    access_reason: "",
+};
 
 const ResidentHomePage = () => {
     const { user } = useAuth();
     const [logs, setLogs] = useState<GateLog[]>([]);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const [requests, setRequests] = useState<UpdateRequestItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [requestsLoading, setRequestsLoading] = useState(false);
+    const [submittingGuest, setSubmittingGuest] = useState(false);
+    const [activeModal, setActiveModal] = useState<ResidentModal>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [openRequest, setOpenRequest] = useState<number | null>(null);
+    const [guestForm, setGuestForm] = useState<GuestForm>(blankGuestForm);
+    const [notice, setNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-    useEffect(() => {
+    const loadDashboardData = () => {
+        setLoading(true);
         Promise.all([
             GateAccessService.myGateLogs(1),
             GateAccessService.loadNotifications(1),
         ])
             .then(([logsRes, notifRes]) => {
                 setLogs(logsRes.data.logs.data ?? []);
-                setNotifications((notifRes.data.notifications.data ?? []).slice(0, 5));
+                setNotifications(notifRes.data.notifications.data ?? []);
             })
             .finally(() => setLoading(false));
+    };
+
+    const loadRequests = () => {
+        setRequestsLoading(true);
+        GateAccessService.myUpdateRequests(1)
+            .then((res) => setRequests(res.data.requests.data ?? []))
+            .finally(() => setRequestsLoading(false));
+    };
+
+    useEffect(() => {
+        loadDashboardData();
     }, []);
+
+    useEffect(() => {
+        if (activeModal === "guest") loadRequests();
+    }, [activeModal]);
 
     if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
 
     const displayName = [user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ") || "Resident";
+    const recentNotifications = notifications.slice(0, 5);
     const lastEntry = logs.find((log) => log.direction === "IN");
     const lastExit = logs.find((log) => log.direction === "OUT");
     const unauthorizedCount = logs.filter((log) => log.status === "unauthorized").length;
+    const guestRequests = requests.filter((request) => request.requested_changes?.request_type === "guest_access");
+
+    const openGuestModal = () => {
+        setNotice(null);
+        setActiveModal("guest");
+    };
+
+    const markAllRead = async () => {
+        await GateAccessService.markAllNotificationsRead();
+        loadDashboardData();
+    };
+
+    const markRead = async (id: number) => {
+        await GateAccessService.markNotificationRead(id);
+        loadDashboardData();
+    };
+
+    const submitGuestAccess = async (event: FormEvent) => {
+        event.preventDefault();
+        setSubmittingGuest(true);
+        setNotice(null);
+
+        try {
+            await GateAccessService.submitUpdateRequest({
+                request_type: "guest_access",
+                ...guestForm,
+                guest_plate_number: guestForm.guest_plate_number.toUpperCase(),
+                guest_age: guestForm.guest_age || undefined,
+            });
+            setGuestForm(blankGuestForm);
+            setNotice({ type: "success", message: "Guest access request submitted for admin review." });
+            loadRequests();
+        } catch (error) {
+            const err = error as { response?: { data?: { message?: string } } };
+            setNotice({ type: "error", message: err.response?.data?.message ?? "Failed to submit guest access request." });
+        } finally {
+            setSubmittingGuest(false);
+        }
+    };
 
     return (
         <div className="flex h-full w-full flex-1 flex-col gap-6">
@@ -69,16 +158,12 @@ const ResidentHomePage = () => {
                 <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800 lg:col-span-2">
                     <div className="mb-4 flex items-center justify-between gap-4">
                         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Recent Notifications</h2>
-                        <Link to="/resident/notifications" className="text-sm text-blue-600 hover:underline dark:text-blue-400">View All</Link>
+                        <button type="button" onClick={() => setActiveModal("notifications")} className="text-sm text-blue-600 hover:underline dark:text-blue-400">View All</button>
                     </div>
-                    {notifications.length > 0 ? (
+                    {recentNotifications.length > 0 ? (
                         <div className="space-y-3">
-                            {notifications.map((notification) => (
-                                <div key={notification.notification_id} className="rounded border-l-4 border-blue-500 bg-blue-50 p-3 dark:bg-blue-900/20">
-                                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{notification.title || "System Alert"}</p>
-                                    <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{limitText(notification.message, 100)}</p>
-                                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">{formatRelative(notification.created_at)}</p>
-                                </div>
+                            {recentNotifications.map((notification) => (
+                                <NotificationCard key={notification.notification_id} notification={notification} compact />
                             ))}
                         </div>
                     ) : (
@@ -89,11 +174,214 @@ const ResidentHomePage = () => {
                 <aside className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
                     <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Quick Links</h2>
                     <div className="space-y-3">
-                        <QuickLink to="/resident/profile" icon={<UserIcon />} title="My Profile" sub="View details" />
-                        <QuickLink to="/resident/logs" icon={<ClipboardIcon />} title="Gate Logs" sub="IN/OUT history" />
-                        <QuickLink to="/resident/updates" icon={<CarIcon />} title="Guest Access" sub="Request visitor access" />
+                        <QuickAction onClick={() => setActiveModal("logs")} icon={<ClipboardIcon />} title="Gate Logs" sub="IN/OUT history" />
+                        <QuickAction onClick={openGuestModal} icon={<CarIcon />} title="Guest Access" sub="Request visitor access" />
                     </div>
                 </aside>
+            </div>
+
+            <DashboardModal title="Notifications" isOpen={activeModal === "notifications"} onClose={() => setActiveModal(null)} maxWidth="max-w-4xl">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Stay updated on gate access alerts and system messages.</p>
+                    {notifications.some((item) => !item.is_read) && (
+                        <button type="button" onClick={() => void markAllRead()} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
+                            Mark all as read
+                        </button>
+                    )}
+                </div>
+                <div className="max-h-[62vh] space-y-3 overflow-y-auto pr-1">
+                    {notifications.length > 0 ? notifications.map((notification) => (
+                        <NotificationCard key={notification.notification_id} notification={notification} onMarkRead={() => void markRead(notification.notification_id)} />
+                    )) : (
+                        <EmptyCard text="No notifications. You're all caught up." />
+                    )}
+                </div>
+            </DashboardModal>
+
+            <DashboardModal title="Gate Access Logs" isOpen={activeModal === "logs"} onClose={() => setActiveModal(null)} maxWidth="max-w-6xl">
+                <div className="mb-4 grid gap-3 md:grid-cols-3">
+                    <StatMini label="Total Entries Today" value={String(countToday(logs, "IN"))} />
+                    <StatMini label="Total Exits Today" value={String(countToday(logs, "OUT"))} />
+                    <StatMini label="Unauthorized Attempts" value={String(unauthorizedCount)} danger />
+                </div>
+                <div className="max-h-[60vh] overflow-auto rounded-xl border border-zinc-200 dark:border-zinc-700">
+                    {logs.length > 0 ? (
+                        <table className="w-full min-w-[760px] bg-white dark:bg-zinc-800">
+                            <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+                                <tr>
+                                    <Head>Date & Time</Head>
+                                    <Head>Status</Head>
+                                    <Head>Access Type</Head>
+                                    <Head>Plate Number</Head>
+                                    <Head center>Image</Head>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+                                {logs.map((log) => (
+                                    <tr key={log.gate_log_id} className="transition hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
+                                        <td className="px-6 py-4 text-sm text-zinc-900 dark:text-zinc-100">
+                                            <p className="font-medium">{formatDate(log.logged_at)}</p>
+                                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{new Date(log.logged_at).toLocaleTimeString()}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm">
+                                            <span className={`inline-flex items-center gap-2 font-medium ${log.status === "authorized" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
+                                                <span className={`h-2 w-2 rounded-full ${log.status === "authorized" ? "bg-green-500" : "bg-red-500"}`} />
+                                                {log.status.toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm">
+                                            <span className={`inline-flex rounded px-2 py-1 text-xs font-medium ${log.direction === "IN" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"}`}>
+                                                {log.direction === "IN" ? "Entry" : "Exit"}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 font-mono text-sm text-zinc-900 dark:text-zinc-100">{log.plate_number || "-"}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            {log.capture_image ? (
+                                                <button type="button" onClick={() => setImagePreview(log.capture_image ?? null)} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                    View
+                                                </button>
+                                            ) : (
+                                                <span className="text-sm text-zinc-500 dark:text-zinc-400">-</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <EmptyCard text="No gate logs found." />
+                    )}
+                </div>
+            </DashboardModal>
+
+            <DashboardModal title="Guest Access" isOpen={activeModal === "guest"} onClose={() => setActiveModal(null)} maxWidth="max-w-5xl">
+                {notice && (
+                    <div className={`mb-4 rounded-lg border p-4 text-sm font-medium ${notice.type === "success" ? "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200" : "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200"}`}>
+                        {notice.message}
+                    </div>
+                )}
+
+                <form onSubmit={submitGuestAccess} className="space-y-5">
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+                        <h3 className="mb-3 text-lg font-semibold text-blue-900 dark:text-blue-100">Your Information (Host)</h3>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <ReadOnlyInfo label="Host Name" value={[user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ")} />
+                            <ReadOnlyInfo label="Your Vehicle Plate" value={user?.user?.plate_number} />
+                        </div>
+                    </div>
+
+                    <SectionHeading title="Guest Vehicle Owner Information" />
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <Field label="Guest Name" name="guest_name" value={guestForm.guest_name} onChange={(value) => setGuestForm({ ...guestForm, guest_name: value })} required placeholder="Full name of the guest vehicle owner" />
+                        <Field label="Guest Age" name="guest_age" type="number" value={guestForm.guest_age} onChange={(value) => setGuestForm({ ...guestForm, guest_age: value })} placeholder="Age (optional)" />
+                        <Field label="Guest Contact Number" name="guest_contact_number" value={guestForm.guest_contact_number} onChange={(value) => setGuestForm({ ...guestForm, guest_contact_number: value })} required placeholder="Mobile number of the guest" />
+                        <Field label="Guest Address" name="guest_address" value={guestForm.guest_address} onChange={(value) => setGuestForm({ ...guestForm, guest_address: value })} textarea placeholder="Home address of the guest (optional)" />
+                    </div>
+
+                    <SectionHeading title="Guest Vehicle Information" />
+                    <div className="grid gap-5 md:grid-cols-3">
+                        <Field label="Vehicle Plate Number" name="guest_plate_number" value={guestForm.guest_plate_number} onChange={(value) => setGuestForm({ ...guestForm, guest_plate_number: value.toUpperCase() })} required placeholder="ABC-1234" mono />
+                        <Field label="Car Model" name="guest_car_model" value={guestForm.guest_car_model} onChange={(value) => setGuestForm({ ...guestForm, guest_car_model: value })} required placeholder="Honda Civic 2020" />
+                        <Field label="Car Color" name="guest_car_color" value={guestForm.guest_car_color} onChange={(value) => setGuestForm({ ...guestForm, guest_car_color: value })} placeholder="White" />
+                    </div>
+
+                    <SectionHeading title="Access Details" />
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <Field label="Access Date" name="access_date" type="date" value={guestForm.access_date} onChange={(value) => setGuestForm({ ...guestForm, access_date: value })} required />
+                        <Field label="Reason for Access" name="access_reason" value={guestForm.access_reason} onChange={(value) => setGuestForm({ ...guestForm, access_reason: value })} required textarea placeholder="Family visit, delivery, service provider, etc." />
+                    </div>
+
+                    <button type="submit" disabled={submittingGuest} className="w-full rounded-lg bg-violet-600 px-6 py-3 font-semibold text-white shadow-md transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60">
+                        {submittingGuest ? "Submitting..." : "Submit Guest Access Request"}
+                    </button>
+                </form>
+
+                <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Your Guest Access Requests</h3>
+                    <div className="mt-4 max-h-[320px] space-y-3 overflow-y-auto pr-1">
+                        {requestsLoading ? (
+                            <Spinner size="md" />
+                        ) : guestRequests.length > 0 ? guestRequests.map((request) => (
+                            <RequestCard key={request.update_request_id} request={request} onOpen={() => setOpenRequest(request.update_request_id)} />
+                        )) : (
+                            <EmptyCard text="No guest access requests yet. Submit your first request above." />
+                        )}
+                    </div>
+                </div>
+            </DashboardModal>
+
+            {openRequest && (
+                <RequestDetailModal request={requests.find((request) => request.update_request_id === openRequest)} onClose={() => setOpenRequest(null)} />
+            )}
+
+            {imagePreview && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-2xl rounded-xl bg-white p-4 shadow-2xl dark:bg-zinc-800">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Captured Plate Image</h3>
+                            <button type="button" onClick={() => setImagePreview(null)} className="text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">x</button>
+                        </div>
+                        <img src={imagePreview} alt="Captured plate" className="w-full rounded-lg" />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const DashboardModal = ({
+    title,
+    isOpen,
+    onClose,
+    children,
+    maxWidth = "max-w-4xl",
+}: {
+    title: string;
+    isOpen: boolean;
+    onClose: () => void;
+    children: ReactNode;
+    maxWidth?: string;
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] overflow-y-auto">
+            <div className="flex min-h-screen items-center justify-center px-4 py-8">
+                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+                <div className={`relative w-full ${maxWidth} rounded-2xl bg-white p-5 shadow-2xl dark:bg-zinc-800 md:p-6`}>
+                    <div className="mb-5 flex items-center justify-between gap-4 border-b border-zinc-200 pb-4 dark:border-zinc-700">
+                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{title}</h2>
+                        <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">x</button>
+                    </div>
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const NotificationCard = ({ notification, compact, onMarkRead }: { notification: NotificationItem; compact?: boolean; onMarkRead?: () => void }) => {
+    const meta = notificationMeta(notification.type);
+
+    return (
+        <div className={`rounded-r-lg border-l-4 p-4 ${notification.is_read ? "border-zinc-300 bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900" : "border-blue-500 bg-blue-50 dark:bg-blue-900/20"}`}>
+            <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{notification.title || "System Notification"}</h3>
+                        {!notification.is_read && <span className="h-2 w-2 rounded-full bg-blue-500" />}
+                    </div>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">{compact ? limitText(notification.message, 100) : notification.message}</p>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                        {!compact && <span className={`rounded px-2 py-1 text-xs font-medium ${meta.className}`}>{meta.label}</span>}
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{formatRelative(notification.created_at)}</p>
+                    </div>
+                </div>
+                {!compact && !notification.is_read && onMarkRead && (
+                    <button type="button" onClick={onMarkRead} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                        Read
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -127,19 +415,191 @@ const SummaryCard = ({
     </div>
 );
 
-const QuickLink = ({ to, icon, title, sub }: { to: string; icon: ReactNode; title: string; sub: string }) => (
-    <Link to={to} className="flex items-center gap-3 rounded-lg p-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-700">
+const QuickAction = ({ onClick, icon, title, sub }: { onClick: () => void; icon: ReactNode; title: string; sub: string }) => (
+    <button type="button" onClick={onClick} className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition hover:bg-zinc-100 dark:hover:bg-zinc-700">
         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-blue-600 dark:bg-zinc-700 dark:text-blue-400">{icon}</span>
         <span>
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{title}</p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{sub}</p>
         </span>
-    </Link>
+    </button>
 );
+
+const SectionHeading = ({ title }: { title: string }) => (
+    <div className="border-t border-zinc-200 pt-5 dark:border-zinc-700">
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{title}</h3>
+    </div>
+);
+
+const ReadOnlyInfo = ({ label, value }: { label: string; value?: string }) => (
+    <div>
+        <p className="mb-1 text-xs font-semibold uppercase text-blue-700 dark:text-blue-300">{label}</p>
+        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">{value || "-"}</p>
+    </div>
+);
+
+const Field = ({
+    label,
+    name,
+    value,
+    onChange,
+    type = "text",
+    required,
+    placeholder,
+    textarea,
+    mono,
+}: {
+    label: string;
+    name: string;
+    value: string;
+    onChange: (value: string) => void;
+    type?: string;
+    required?: boolean;
+    placeholder?: string;
+    textarea?: boolean;
+    mono?: boolean;
+}) => (
+    <label className="block">
+        <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}{required ? " *" : ""}</span>
+        {textarea ? (
+            <textarea
+                name={name}
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                rows={3}
+                required={required}
+                placeholder={placeholder}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 transition focus:border-transparent focus:ring-2 focus:ring-violet-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
+            />
+        ) : (
+            <input
+                type={type}
+                name={name}
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                required={required}
+                placeholder={placeholder}
+                min={type === "number" ? 1 : undefined}
+                max={type === "number" ? 150 : undefined}
+                className={`w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 transition focus:border-transparent focus:ring-2 focus:ring-violet-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100 ${mono ? "font-mono uppercase" : ""}`}
+            />
+        )}
+    </label>
+);
+
+const RequestCard = ({ request, onOpen }: { request: UpdateRequestItem; onOpen: () => void }) => {
+    const changes = request.requested_changes;
+
+    return (
+        <button
+            type="button"
+            onClick={onOpen}
+            className="w-full rounded-xl border border-violet-200 bg-white p-4 text-left shadow-sm transition hover:border-violet-400 hover:shadow-md dark:border-violet-700 dark:bg-zinc-800 dark:hover:border-violet-500"
+        >
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid flex-1 gap-3 text-sm md:grid-cols-4">
+                    <Mini label={`Request #${request.update_request_id}`} value={changes.guest_name ?? "Guest"} strong />
+                    <Mini label="Vehicle Plate" value={changes.guest_plate_number ?? "N/A"} mono />
+                    <Mini label="Access Date" value={formatMaybeDate(changes.access_date)} />
+                    <Mini label="Submitted" value={new Date(request.created_at).toLocaleDateString()} />
+                </div>
+                <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClass(request.status)}`}>{request.status}</span>
+            </div>
+        </button>
+    );
+};
+
+const RequestDetailModal = ({ request, onClose }: { request?: UpdateRequestItem; onClose: () => void }) => {
+    if (!request) return null;
+
+    const entries = Object.entries(request.requested_changes).filter(([key]) => key !== "request_type");
+
+    return (
+        <div className="fixed inset-0 z-[120] overflow-y-auto">
+            <div className="flex min-h-screen items-center justify-center px-4 py-10">
+                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+                <div className="relative w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-800">
+                    <div className="mb-6 flex items-start justify-between gap-4 border-b border-zinc-200 pb-4 dark:border-zinc-700">
+                        <div>
+                            <div className="mb-3 flex flex-wrap items-center gap-3">
+                                <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">GUEST ACCESS</span>
+                                <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Request #{request.update_request_id}</h3>
+                                <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClass(request.status)}`}>{request.status}</span>
+                            </div>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400">Submitted on {new Date(request.created_at).toLocaleString()}</p>
+                        </div>
+                        <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">x</button>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {entries.map(([key, value]) => (
+                            <div key={key} className="rounded bg-zinc-50 p-3 dark:bg-zinc-700/50">
+                                <p className="mb-1 text-xs font-semibold uppercase text-zinc-600 dark:text-zinc-400">{labelize(key)}</p>
+                                <p className="break-words text-sm text-zinc-900 dark:text-zinc-100">{String(value || "N/A")}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {request.admin_notes && (
+                        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                            <strong>Admin notes:</strong> {request.admin_notes}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const Head = ({ children, center }: { children: string; center?: boolean }) => (
+    <th className={`px-6 py-3 text-xs font-semibold uppercase text-zinc-700 dark:text-zinc-300 ${center ? "text-center" : "text-left"}`}>{children}</th>
+);
+
+const StatMini = ({ label, value, danger }: { label: string; value: string; danger?: boolean }) => (
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
+        <p className="mb-1 text-xs font-semibold uppercase text-zinc-600 dark:text-zinc-400">{label}</p>
+        <p className={`text-2xl font-bold ${danger ? "text-red-600 dark:text-red-400" : "text-zinc-900 dark:text-zinc-100"}`}>{value}</p>
+    </div>
+);
+
+const Mini = ({ label, value, strong, mono }: { label: string; value: string; strong?: boolean; mono?: boolean }) => (
+    <div>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
+        <p className={`${strong ? "font-semibold" : ""} ${mono ? "font-mono" : ""} text-zinc-900 dark:text-zinc-100`}>{value}</p>
+    </div>
+);
+
+const EmptyCard = ({ text }: { text: string }) => (
+    <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">{text}</div>
+);
+
+const notificationMeta = (type: string) => {
+    const map: Record<string, { label: string; className: string }> = {
+        gate_open: { label: "Gate Access", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+        unauthorized: { label: "Unauthorized", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+        update_request: { label: "Update Request", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+        system: { label: "System", className: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400" },
+    };
+
+    return map[type] ?? { label: "General", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" };
+};
+
+const statusClass = (status: UpdateRequestItem["status"]) => {
+    if (status === "approved") return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
+    if (status === "rejected") return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
+    return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200";
+};
+
+const countToday = (logs: GateLog[], direction: GateLog["direction"]) => {
+    const today = new Date().toDateString();
+    return logs.filter((log) => log.direction === direction && new Date(log.logged_at).toDateString() === today).length;
+};
 
 const formatDate = (value: string) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" });
 const formatTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const formatRelative = (value: string) => new Date(value).toLocaleString();
+const formatMaybeDate = (value?: string) => value ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" }) : "N/A";
+const labelize = (value: string) => value.replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 const limitText = (value: string, limit: number) => value.length > limit ? `${value.slice(0, limit)}...` : value;
 
 const Svg = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
@@ -148,7 +608,6 @@ const Svg = ({ children, className = "" }: { children: ReactNode; className?: st
 const BarIcon = ({ className }: { className?: string }) => <Svg className={className}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 19V9m8 10V5m8 14v-7" /></Svg>;
 const ExitIcon = ({ className }: { className?: string }) => <Svg className={className}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12H3m0 0 4-4m-4 4 4 4m5-9V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2" /></Svg>;
 const LockIcon = ({ className }: { className?: string }) => <Svg className={className}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 11V8a5 5 0 0 1 10 0v3m-9 0h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z" /></Svg>;
-const UserIcon = () => <Svg><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7Z" /></Svg>;
 const ClipboardIcon = () => <Svg><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5h6m-8 4h10M7 13h10M7 17h6M9 3h6a2 2 0 0 1 2 2h1a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1a2 2 0 0 1 2-2Z" /></Svg>;
 const CarIcon = () => <Svg><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 17h14M7 17a2 2 0 1 1-4 0m18 0a2 2 0 1 1-4 0M5 17V9l2-4h10l2 4v8M7 9h10" /></Svg>;
 
