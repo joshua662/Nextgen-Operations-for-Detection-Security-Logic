@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { adminAuthApi } from '../../services/adminApi'
 import { useAuth } from '../../hooks/useAuth'
+import { AdminPanelCard, AdminPanelHeader } from '../UI/AdminPanelShell'
 
 const SystemSettings = () => {
   const { user } = useAuth()
@@ -18,10 +19,10 @@ const SystemSettings = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">System Settings</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Portal and system status overview.</p>
-      </div>
+      <AdminPanelHeader
+        title="System Settings"
+        description="Portal and system status overview."
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <SettingCard label="Signed in as" value={user ? `${user.first_name} ${user.last_name}` : 'N/A'} />
@@ -37,10 +38,10 @@ const SystemSettings = () => {
 }
 
 const SettingCard = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
+  <AdminPanelCard className="p-4">
     <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
-    <p className="mt-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">{value}</p>
-  </div>
+    <p className="mt-1 text-sm font-medium text-zinc-100">{value}</p>
+  </AdminPanelCard>
 )
 
 export default SystemSettings

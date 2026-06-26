@@ -147,9 +147,25 @@ const AuthForm = ({
 
         try {
             const isSecurityGuard = admissionForm.role === "Security Guard";
+            if (!isSecurityGuard) {
+                if (!admissionForm.contact_number.trim() || !admissionForm.plate_number.trim()) {
+                    setFieldErrors({
+                        ...(admissionForm.contact_number.trim() ? {} : { contact_number: ["Contact number is required for residents."] }),
+                        ...(admissionForm.plate_number.trim() ? {} : { plate_number: ["Plate number is required for residents."] }),
+                    });
+                    showToast("Please complete the resident contact and plate number fields.", true);
+                    setRegisterLoading(false);
+                    return;
+                }
+            }
+
             const res = isSecurityGuard
                 ? await securityGuardRegister(payload as any)
-                : await GateAccessService.residentRegister(payload);
+                : await GateAccessService.residentRegister({
+                    ...payload,
+                    contact_number: admissionForm.contact_number.trim(),
+                    plate_number: admissionForm.plate_number.trim().toUpperCase(),
+                });
 
             setRegistrationSuccess(true);
             setAdmissionForm(emptyAdmissionForm());

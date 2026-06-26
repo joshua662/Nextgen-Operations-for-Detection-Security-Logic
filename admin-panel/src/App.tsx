@@ -8,6 +8,10 @@ import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import { useState } from 'react'
 import AdminProfileModal from './components/Profile/AdminProfileModal'
+import SidebarHoverLabel from './components/Sidebar/SidebarHoverLabel'
+import { usePersistedSidebarCollapsed } from './hooks/usePersistedSidebarCollapsed'
+
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'gate-admin-sidebar-collapsed'
 
 const HomeIcon = () => (
   <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -58,7 +62,7 @@ const ProtectedLayout = () => {
   const { user, loading, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const { isCollapsed, toggleCollapsed } = usePersistedSidebarCollapsed(SIDEBAR_COLLAPSED_STORAGE_KEY)
   const navigate = useNavigate()
 
   if (loading) {
@@ -88,7 +92,7 @@ const ProtectedLayout = () => {
   const userName = `${user.last_name}, ${user.first_name}`
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-800">
+    <div className="min-h-screen bg-[#121212]">
       {/* Mobile header */}
       <header className="fixed top-0 z-50 flex h-14 w-full items-center justify-between border-b border-zinc-200 bg-zinc-50 px-4 lg:hidden dark:border-zinc-700 dark:bg-[#18181b]">
         <button
@@ -117,28 +121,30 @@ const ProtectedLayout = () => {
       <aside
         className={`fixed top-0 left-0 z-40 flex h-screen flex-col bg-[#18181b] transition-all duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 ${isCollapsed ? 'w-[76px]' : 'w-[260px]'}`}
+        } lg:translate-x-0 ${isCollapsed ? 'w-[76px] overflow-visible' : 'w-[260px]'}`}
       >
         <div className="hidden border-b border-white/5 p-4 lg:flex items-center h-[76px] shrink-0">
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`flex items-center focus:outline-none cursor-pointer transition-all ${
-              isCollapsed ? 'justify-center w-full' : 'gap-3.5'
-            }`}
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-white text-lg font-extrabold text-black shadow-md">
-              G
-            </div>
-            {!isCollapsed && (
-              <span className="truncate font-bold text-white text-lg tracking-wide text-start animate-fade-in">
-                Gate Security
-              </span>
-            )}
-          </button>
+          <SidebarHoverLabel label="Gate Security" isCollapsed={isCollapsed} variant="dark" className="w-full">
+            <button
+              onClick={toggleCollapsed}
+              className={`flex items-center focus:outline-none cursor-pointer transition-all ${
+                isCollapsed ? 'justify-center w-full' : 'gap-3.5'
+              }`}
+              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-white text-lg font-extrabold text-black shadow-md">
+                G
+              </div>
+              {!isCollapsed && (
+                <span className="truncate font-bold text-white text-lg tracking-wide text-start animate-fade-in">
+                  Gate Security
+                </span>
+              )}
+            </button>
+          </SidebarHoverLabel>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className={`flex-1 py-6 ${isCollapsed ? 'overflow-visible px-2' : 'overflow-y-auto px-4'}`}>
           {!isCollapsed ? (
             <p className="mb-4 px-2 text-[12.5px] font-bold uppercase tracking-widest text-zinc-500 animate-fade-in">
               Platform
@@ -148,79 +154,91 @@ const ProtectedLayout = () => {
           )}
           <ul className="space-y-1.5">
             <li>
-              <NavLink to="/" end onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Dashboard" : undefined}>
-                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
-                  <HomeIcon />
-                </span>
-                {!isCollapsed && <span>Dashboard</span>}
-              </NavLink>
+              <SidebarHoverLabel label="Dashboard" isCollapsed={isCollapsed} variant="dark">
+                <NavLink to="/" end onClick={closeSidebar} className={navLinkClass(isCollapsed)}>
+                  <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                    <HomeIcon />
+                  </span>
+                  {!isCollapsed && <span>Dashboard</span>}
+                </NavLink>
+              </SidebarHoverLabel>
             </li>
             <li>
-              <NavLink to="/reports" onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Activity Logs" : undefined}>
-                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
-                  <ChartBarIcon />
-                </span>
-                {!isCollapsed && <span>Activity Logs</span>}
-              </NavLink>
+              <SidebarHoverLabel label="Activity Logs" isCollapsed={isCollapsed} variant="dark">
+                <NavLink to="/reports" onClick={closeSidebar} className={navLinkClass(isCollapsed)}>
+                  <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                    <ChartBarIcon />
+                  </span>
+                  {!isCollapsed && <span>Activity Logs</span>}
+                </NavLink>
+              </SidebarHoverLabel>
             </li>
             <li>
-              <NavLink to="/notifications" onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Notifications" : undefined}>
-                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
-                  <BellIcon />
-                </span>
-                {!isCollapsed && <span>Notifications</span>}
-              </NavLink>
+              <SidebarHoverLabel label="Notifications" isCollapsed={isCollapsed} variant="dark">
+                <NavLink to="/notifications" onClick={closeSidebar} className={navLinkClass(isCollapsed)}>
+                  <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                    <BellIcon />
+                  </span>
+                  {!isCollapsed && <span>Notifications</span>}
+                </NavLink>
+              </SidebarHoverLabel>
             </li>
             <li>
-              <NavLink to="/guards" onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Staff Users" : undefined}>
-                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
-                  <UsersIcon />
-                </span>
-                {!isCollapsed && <span>Staff Users</span>}
-              </NavLink>
+              <SidebarHoverLabel label="Staff Users" isCollapsed={isCollapsed} variant="dark">
+                <NavLink to="/guards" onClick={closeSidebar} className={navLinkClass(isCollapsed)}>
+                  <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                    <UsersIcon />
+                  </span>
+                  {!isCollapsed && <span>Staff Users</span>}
+                </NavLink>
+              </SidebarHoverLabel>
             </li>
             <li>
-              <NavLink to="/settings" onClick={closeSidebar} className={navLinkClass(isCollapsed)} title={isCollapsed ? "Genders" : undefined}>
-                <span className="shrink-0 h-5 w-5 flex items-center justify-center">
-                  <TagIcon />
-                </span>
-                {!isCollapsed && <span>Genders</span>}
-              </NavLink>
+              <SidebarHoverLabel label="Genders" isCollapsed={isCollapsed} variant="dark">
+                <NavLink to="/settings" onClick={closeSidebar} className={navLinkClass(isCollapsed)}>
+                  <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                    <TagIcon />
+                  </span>
+                  {!isCollapsed && <span>Genders</span>}
+                </NavLink>
+              </SidebarHoverLabel>
             </li>
           </ul>
         </div>
         
-        <div className={`border-t border-white/5 ${isCollapsed ? 'p-2 flex justify-center' : 'p-4'}`}>
-          <button 
-            type="button"
-            onClick={() => setProfileOpen(true)}
-            title={isCollapsed ? `${userName} (${user.email || 'admin@pdp.com'})` : "Click to view profile"}
-            className={`flex items-center transition hover:bg-[#2a2a2a] cursor-pointer ${
-              isCollapsed ? 'h-10 w-10 justify-center rounded-lg bg-zinc-800 text-white' : 'w-full gap-3.5 rounded-xl p-2.5 text-left'
-            }`}
-          >
-            <div className={`flex shrink-0 items-center justify-center text-sm font-bold text-white ${
-              isCollapsed ? '' : 'h-11 w-11 rounded-xl bg-zinc-800 tracking-wider'
-            }`}>
-              {userInitials}
-            </div>
-            {!isCollapsed && (
-              <>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-bold text-white">{userName}</p>
-                  <p className="truncate text-[13px] text-zinc-400">{user.email || 'admin@pdp.com'}</p>
-                </div>
-                <div className="text-zinc-400">
-                  <ChevronUpDownIcon />
-                </div>
-              </>
-            )}
-          </button>
+        <div className={`border-t border-white/5 ${isCollapsed ? 'overflow-visible p-2 flex justify-center' : 'p-4'}`}>
+          <SidebarHoverLabel label={userName} isCollapsed={isCollapsed} variant="dark" className={isCollapsed ? 'flex justify-center' : 'w-full'}>
+            <button 
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              className={`flex items-center transition hover:bg-[#2a2a2a] cursor-pointer ${
+                isCollapsed ? 'h-10 w-10 justify-center rounded-lg bg-zinc-800 text-white' : 'w-full gap-3.5 rounded-xl p-2.5 text-left'
+              }`}
+              aria-label={isCollapsed ? userName : 'Click to view profile'}
+            >
+              <div className={`flex shrink-0 items-center justify-center text-sm font-bold text-white ${
+                isCollapsed ? '' : 'h-11 w-11 rounded-xl bg-zinc-800 tracking-wider'
+              }`}>
+                {userInitials}
+              </div>
+              {!isCollapsed && (
+                <>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-bold text-white">{userName}</p>
+                    <p className="truncate text-[13px] text-zinc-400">{user.email || 'admin@pdp.com'}</p>
+                  </div>
+                  <div className="text-zinc-400">
+                    <ChevronUpDownIcon />
+                  </div>
+                </>
+              )}
+            </button>
+          </SidebarHoverLabel>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className={`min-h-screen pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-[76px]' : 'lg:ml-[260px]'}`}>
+      <main className={`min-h-screen bg-[#121212] pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-[76px]' : 'lg:ml-[260px]'}`}>
         <div className="flex h-full w-full flex-1 flex-col gap-4 p-4 lg:p-8">
           <Outlet />
         </div>

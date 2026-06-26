@@ -330,9 +330,9 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')],
             'username' => ['sometimes', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')],
             'password' => ['sometimes', 'min:6', 'max:12', 'confirmed'],
-            'contact_number' => ['nullable', 'max:20'],
+            'contact_number' => ['required', 'max:20'],
             'address' => ['nullable', 'max:255'],
-            'plate_number' => ['nullable', 'max:20', Rule::unique('tbl_users', 'plate_number')],
+            'plate_number' => ['required', 'max:20', Rule::unique('tbl_users', 'plate_number')],
             'car_model' => ['nullable', 'max:55'],
             'car_color' => ['nullable', 'max:55'],
         ]);
@@ -437,6 +437,29 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
         $user = $request->user();
+
+        if ($user->isSecurityGuard()) {
+            $validated = $request->validate([
+                'first_name' => ['required', 'max:55'],
+                'middle_name' => ['nullable', 'max:55'],
+                'last_name' => ['required', 'max:55'],
+                'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')->ignore($user->user_id, 'user_id')],
+                'contact_number' => ['required', 'max:20'],
+            ]);
+
+            $user->update([
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'],
+                'contact_number' => $validated['contact_number'],
+            ]);
+
+            return response()->json([
+                'message' => 'Profile updated successfully.',
+                'user' => $user->load('gender'),
+            ], 200);
+        }
 
         if (! $user->isResident()) {
             return response()->json(['message' => 'Forbidden.'], 403);
