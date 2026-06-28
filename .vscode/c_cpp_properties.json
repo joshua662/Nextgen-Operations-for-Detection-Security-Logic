@@ -1,0 +1,19 @@
+{
+  "configurations": [
+    {
+      "name": "Arduino",
+      "includePath": [
+        "C:/Users/joshua/Documents/Arduino/libraries/**",
+        "C:/Program Files (x86)/Arduino/hardware/arduino/avr/cores/arduino",
+        "C:/Users/joshua/AppData/Local/Arduino15/packages/esp32/hardware/esp32/2.0.14/libraries/**",
+        "C:/Users/joshua/AppData/Local/Arduino15/packages/esp32/hardware/esp32/2.0.14/cores/esp32"
+      ],
+      "defines": [],
+      "compilerPath": "C:/Program Files (x86)/Arduino/hardware/tools/avr/bin/avr-gcc.exe",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-gcc-x64"
+    }
+  ],
+  "version": 4
+}
