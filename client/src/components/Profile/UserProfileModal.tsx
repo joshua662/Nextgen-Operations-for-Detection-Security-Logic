@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type FC, type ReactNode } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import GateAccessService from "../../services/GateAccessService";
 import GenderService from "../../services/GenderService";
-import IdPrintCardModal from "./IdPrintCardModal";
 
 export interface UserProfileModalProps {
   isOpen: boolean;
@@ -65,7 +64,6 @@ const buildFormFromUser = (user: UserProfileModalProps["user"]): ProfileForm => 
 const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, onLogout }) => {
   const { refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [cardModalOpen, setCardModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
@@ -77,7 +75,6 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
   useEffect(() => {
     if (!isOpen) {
       setIsEditing(false);
-      setCardModalOpen(false);
       setSaveError("");
       setConfirmSaveOpen(false);
       setStatusModal(null);
@@ -111,8 +108,6 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
 
   const isResident = user.role === "resident";
   const roleDisplay = isResident ? "Resident" : "Security Guard";
-  const cardRole = isResident ? "resident" : "security_guard";
-  const cardRoleLabel = isResident ? "Resident" : "Security Guard";
 
   if (!isOpen) return null;
 
@@ -359,31 +354,6 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
                   </div>
                 )}
 
-                <div className="rounded-xl border border-[#333] bg-[#242424] p-6">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-6 w-6 rounded-md bg-[#2f2f2f] flex items-center justify-center">
-                        <svg className="h-3.5 w-3.5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h4 className="text-[17px] font-bold text-white">Member ID Card</h4>
-                        <p className="text-xs text-zinc-500">Open preview and print your gate access card</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCardModalOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V4h12v5M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v7H6v-7z" />
-                      </svg>
-                      Print Card
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <div className="h-fit rounded-xl border border-[#333] bg-[#242424] p-6">
@@ -439,18 +409,6 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
           </div>
         </div>
       </div>
-
-      <IdPrintCardModal
-        isOpen={cardModalOpen}
-        onClose={() => setCardModalOpen(false)}
-        userId={user.user_id}
-        role={cardRole}
-        fullName={fullName.toUpperCase()}
-        roleLabel={cardRoleLabel.toUpperCase()}
-        contactNumber={user.contact_number}
-        email={user.email}
-        plateNumber={user.plate_number}
-      />
 
       <ProfileActionModal
         isOpen={confirmSaveOpen}

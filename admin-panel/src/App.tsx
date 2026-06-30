@@ -199,7 +199,7 @@ const ProtectedLayout = () => {
                   <span className="shrink-0 h-5 w-5 flex items-center justify-center">
                     <TagIcon />
                   </span>
-                  {!isCollapsed && <span>Genders</span>}
+                  {!isCollapsed && <span>System</span>}
                 </NavLink>
               </SidebarHoverLabel>
             </li>
