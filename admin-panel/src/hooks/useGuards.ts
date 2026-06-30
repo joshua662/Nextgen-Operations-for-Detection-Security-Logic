@@ -12,7 +12,7 @@ export const useGuards = (search = '') => {
     guardApi
       .loadGuards(1, search)
       .then((res) => setGuards(res.data.users?.data ?? []))
-      .catch(() => setError('Failed to load security guards.'))
+      .catch(() => setError('Failed to load staff users.'))
       .finally(() => setLoading(false))
   }, [search])
 

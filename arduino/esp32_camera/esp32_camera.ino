@@ -20,6 +20,7 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 #include "esp_http_server.h"
+#include "board_config.h"
 
 // ==========================================
 // DEVICE ROLE — change before each upload
@@ -45,7 +46,7 @@ const int STREAM_PORT = 81;
 #endif
 
 // Optional static IP — set USE_STATIC_IP true for a fixed LAN address.
-#define USE_STATIC_IP false
+#define USE_STATIC_IP true
 IPAddress staticIP(192, 168, 2, DEFAULT_STATIC_IP_4);
 IPAddress gatewayIP(192, 168, 2, 1);
 IPAddress subnetMask(255, 255, 255, 0);
@@ -53,8 +54,8 @@ IPAddress subnetMask(255, 255, 255, 0);
 // ==========================================
 // WIFI CREDENTIALS (Configure these!)
 // ==========================================
-const char* ssid = "MERCUSYS_D066";
-const char* password = "31393928";
+const char* ssid = "GlobeAtHome_530C8_5";
+const char* password = "32ACD3AD";
 
 // ==========================================
 // CAMERA PIN DEFINITIONS (AI-THINKER MODEL)

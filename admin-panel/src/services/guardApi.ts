@@ -7,8 +7,14 @@ export interface GuardUser {
   last_name: string
   middle_name?: string | null
   email?: string | null
+  contact_number?: string | null
+  address?: string | null
+  plate_number?: string | null
+  car_model?: string | null
+  car_color?: string | null
   role: string
   birth_date?: string
+  age?: string | number | null
   gender?: { gender_id: number; gender: string } | null
 }
 
@@ -34,6 +40,9 @@ export const guardApi = {
     const q = search ? `&search=${encodeURIComponent(search)}` : ''
     return adminApi.get<{ users: { data: GuardUser[] } }>(`/user/loadUsers?page=${page}${q}`)
   },
+
+  loadMemberCardQr: (userId: number) =>
+    adminApi.get<{ qr_code: string }>(`/user/memberCardQr/${userId}`),
 
   loadGuardActivityLogs: (
     page = 1,

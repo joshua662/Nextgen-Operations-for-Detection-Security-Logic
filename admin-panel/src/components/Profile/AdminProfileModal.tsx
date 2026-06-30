@@ -83,26 +83,7 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#333] bg-[#242424] p-6">
-                <div className="mb-5 flex items-center gap-3">
-                  <div className="h-6 w-6 rounded-md bg-[#3f2a4f]"></div>
-                  <h4 className="text-[17px] font-bold text-white">Vehicle Information</h4>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="rounded-lg border border-blue-900/50 bg-[#1c2230] p-4 shadow-inner">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#4d82c2]">Plate Number</p>
-                    <p className="mt-1.5 text-[15px] font-bold text-gray-100">—</p>
-                  </div>
-                  <div className="rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Car Model</p>
-                    <p className="mt-1.5 text-[15px] font-bold text-gray-100">—</p>
-                  </div>
-                  <div className="col-span-1 sm:col-span-2 rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Car Color</p>
-                    <p className="mt-1.5 text-[15px] font-bold text-gray-100">—</p>
-                  </div>
-                </div>
-              </div>
+              
             </div>
 
             <div className="h-fit rounded-xl border border-[#333] bg-[#242424] p-6">
