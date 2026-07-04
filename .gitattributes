@@ -1,3 +1,4 @@
 audio/rfid_rf522/oracleJdk-26/lib/modules filter=lfs diff=lfs merge=lfs -text
 arduino/rfid_rc522/oracleJdk-26/lib/modules filter=lfs diff=lfs merge=lfs -text
+<exact/path/from_above> filter=lfs diff=lfs merge=lfs -text
 oracleJdk-26/lib/modules filter=lfs diff=lfs merge=lfs -text
