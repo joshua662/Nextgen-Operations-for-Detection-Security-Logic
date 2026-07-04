@@ -54,8 +54,8 @@ IPAddress subnetMask(255, 255, 255, 0);
 // ==========================================
 // WIFI CREDENTIALS (Configure these!)
 // ==========================================
-const char* ssid = "GlobeAtHome_530C8_5";
-const char* password = "32ACD3AD";
+const char* ssid = "MERCUSYS_D066";
+const char* password = "31393928";
 
 // ==========================================
 // CAMERA PIN DEFINITIONS (AI-THINKER MODEL)

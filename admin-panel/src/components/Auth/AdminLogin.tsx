@@ -88,20 +88,12 @@ const AdminLogin = () => {
         }
     };
 
-    const handleRegister = async (e: FormEvent) => {
-        e.preventDefault();
-        const expected = captchaA + captchaB;
-        const got = parseInt(captchaAnswer.trim(), 10);
-        if (Number.isNaN(got) || got !== expected) {
-            setCaptchaError("Please solve the verification correctly.");
-            return;
-        }
-        setCaptchaError("");
+    const handleRegister = async () => {
         setRegisterLoading(true);
         setFieldErrors({});
 
         try {
-            await register({
+            const res = await register({
                 first_name: form.first_name.trim(),
                 middle_name: form.middle_name.trim() || undefined,
                 last_name: form.last_name.trim(),
@@ -110,7 +102,7 @@ const AdminLogin = () => {
                 email: form.email.trim(),
             });
             setForm(emptyForm());
-            showToast("Registration complete. Credentials were sent to the registered email.", false);
+            showToast((res as any)?.data?.message ?? "Registration complete. Credentials were sent to the registered email.", false);
         } catch (error) {
             const err = error as {
                 response?: { data?: { message?: string; errors?: Record<string, string[]> } };

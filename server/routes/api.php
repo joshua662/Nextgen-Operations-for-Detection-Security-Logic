@@ -54,6 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/loadResidents', 'loadResidents');
             Route::post('/storeResident', 'storeResident');
             Route::put('/updateResident/{resident}', 'updateResident');
+            Route::put('/updateRfid/{resident}', 'updateRfid');
             Route::delete('/destroyResident/{resident}', 'destroyResident');
         });
 

@@ -38,6 +38,11 @@ class ResidentGateAccessWelcomeMail extends Mailable
                 'username' => $this->user->username,
                 'password' => $this->plainPassword,
                 'portalUrl' => $this->portalUrl,
+                'portalLabel' => match ($this->user->role) {
+                    'admin' => 'admin monitoring portal',
+                    'security_guard' => 'security guard portal',
+                    default => 'resident portal',
+                },
                 'phone' => config('gate.security_office.phone'),
                 'securityEmail' => config('gate.security_office.email'),
                 'hours' => config('gate.security_office.hours'),

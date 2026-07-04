@@ -67,12 +67,13 @@ class ResidentController extends Controller
 
         $mailError = null;
 
-        $credentialsMailbox = $user->email;
+        $credentialsMailbox = trim((string) $user->email);
 
         if (! filter_var($credentialsMailbox, FILTER_VALIDATE_EMAIL)) {
             $mailError = 'The registered resident does not have a valid email address.';
         } else {
             try {
+                \Illuminate\Support\Facades\Log::info("Sending credentials email to: " . $credentialsMailbox);
                 Mail::to($credentialsMailbox)->send(new ResidentGateAccessWelcomeMail(
                     $user,
                     $plainPassword,
@@ -140,6 +141,37 @@ class ResidentController extends Controller
         $resident->update(['is_deleted' => true]);
 
         return response()->json(['message' => 'Resident successfully deleted.'], 200);
+    }
+
+    public function updateRfid(Request $request, User $resident)
+    {
+        if ($resident->role !== 'resident' || $resident->is_deleted) {
+            return response()->json(['message' => 'Resident not found.'], 404);
+        }
+
+        if (!empty($resident->rfid_card_uid)) {
+            return response()->json([
+                'message' => 'RFID UID has already been assigned and cannot be changed.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'rfid_card_uid' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('tbl_users', 'rfid_card_uid')->ignore($resident->user_id, 'user_id'),
+            ],
+        ]);
+
+        $resident->update([
+            'rfid_card_uid' => $validated['rfid_card_uid'],
+        ]);
+
+        return response()->json([
+            'message' => 'RFID UID successfully assigned.',
+            'resident' => $resident->load('gender'),
+        ], 200);
     }
 
     private function validateResident(Request $request, ?int $ignoreUserId = null): array

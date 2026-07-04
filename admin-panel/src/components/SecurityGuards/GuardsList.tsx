@@ -16,7 +16,7 @@ const roleLabel = (role: string) => (role === 'resident' ? 'Resident' : 'Securit
 
 const GuardsList = () => {
   const [search, setSearch] = useState('')
-  const { guards, loading, error } = useGuards(search)
+  const { guards, loading, error, refresh } = useGuards(search)
   const [selectedRole, setSelectedRole] = useState<StaffRole>('security_guard')
   const [selectedStaff, setSelectedStaff] = useState<GuardUser | null>(null)
   const staffUsers = guards.filter((user) => user.role === 'security_guard' || user.role === 'resident')
@@ -65,7 +65,11 @@ const GuardsList = () => {
         <p className="py-10 text-sm text-zinc-500">Loading staff users...</p>
       ) : (
         <AdminDataTable
-          columns={['Name', 'Role', 'Username', 'Email', 'Actions']}
+          columns={
+            selectedRole === 'resident'
+              ? ['Name', 'Role', 'Username', 'Email', 'RFID UID', 'Actions']
+              : ['Name', 'Role', 'Username', 'Email', 'Actions']
+          }
           isEmpty={filteredStaff.length === 0}
           emptyMessage={`No ${roleLabel(selectedRole).toLowerCase()} users found.`}
         >
@@ -77,6 +81,20 @@ const GuardsList = () => {
               <AdminTableCell muted>{roleLabel(guard.role)}</AdminTableCell>
               <AdminTableCell mono>{guard.username}</AdminTableCell>
               <AdminTableCell muted>{guard.email ?? 'N/A'}</AdminTableCell>
+              {selectedRole === 'resident' && (
+                <AdminTableCell mono>
+                  {guard.rfid_card_uid ? (
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      {guard.rfid_card_uid}
+                    </span>
+                  ) : (
+                    <span className="text-zinc-500 italic">Not Set</span>
+                  )}
+                </AdminTableCell>
+              )}
               <AdminTableCell>
                 <button
                   type="button"
@@ -92,7 +110,11 @@ const GuardsList = () => {
       )}
 
       {selectedStaff !== null && (
-        <GuardDetailsModal user={selectedStaff} onClose={() => setSelectedStaff(null)} />
+        <GuardDetailsModal
+          user={selectedStaff}
+          onClose={() => setSelectedStaff(null)}
+          onUpdate={refresh}
+        />
       )}
     </div>
   )

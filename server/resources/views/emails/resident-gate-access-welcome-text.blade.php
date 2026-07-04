@@ -2,7 +2,7 @@ Gate Access System — {{ $subdivisionName }}
 
 Dear {{ $fullName }},
 
-On behalf of the subdivision security office, we are pleased to inform you that your enrollment in the Gate Access System is now complete. You may use the resident portal to review your vehicle entry and exit history, receive gate-related notifications, and stay informed of access activity associated with your registered plate.
+On behalf of the subdivision security office, we are pleased to inform you that your enrollment in the Gate Access System is now complete. You may use the {{ $portalLabel }} to review gate activity, receive gate-related notifications, and stay informed about your account.
 
 YOUR PORTAL LOGIN CREDENTIALS
 --------------------------------

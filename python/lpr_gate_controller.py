@@ -1,4 +1,4 @@
-#!/usr/bin/env char
+#!/usr/bin/env python
 import os
 import re
 import time
@@ -6,9 +6,17 @@ import sys
 import threading
 import queue
 import requests
-import cv2
-import easyocr
-import numpy as np
+
+# Try importing camera/LPR dependencies (only needed if using license plate recognition)
+try:
+    import cv2
+    import easyocr
+    import numpy as np
+    LPR_AVAILABLE = True
+except ImportError:
+    LPR_AVAILABLE = False
+    print("Note: Camera/LPR libraries (cv2, easyocr, numpy) not installed.")
+    print("      RFID gate access will still work. LPR camera features are disabled.")
 
 # Try importing serial (pyserial)
 try:
@@ -134,22 +142,40 @@ def serial_reader_thread():
                     print(f"[Arduino -> Serial] {line}")
                     
                     if line == "PASSED":
-                        print("Vehicle successfully passed. Updating Laravel status to closed...")
+                        print("Vehicle successfully passed entrance. Updating Laravel status to closed...")
+                        sync_gate_status_with_laravel("closed")
+                    elif line == "EXIT_PASSED":
+                        print("Vehicle successfully passed exit. Updating Laravel status...")
                         sync_gate_status_with_laravel("closed")
                     elif line == "BLOCKED":
                         print("WARNING: Gate close attempt blocked! Vehicle still under the gate.")
-                        # Sync status back to open in backend since it could not close safely
                         sync_gate_status_with_laravel("open")
                     elif line.startswith("STATUS:"):
                         status = line.split(":")[1].lower()
                         if status in ["open", "closed"]:
                             gate_state = status
-                    elif line.startswith("RFID:"):
-                        rfid_uid = line.split(":")[1].strip()
-                        print(f"\n[RFID Card Tapped] UID: {rfid_uid}")
+                    elif line.startswith("RFID_IN:") or line.startswith("RFID_OUT:"):
+                        # Direction-aware RFID scan from merged Arduino sketch
+                        if line.startswith("RFID_IN:"):
+                            rfid_uid = line[len("RFID_IN:"):].strip()
+                            direction = "IN"
+                        else:
+                            rfid_uid = line[len("RFID_OUT:"):].strip()
+                            direction = "OUT"
+                        print(f"\n[RFID Card Tapped] UID: {rfid_uid} | Direction: {direction}")
                         verify_thread = threading.Thread(
-                            target=process_rfid_verification, 
-                            args=(rfid_uid,)
+                            target=process_rfid_verification,
+                            args=(rfid_uid, direction)
+                        )
+                        verify_thread.daemon = True
+                        verify_thread.start()
+                    elif line.startswith("RFID:"):
+                        # Backward compatible: plain RFID: prefix (defaults to IN)
+                        rfid_uid = line.split(":")[1].strip()
+                        print(f"\n[RFID Card Tapped] UID: {rfid_uid} | Direction: IN")
+                        verify_thread = threading.Thread(
+                            target=process_rfid_verification,
+                            args=(rfid_uid, "IN")
                         )
                         verify_thread.daemon = True
                         verify_thread.start()
@@ -411,15 +437,24 @@ def process_plate_verification(plate_number):
     else:
         print(f"ACCESS DENIED for plate: {plate_number}")
 
-def process_rfid_verification(rfid_uid):
-    """Processes RFID verification and opens gate if authorized."""
+def process_rfid_verification(rfid_uid, direction="IN"):
+    """Processes RFID verification and opens the correct gate if authorized.
+    
+    Direction determines which gate servo to open:
+      IN  -> Entrance gate (command 'O' to open, 'C' to close)
+      OUT -> Exit gate     (command 'X' to open, 'Z' to close)
+    """
     verify_url = f"{API_BASE_URL}/gate/verify"
     payload = {
         "rfid_card_uid": rfid_uid,
-        "direction": "IN"
+        "direction": direction
     }
     
-    print(f"Verifying RFID '{rfid_uid}' with Laravel API...")
+    open_cmd = 'O' if direction == 'IN' else 'X'
+    close_cmd = 'C' if direction == 'IN' else 'Z'
+    gate_label = 'ENTRANCE' if direction == 'IN' else 'EXIT'
+    
+    print(f"Verifying RFID '{rfid_uid}' ({direction}) with Laravel API...")
     try:
         response = requests.post(verify_url, json=payload, headers=headers, timeout=5)
         if response.status_code == 200:
@@ -427,18 +462,18 @@ def process_rfid_verification(rfid_uid):
             authorized = res_data.get("authorized", False)
             
             if authorized:
-                print(f"ACCESS GRANTED for RFID: {rfid_uid}")
-                send_arduino_command('O')
+                print(f"ACCESS GRANTED for RFID: {rfid_uid} -> Opening {gate_label} gate")
+                send_arduino_command(open_cmd)
                 
-                # Fallback close timer if no physical sensor triggers close
+                # Fallback close timer if no physical ultrasonic sensor
                 if arduino is None:
                     time.sleep(7)
-                    print("Simulation: Timer expired, closing gate...")
-                    send_arduino_command('C')
+                    print(f"Simulation: Timer expired, closing {gate_label} gate...")
+                    send_arduino_command(close_cmd)
             else:
                 print(f"ACCESS DENIED for RFID: {rfid_uid}")
         else:
-            print(f"RFID verification request failed (HTTP {response.status_code}): {response.text}")
+            print(f"RFID verification failed (HTTP {response.status_code}): {response.text}")
     except Exception as e:
         print(f"Network error during RFID verification: {e}")
 
@@ -467,9 +502,19 @@ if __name__ == "__main__":
     sync_t.daemon = True
     sync_t.start()
     
-    # 4. Run Main LPR Loop (Opencv camera feed + EasyOCR)
+    # 4. Run Main LPR Loop or RFID-only mode
     try:
-        lpr_main()
+        if LPR_AVAILABLE:
+            lpr_main()
+        else:
+            print("\n=============================================")
+            print("  Running in RFID-ONLY mode (no camera LPR)")
+            print("  RFID scans will be processed via Serial.")
+            print("  Press Ctrl+C to stop.")
+            print("=============================================\n")
+            # Keep the main thread alive so background threads (serial reader, dashboard sync) keep running
+            while running:
+                time.sleep(1)
     except KeyboardInterrupt:
         print("\nShutdown signal received.")
     finally:

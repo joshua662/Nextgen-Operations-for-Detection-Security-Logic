@@ -12,6 +12,7 @@ export interface GuardUser {
   plate_number?: string | null
   car_model?: string | null
   car_color?: string | null
+  rfid_card_uid?: string | null
   role: string
   birth_date?: string
   age?: string | number | null
@@ -43,6 +44,12 @@ export const guardApi = {
 
   loadMemberCardQr: (userId: number) =>
     adminApi.get<{ qr_code: string }>(`/user/memberCardQr/${userId}`),
+
+  updateResidentRfid: (userId: number, rfid_card_uid: string) =>
+    adminApi.put<{ message: string; resident: GuardUser }>(
+      `/resident/updateRfid/${userId}`,
+      { rfid_card_uid },
+    ),
 
   loadGuardActivityLogs: (
     page = 1,

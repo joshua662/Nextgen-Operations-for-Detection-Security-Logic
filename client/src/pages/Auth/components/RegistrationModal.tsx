@@ -130,6 +130,46 @@ const SubmitAdmissionButton = ({ loading }: { loading: boolean }) => (
     </button>
 );
 
+const ConfirmationDialog = ({
+    email,
+    loading,
+    onCancel,
+    onConfirm,
+}: {
+    email: string;
+    loading: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) => (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+        <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#15112f] p-7 text-white shadow-2xl">
+            <h3 className="text-xl font-semibold">Confirm registration</h3>
+            <p className="mt-3 text-sm leading-relaxed text-violet-100/80">
+                Create this account and send the generated username and password to <span className="font-semibold text-white">{email}</span>?
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    disabled={loading}
+                    className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-violet-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Review
+                </button>
+                <button
+                    type="button"
+                    onClick={onConfirm}
+                    disabled={loading}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {loading && <Spinner size="xs" />}
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
 const ANIM_DURATION = 300;
 
 const RegistrationModal = ({
@@ -143,6 +183,7 @@ const RegistrationModal = ({
     const [captchaAnswer, setCaptchaAnswer] = useState("");
     const [captchaError, setCaptchaError] = useState("");
     const [toastVisible, setToastVisible] = useState(false);
+    const [confirmationOpen, setConfirmationOpen] = useState(false);
 
     const [isMounted, setIsMounted] = useState(false);
     const [isAnimatingOut, setIsAnimatingOut] = useState(false);
@@ -191,6 +232,11 @@ const RegistrationModal = ({
             return;
         }
         setCaptchaError("");
+        setConfirmationOpen(true);
+    };
+
+    const handleConfirmRegistration = () => {
+        setConfirmationOpen(false);
         void onRegister();
     };
 
@@ -218,6 +264,14 @@ const RegistrationModal = ({
                 size="large"
                 actionLabel="Ok"
             />
+            {confirmationOpen && (
+                <ConfirmationDialog
+                    email={form.email.trim() || "the registered email address"}
+                    loading={loading}
+                    onCancel={() => setConfirmationOpen(false)}
+                    onConfirm={handleConfirmRegistration}
+                />
+            )}
 
             <div
                 className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden"

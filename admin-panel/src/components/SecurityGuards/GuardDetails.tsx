@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { GuardUser } from '../../services/guardApi'
+import { guardApi, type GuardUser } from '../../services/guardApi'
 import { formatDateShort } from '../../utils/formatDate'
 import GuardActivityLogs from './GuardActivityLogs'
 import { MemberCardModal } from './MemberCard'
@@ -8,6 +8,7 @@ import { MemberCardModal } from './MemberCard'
 interface GuardDetailsProps {
   user: GuardUser
   onClose: () => void
+  onUpdate?: () => void
 }
 
 const roleLabel = (role: string) => (role === 'resident' ? 'Resident' : 'Security Guard')
@@ -15,7 +16,108 @@ const roleLabel = (role: string) => (role === 'resident' ? 'Resident' : 'Securit
 const userFullName = (user: GuardUser) =>
   [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' ')
 
-const GuardDetailsModal = ({ user, onClose }: GuardDetailsProps) => {
+const LockIcon = () => (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+  </svg>
+)
+
+const ShieldCheckIcon = () => (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+  </svg>
+)
+
+const RfidSection = ({ user, onUpdate }: { user: GuardUser; onUpdate?: () => void }) => {
+  const [rfidInput, setRfidInput] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [savedUid, setSavedUid] = useState(user.rfid_card_uid ?? '')
+  const isLocked = !!savedUid
+
+  const handleSave = async () => {
+    const trimmed = rfidInput.trim()
+    if (!trimmed) {
+      setError('Please enter an RFID UID.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    try {
+      const res = await guardApi.updateResidentRfid(user.user_id, trimmed)
+      setSavedUid(res.data.resident.rfid_card_uid ?? trimmed)
+      setRfidInput('')
+      onUpdate?.()
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } }
+      setError(axiosErr.response?.data?.message || 'Failed to save RFID UID.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (isLocked) {
+    return (
+      <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
+            <ShieldCheckIcon />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">RFID UID</p>
+            <p className="mt-1 font-mono text-sm font-semibold text-emerald-300">{savedUid}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-1.5 text-xs font-medium text-zinc-400">
+            <LockIcon />
+            Permanently Assigned
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#1f1f23] p-5">
+      <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Assign RFID UID</p>
+      <p className="mt-1 text-sm text-zinc-400">
+        Enter the RFID card UID for this resident. Once assigned, it <strong className="text-amber-400">cannot be changed</strong>.
+      </p>
+      <div className="mt-4 flex gap-3">
+        <input
+          type="text"
+          value={rfidInput}
+          onChange={(e) => { setRfidInput(e.target.value); setError('') }}
+          placeholder="e.g. A3 B2 C1 D0"
+          maxLength={50}
+          className="flex-1 rounded-lg border border-white/10 bg-[#121212] px-4 py-2.5 font-mono text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-[#C5A073] focus:ring-1 focus:ring-[#C5A073]/40"
+        />
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !rfidInput.trim()}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#C5A073] px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-[#d4b589] disabled:opacity-50"
+        >
+          {saving ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Saving...
+            </>
+          ) : 'Assign RFID'}
+        </button>
+      </div>
+      {error && (
+        <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
+      )}
+    </div>
+  )
+}
+
+const GuardDetailsModal = ({ user, onClose, onUpdate }: GuardDetailsProps) => {
   const [cardOpen, setCardOpen] = useState(false)
   const isResident = user.role === 'resident'
 
@@ -68,6 +170,8 @@ const GuardDetailsModal = ({ user, onClose }: GuardDetailsProps) => {
                 </div>
               </div>
             </div>
+
+            {isResident && <RfidSection user={user} onUpdate={onUpdate} />}
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Detail label="Email" value={user.email ?? 'N/A'} />

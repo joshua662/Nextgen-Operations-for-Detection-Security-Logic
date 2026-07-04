@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1020" viewBox="0 0 1600 1020">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111827; }
+      .subtitle { font: 400 15px Arial, sans-serif; fill: #374151; }
+      .section { font: 700 18px Arial, sans-serif; fill: #111827; }
+      .label { font: 600 14px Arial, sans-serif; fill: #111827; }
+      .small { font: 12px Arial, sans-serif; fill: #374151; }
+      .tiny { font: 11px Arial, sans-serif; fill: #4b5563; }
+      .pin { font: 12px 'Consolas', monospace; fill: #111827; }
+      .note { font: 13px Arial, sans-serif; fill: #7c2d12; }
+      .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 16; ry: 16; }
+      .arduino { fill: #e0f2fe; stroke: #0284c7; stroke-width: 3; rx: 20; ry: 20; }
+      .power { fill: #ecfccb; stroke: #65a30d; stroke-width: 2; rx: 16; ry: 16; }
+      .camera { fill: #ede9fe; stroke: #7c3aed; stroke-width: 2; rx: 16; ry: 16; }
+      .sensor { fill: #fef3c7; stroke: #d97706; stroke-width: 2; rx: 16; ry: 16; }
+      .servo { fill: #fee2e2; stroke: #dc2626; stroke-width: 2; rx: 16; ry: 16; }
+      .rfid { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; rx: 16; ry: 16; }
+      .breadboard { fill: #fff7ed; stroke: #ea580c; stroke-width: 2; rx: 16; ry: 16; }
+      .wire5v { stroke: #dc2626; stroke-width: 4; fill: none; }
+      .wiregnd { stroke: #111827; stroke-width: 4; fill: none; }
+      .wiresig { stroke: #2563eb; stroke-width: 4; fill: none; }
+      .wirespi { stroke: #16a34a; stroke-width: 4; fill: none; }
+      .wirewifi { stroke: #7c3aed; stroke-width: 4; fill: none; stroke-dasharray: 8 8; }
+      .wireaux { stroke: #d97706; stroke-width: 4; fill: none; }
+    </style>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/>
+    </marker>
+    <marker id="arrowBlack" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#111827"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#16a34a"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#d97706"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="1020" fill="#f8fafc"/>
+
+  <text x="40" y="48" class="title">Arduino Uno wiring diagram</text>
+  <text x="40" y="76" class="subtitle">2 servo motors, 2 ESP32-CAM-MB, 2 ultrasonic sensors, 1 breadboard, and 1 RFID RC522</text>
+
+  <rect x="35" y="90" width="1530" height="78" class="power"/>
+  <text x="55" y="122" class="section">Power notes</text>
+  <text x="55" y="148" class="note">Use an external 5V supply for both servos. Do not power two servos from the Arduino 5V pin. All grounds must be connected together.</text>
+
+  <rect x="520" y="220" width="500" height="560" class="arduino"/>
+  <text x="690" y="255" class="title" style="font-size:26px;">Arduino Uno</text>
+  <text x="560" y="290" class="section">Digital pins used</text>
+  <text x="560" y="325" class="pin">D3  = Ultrasonic 1 TRIG</text>
+  <text x="560" y="350" class="pin">D4  = Ultrasonic 1 ECHO</text>
+  <text x="560" y="375" class="pin">D5  = Servo 1 signal</text>
+  <text x="560" y="400" class="pin">D6  = Servo 2 signal</text>
+  <text x="560" y="425" class="pin">D7  = Ultrasonic 2 TRIG</text>
+  <text x="560" y="450" class="pin">D8  = Ultrasonic 2 ECHO</text>
+  <text x="560" y="475" class="pin">D9  = RC522 RST</text>
+  <text x="560" y="500" class="pin">D10 = RC522 SDA / SS</text>
+  <text x="560" y="525" class="pin">D11 = RC522 MOSI</text>
+  <text x="560" y="550" class="pin">D12 = RC522 MISO</text>
+  <text x="560" y="575" class="pin">D13 = RC522 SCK</text>
+  <text x="560" y="625" class="section">Power pins used</text>
+  <text x="560" y="655" class="pin">5V   = Ultrasonic sensors VCC</text>
+  <text x="560" y="680" class="pin">3.3V = RC522 VCC only</text>
+  <text x="560" y="705" class="pin">GND  = Common ground</text>
+  <text x="560" y="745" class="small">ESP32-CAM-MB boards are separate Wi-Fi devices in this setup.</text>
+
+  <rect x="60" y="230" width="250" height="180" class="rfid"/>
+  <text x="120" y="262" class="section">RFID RC522</text>
+  <text x="82" y="295" class="pin">SDA/SS → D10</text>
+  <text x="82" y="320" class="pin">SCK    → D13</text>
+  <text x="82" y="345" class="pin">MOSI   → D11</text>
+  <text x="82" y="370" class="pin">MISO   → D12</text>
+  <text x="82" y="395" class="pin">RST    → D9</text>
+  <text x="82" y="420" class="pin">VCC    → 3.3V</text>
+  <text x="82" y="445" class="pin">GND    → GND</text>
+
+  <rect x="70" y="520" width="230" height="130" class="sensor"/>
+  <text x="102" y="552" class="section">Ultrasonic 1</text>
+  <text x="92" y="585" class="pin">TRIG → D3</text>
+  <text x="92" y="610" class="pin">ECHO → D4</text>
+  <text x="92" y="635" class="pin">VCC → 5V, GND → GND</text>
+
+  <rect x="70" y="690" width="230" height="130" class="sensor"/>
+  <text x="102" y="722" class="section">Ultrasonic 2</text>
+  <text x="92" y="755" class="pin">TRIG → D7</text>
+  <text x="92" y="780" class="pin">ECHO → D8</text>
+  <text x="92" y="805" class="pin">VCC → 5V, GND → GND</text>
+
+  <rect x="1120" y="260" width="250" height="150" class="servo"/>
+  <text x="1190" y="292" class="section">Servo 1</text>
+  <text x="1142" y="325" class="pin">Signal → D5</text>
+  <text x="1142" y="350" class="pin">VCC → external 5V</text>
+  <text x="1142" y="375" class="pin">GND → common GND</text>
+
+  <rect x="1120" y="455" width="250" height="150" class="servo"/>
+  <text x="1190" y="487" class="section">Servo 2</text>
+  <text x="1142" y="520" class="pin">Signal → D6</text>
+  <text x="1142" y="545" class="pin">VCC → external 5V</text>
+  <text x="1142" y="570" class="pin">GND → common GND</text>
+
+  <rect x="1120" y="655" width="250" height="150" class="breadboard"/>
+  <text x="1186" y="687" class="section">Breadboard</text>
+  <text x="1146" y="720" class="pin">+ rail = external 5V</text>
+  <text x="1146" y="745" class="pin">- rail = common GND</text>
+  <text x="1146" y="770" class="tiny">Use this to distribute servo power</text>
+
+  <rect x="1270" y="130" width="250" height="95" class="camera"/>
+  <text x="1320" y="163" class="section">ESP32-CAM-MB 1</text>
+  <text x="1292" y="190" class="small">USB power/programming</text>
+  <text x="1292" y="210" class="small">Wi-Fi only, no Uno signal wire</text>
+
+  <rect x="1270" y="840" width="250" height="95" class="camera"/>
+  <text x="1320" y="873" class="section">ESP32-CAM-MB 2</text>
+  <text x="1292" y="900" class="small">USB power/programming</text>
+  <text x="1292" y="920" class="small">Wi-Fi only, no Uno signal wire</text>
+
+  <rect x="1260" y="480" width="265" height="110" class="power"/>
+  <text x="1305" y="512" class="section">External 5V supply</text>
+  <text x="1285" y="540" class="pin">+5V → breadboard + rail</text>
+  <text x="1285" y="565" class="pin">GND → breadboard - rail</text>
+
+  <path d="M310 295 C390 295, 420 500, 520 500" class="wirespi" marker-end="url(#arrowGreen)"/>
+  <path d="M310 320 C410 320, 430 575, 520 575" class="wirespi" marker-end="url(#arrowGreen)"/>
+  <path d="M310 345 C405 345, 425 525, 520 525" class="wirespi" marker-end="url(#arrowGreen)"/>
+  <path d="M310 370 C405 370, 425 550, 520 550" class="wirespi" marker-end="url(#arrowGreen)"/>
+  <path d="M310 395 C395 395, 420 475, 520 475" class="wirespi" marker-end="url(#arrowGreen)"/>
+  <path d="M310 420 C390 420, 430 680, 520 680" class="wirespi" marker-end="url(#arrowGreen)"/>
+  <path d="M310 445 C380 445, 420 705, 520 705" class="wiregnd" marker-end="url(#arrowBlack)"/>
+
+  <path d="M300 585 C380 585, 420 325, 520 325" class="wireaux" marker-end="url(#arrowOrange)"/>
+  <path d="M300 610 C380 610, 420 350, 520 350" class="wireaux" marker-end="url(#arrowOrange)"/>
+  <path d="M300 635 C380 635, 420 655, 520 655" class="wire5v" marker-end="url(#arrowRed)"/>
+  <path d="M300 645 C380 645, 420 705, 520 705" class="wiregnd" marker-end="url(#arrowBlack)"/>
+
+  <path d="M300 755 C390 755, 430 425, 520 425" class="wireaux" marker-end="url(#arrowOrange)"/>
+  <path d="M300 780 C390 780, 430 450, 520 450" class="wireaux" marker-end="url(#arrowOrange)"/>
+  <path d="M300 805 C390 805, 430 655, 520 655" class="wire5v" marker-end="url(#arrowRed)"/>
+  <path d="M300 815 C390 815, 430 705, 520 705" class="wiregnd" marker-end="url(#arrowBlack)"/>
+
+  <path d="M1020 375 C1080 375, 1080 325, 1120 325" class="wiresig" marker-end="url(#arrowBlue)"/>
+  <path d="M1020 400 C1080 400, 1080 520, 1120 520" class="wiresig" marker-end="url(#arrowBlue)"/>
+
+  <path d="M1260 540 C1215 540, 1215 720, 1120 720" class="wire5v" marker-end="url(#arrowRed)"/>
+  <path d="M1260 565 C1215 565, 1215 745, 1120 745" class="wiregnd" marker-end="url(#arrowBlack)"/>
+  <path d="M1260 540 C1220 540, 1220 350, 1120 350" class="wire5v" marker-end="url(#arrowRed)"/>
+  <path d="M1260 565 C1220 565, 1220 375, 1120 375" class="wiregnd" marker-end="url(#arrowBlack)"/>
+  <path d="M1260 540 C1225 540, 1225 545, 1120 545" class="wire5v" marker-end="url(#arrowRed)"/>
+  <path d="M1260 565 C1225 565, 1225 570, 1120 570" class="wiregnd" marker-end="url(#arrowBlack)"/>
+
+  <path d="M1370 177 C1450 177, 1490 245, 1490 480" class="wirewifi" marker-end="url(#arrowPurple)"/>
+  <path d="M1370 887 C1450 887, 1490 820, 1490 590" class="wirewifi" marker-end="url(#arrowPurple)"/>
+  <text x="1430" y="460" class="small" transform="rotate(90 1430,460)">Wi-Fi / web stream only</text>
+
+  <circle cx="1490" cy="535" r="34" fill="#ede9fe" stroke="#7c3aed" stroke-width="3"/>
+  <text x="1468" y="541" class="label" style="fill:#6d28d9;">Wi-Fi</text>
+
+  <text x="60" y="920" class="section">Legend</text>
+  <line x1="60" y1="945" x2="130" y2="945" class="wire5v"/>
+  <text x="142" y="949" class="small">5V power</text>
+  <line x1="250" y1="945" x2="320" y2="945" class="wiregnd"/>
+  <text x="332" y="949" class="small">GND</text>
+  <line x1="420" y1="945" x2="490" y2="945" class="wiresig"/>
+  <text x="502" y="949" class="small">Servo signal</text>
+  <line x1="640" y1="945" x2="710" y2="945" class="wireaux"/>
+  <text x="722" y="949" class="small">Ultrasonic signal</text>
+  <line x1="880" y1="945" x2="950" y2="945" class="wirespi"/>
+  <text x="962" y="949" class="small">RFID SPI lines</text>
+  <line x1="1090" y1="945" x2="1160" y2="945" class="wirewifi"/>
+  <text x="1172" y="949" class="small">Wi-Fi only</text>
+
+  <text x="60" y="985" class="tiny">Recommended servo supply: regulated 5V, 2A or higher depending on servo load.</text>
+  <text x="760" y="985" class="tiny">RC522 must use 3.3V only. ESP32-CAM-MB modules should be powered by USB, not from the Arduino Uno.</text>
+</svg>

@@ -22,7 +22,7 @@ interface AuthContextValue {
     gender: string
     birth_date: string
     email: string
-  }) => Promise<void>
+  }) => Promise<unknown>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       birth_date: string
       email: string
     }) => {
-      await adminAuthApi.register(data)
+      return adminAuthApi.register(data)
     },
     [],
   )

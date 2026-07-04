@@ -78,7 +78,7 @@ interface RegistrationModalProps {
     genders: { gender_id: number; gender: string }[];
     fieldErrors: Record<string, string[]>;
     loading: boolean;
-    onRegister: (e: FormEvent) => void;
+    onRegister: () => void;
     captchaA: number;
     captchaB: number;
     captchaAnswer: string;
@@ -108,6 +108,7 @@ const RegistrationModal = ({
     const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [modalMounted, setModalMounted] = useState(false);
     const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+    const [confirmationOpen, setConfirmationOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -130,6 +131,23 @@ const RegistrationModal = ({
 
     const err = (key: string) => fieldErrors[key]?.[0];
 
+    const handleSubmit = (e: FormEvent) => {
+        e.preventDefault();
+        const expected = captchaA + captchaB;
+        const got = parseInt(captchaAnswer.trim(), 10);
+        if (Number.isNaN(got) || got !== expected) {
+            setCaptchaError("Please solve the verification correctly.");
+            return;
+        }
+        setCaptchaError("");
+        setConfirmationOpen(true);
+    };
+
+    const handleConfirmRegistration = () => {
+        setConfirmationOpen(false);
+        onRegister();
+    };
+
     const ANIM_DURATION = 300;
     const backdropAnim = isAnimatingOut
         ? `reg-backdrop-out ${ANIM_DURATION}ms ease both`
@@ -139,11 +157,41 @@ const RegistrationModal = ({
         : `reg-modal-in  ${ANIM_DURATION}ms cubic-bezier(0.34,1.56,0.64,1) both`;
 
     return createPortal(
-        <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden"
-            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-            style={{ animation: backdropAnim }}
-        >
+        <>
+            {confirmationOpen && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#15112f] p-7 text-white shadow-2xl">
+                        <h3 className="text-xl font-semibold">Confirm registration</h3>
+                        <p className="mt-3 text-sm leading-relaxed text-violet-100/80">
+                            Create this admin account and send the generated username and password to <span className="font-semibold text-white">{form.email.trim() || "the registered email address"}</span>?
+                        </p>
+                        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmationOpen(false)}
+                                disabled={loading}
+                                className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-violet-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Review
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmRegistration}
+                                disabled={loading}
+                                className="inline-flex items-center justify-center gap-2 rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {loading && <Spinner size="xs" />}
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden"
+                onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+                style={{ animation: backdropAnim }}
+            >
             <img src={loginBackdrop} alt="" className="absolute inset-0 h-full w-full object-cover scale-105" aria-hidden />
             <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/50 via-violet-950/35 to-purple-950/45" aria-hidden />
             <div className="pointer-events-none absolute inset-0 opacity-20"
@@ -251,7 +299,7 @@ const RegistrationModal = ({
                             <h2 className="text-[30px] font-light tracking-tight text-white">Admin Registration</h2>
                             <div className="mt-3.5 h-[3px] max-w-[280px] rounded-sm" style={{ background: "linear-gradient(90deg, #a78bfa, #7c3aed)", animation: isAnimatingOut ? "none" : "reg-bar-in 0.5s cubic-bezier(0.4,0,0.2,1) 0.35s both" }} />
                         </div>
-                        <form onSubmit={onRegister} className="px-12 py-10 md:px-14" style={{ animation: isAnimatingOut ? "none" : "reg-field-in 0.4s ease 0.2s both" }}>
+                        <form onSubmit={handleSubmit} className="px-12 py-10 md:px-14" style={{ animation: isAnimatingOut ? "none" : "reg-field-in 0.4s ease 0.2s both" }}>
                             <div className="grid gap-x-16 gap-y-0 md:grid-cols-2">
                                 <UnderlineField label="First Name" name="adm_fn" placeholder="e.g. Juan" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required error={err("first_name")} trailingIcon="user" />
                                 <UnderlineField label="Last Name" name="adm_ln" placeholder="e.g. Santos" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required error={err("last_name")} trailingIcon="user" />
@@ -291,7 +339,8 @@ const RegistrationModal = ({
                     </div>
                 </div>
             </div>
-        </div>,
+            </div>
+        </>,
         document.body
     );
 };

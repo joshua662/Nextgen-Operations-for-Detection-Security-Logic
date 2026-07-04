@@ -1,200 +1,283 @@
-/**
- * Nextgen Operations - Gate Security System
- * Arduino Gate Controller (Servo, Ultrasonic Safety Sensor, & RFID Reader)
- * 
- * Hardware Connections:
- * - Servo Motor: Signal to Pin 5 (PWM)  [MOVED from Pin 9 to avoid SPI conflicts]
- * - Green LED (Access Granted): Pin 6 (via 220 ohm resistor)
- * - Red LED (Access Denied / Idle): Pin 7 (via 220 ohm resistor)
- * - Ultrasonic Sensor HC-SR04:
- *   - VCC: 5V
- *   - GND: GND
- *   - Trig Pin: Pin 3  [MOVED from Pin 11 to keep SPI free]
- *   - Echo Pin: Pin 4  [MOVED from Pin 12 to keep SPI free]
- * - RFID MFRC522 Reader (SPI):
- *   - VCC: 3.3V (Do NOT connect to 5V!)
- *   - RST: Pin 9
- *   - GND: GND
- *   - MISO: Pin 12
- *   - MOSI: Pin 11
- *   - SCK: Pin 13
- *   - SDA (SS): Pin 10
- */
-
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Servo.h>
 
-// Pin Definitions
-const int SERVO_PIN = 5;       // Moved to Pin 5 (SPI uses 11, 12, 13)
-const int RED_LED_PIN = 7;
-const int GREEN_LED_PIN = 6;
-const int TRIG_PIN = 3;        // Moved to Pin 3 to clear Pin 11 (MOSI)
-const int ECHO_PIN = 4;        // Moved to Pin 4 to clear Pin 12 (MISO)
-const int RFID_SS_PIN = 10;
-const int RFID_RST_PIN = 9;
+// =============================================
+// PIN DEFINITIONS (matches wiring diagram)
+// =============================================
 
-// Gate State constants
-const int GATE_CLOSED_ANGLE = 0;   // Degrees
-const int GATE_OPEN_ANGLE = 90;    // Degrees
-const int SAFETY_DISTANCE_CM = 30; // Min distance in cm to safely close the gate
+// RFID RC522
+#define RFID_RST_PIN  9
+#define RFID_SS_PIN   10
+// SPI pins (D11=MOSI, D12=MISO, D13=SCK) are used automatically
 
-Servo gateServo;
-MFRC522 mfrc522(RFID_SS_PIN, RFID_RST_PIN); // Create MFRC522 instance
+// Entrance gate
+const int ENTRANCE_SERVO_PIN = 5;
+const int ENTRANCE_TRIG_PIN  = 3;
+const int ENTRANCE_ECHO_PIN  = 4;
 
-bool isGateOpen = false;
-bool vehiclePassed = false;
+// Exit gate
+const int EXIT_SERVO_PIN = 8;
+const int EXIT_TRIG_PIN  = 6;
+const int EXIT_ECHO_PIN  = 7;
 
+// Gate angles
+const int GATE_CLOSED_ANGLE = 0;
+const int GATE_OPEN_ANGLE   = 90;
+
+// =============================================
+// TIMING CONSTANTS
+// =============================================
+const unsigned long SENSOR_POLL_MS     = 100;
+const unsigned long VEHICLE_GRACE_MS   = 3000;  // Keep gate open 3s after vehicle clears
+const unsigned long RFID_COOLDOWN_MS   = 2000;  // Prevent double-scan
+const unsigned long GATE_AUTO_CLOSE_MS = 8000;  // Auto-close gate after 8s if no vehicle detected
+const int MAX_DETECT_CM = 60;
+const int MIN_DETECT_CM = 3;
+
+// =============================================
+// OBJECTS
+// =============================================
+MFRC522 mfrc522(RFID_SS_PIN, RFID_RST_PIN);
+Servo entranceServo;
+Servo exitServo;
+
+// =============================================
+// STATE
+// =============================================
+bool isEntranceOpen = false;
+bool isExitOpen     = false;
+
+unsigned long entranceLastSeen  = 0;
+unsigned long exitLastSeen      = 0;
+unsigned long entranceOpenedAt  = 0;
+unsigned long exitOpenedAt      = 0;
+unsigned long lastSensorCheck   = 0;
+unsigned long lastRfidScan      = 0;
+
+// Track if gate was opened by RFID (vs serial command)
+bool entranceRfidOpened = false;
+bool exitRfidOpened     = false;
+
+// =============================================
+// SETUP
+// =============================================
 void setup() {
-  // Initialize Serial communication
   Serial.begin(9600);
-  
-  // Initialize SPI Bus and RFID Reader
+
+  // Ultrasonic pins
+  pinMode(ENTRANCE_TRIG_PIN, OUTPUT);
+  pinMode(ENTRANCE_ECHO_PIN, INPUT);
+  pinMode(EXIT_TRIG_PIN, OUTPUT);
+  pinMode(EXIT_ECHO_PIN, INPUT);
+
+  digitalWrite(ENTRANCE_TRIG_PIN, LOW);
+  digitalWrite(EXIT_TRIG_PIN, LOW);
+
+  // Servos
+  entranceServo.attach(ENTRANCE_SERVO_PIN);
+  exitServo.attach(EXIT_SERVO_PIN);
+  entranceServo.write(GATE_CLOSED_ANGLE);
+  exitServo.write(GATE_CLOSED_ANGLE);
+
+  // RFID
   SPI.begin();
   mfrc522.PCD_Init();
-  
-  // Initialize pins
-  pinMode(RED_LED_PIN, OUTPUT);
-  pinMode(GREEN_LED_PIN, OUTPUT);
-  pinMode(TRIG_PIN, OUTPUT);
-  pinMode(ECHO_PIN, INPUT);
-  
-  // Attach Servo motor and initialize to closed position
-  gateServo.attach(SERVO_PIN);
-  gateServo.write(GATE_CLOSED_ANGLE);
-  
-  // Initial LED status
-  digitalWrite(RED_LED_PIN, HIGH);
-  digitalWrite(GREEN_LED_PIN, LOW);
-  
-  Serial.println("READY"); // Signal Python script we are online
+  delay(10);
+  mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
+
+  delay(500);
+  Serial.println(F("READY"));
+  Serial.println(F("--- GATE CONTROL + RFID SYSTEM ONLINE ---"));
 }
 
+// =============================================
+// MAIN LOOP
+// =============================================
 void loop() {
-  // 1. Scan for RFID cards
-  if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
-    String cardUID = "";
-    for (byte i = 0; i < mfrc522.uid.size; i++) {
-      if (mfrc522.uid.uidByte[i] < 0x10) cardUID += "0";
-      cardUID += String(mfrc522.uid.uidByte[i], HEX);
-    }
-    cardUID.toUpperCase();
-    
-    // Print card UID to serial so Python can intercept and verify it
-    Serial.print("RFID:");
-    Serial.println(cardUID);
-    
-    // Halt PICC to stop reading the card repeatedly
-    mfrc522.PICC_HaltA();
-    mfrc522.PCD_StopCrypto1();
-  }
+  // 1. Check for serial commands from Python bridge
+  handleSerialCommands();
 
-  // 2. Listen for commands from the Python bridge
-  if (Serial.available() > 0) {
+  // 2. Scan for RFID cards
+  handleRfidScan();
+
+  // 3. Poll ultrasonic sensors for auto-close
+  if (millis() - lastSensorCheck >= SENSOR_POLL_MS) {
+    lastSensorCheck = millis();
+    handleEntranceSensor();
+    handleExitSensor();
+  }
+}
+
+// =============================================
+// SERIAL COMMAND HANDLER
+// Receives commands from Python lpr_gate_controller.py:
+//   'O' = Open entrance gate
+//   'C' = Close entrance gate
+//   'X' = Open exit gate
+//   'Z' = Close exit gate
+// =============================================
+void handleSerialCommands() {
+  while (Serial.available() > 0) {
     char cmd = Serial.read();
-    
-    if (cmd == 'O') {
-      openGate();
-    } else if (cmd == 'C') {
-      closeGate();
-    }
-  }
 
-  // 3. Intelligent Auto-Close and Presence Detection logic
-  if (isGateOpen) {
-    long distance = getDistance();
-    
-    // Check if vehicle is currently passing through the gate
-    if (distance > 0 && distance < SAFETY_DISTANCE_CM) {
-      if (!vehiclePassed) {
-        Serial.println("VEHICLE_DETECTED");
-        vehiclePassed = true;
-      }
+    switch (cmd) {
+      case 'O':
+        openEntrance();
+        Serial.println(F(">> ENTRANCE GATE OPEN (COMMAND)"));
+        break;
+      case 'C':
+        closeEntrance();
+        Serial.println(F(">> ENTRANCE GATE CLOSED (COMMAND)"));
+        break;
+      case 'X':
+        openExit();
+        Serial.println(F(">> EXIT GATE OPEN (COMMAND)"));
+        break;
+      case 'Z':
+        closeExit();
+        Serial.println(F(">> EXIT GATE CLOSED (COMMAND)"));
+        break;
     }
-    
-    // Check if the vehicle has successfully cleared the sensor after passing
-    if (vehiclePassed && distance >= SAFETY_DISTANCE_CM) {
-      delay(1500); // Small grace period for the vehicle's rear end to clear
-      Serial.println("PASSED");
-      closeGate();
-      vehiclePassed = false;
-    }
-  }
-  
-  delay(100); // Small cycle delay to avoid excessive CPU loops
-}
-
-/**
- * Commands the Servo to open the gate and updates status LEDs
- */
-void openGate() {
-  if (!isGateOpen) {
-    gateServo.write(GATE_OPEN_ANGLE);
-    digitalWrite(GREEN_LED_PIN, HIGH);
-    digitalWrite(RED_LED_PIN, LOW);
-    isGateOpen = true;
-    vehiclePassed = false; // Reset passing state
-    Serial.println("STATUS:OPEN");
   }
 }
 
-/**
- * Commands the Servo to close the gate, checking the safety distance first
- */
-void closeGate() {
-  long distance = getDistance();
-  
-  // Safety check: Don't close if a vehicle is blocking the sensor
-  if (distance > 0 && distance < SAFETY_DISTANCE_CM) {
-    Serial.println("BLOCKED");
-    
-    // Flash LEDs to indicate blockage warning
-    for (int i = 0; i < 3; i++) {
-      digitalWrite(RED_LED_PIN, HIGH);
-      digitalWrite(GREEN_LED_PIN, HIGH);
-      delay(200);
-      digitalWrite(RED_LED_PIN, LOW);
-      digitalWrite(GREEN_LED_PIN, LOW);
-      delay(200);
-    }
-    
-    // Restore open state LEDs
-    digitalWrite(GREEN_LED_PIN, HIGH);
-    digitalWrite(RED_LED_PIN, LOW);
-    return;
+// =============================================
+// RFID SCAN HANDLER
+// Reads card UID and sends it to Python via Serial
+// Format: "RFID:XX XX XX XX" (hex bytes, space-separated)
+// The direction is determined by which gate is currently open:
+//   - If entrance is closed -> scan means someone wants IN
+//   - If entrance is open   -> scan means someone wants OUT
+// =============================================
+void handleRfidScan() {
+  if (millis() - lastRfidScan < RFID_COOLDOWN_MS) return;
+  if (!mfrc522.PICC_IsNewCardPresent()) return;
+  if (!mfrc522.PICC_ReadCardSerial()) return;
+
+  lastRfidScan = millis();
+
+  // Build UID hex string
+  String uidStr = "";
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    if (i > 0) uidStr += " ";
+    if (mfrc522.uid.uidByte[i] < 0x10) uidStr += "0";
+    uidStr += String(mfrc522.uid.uidByte[i], HEX);
   }
-  
-  if (isGateOpen) {
-    gateServo.write(GATE_CLOSED_ANGLE);
-    digitalWrite(RED_LED_PIN, HIGH);
-    digitalWrite(GREEN_LED_PIN, LOW);
-    isGateOpen = false;
-    vehiclePassed = false;
-    Serial.println("STATUS:CLOSED");
+  uidStr.toUpperCase();
+
+  // Determine direction based on current gate state
+  // If entrance gate is closed, this is an IN scan
+  // If entrance gate is already open, this is an OUT scan
+  String direction = isEntranceOpen ? "OUT" : "IN";
+
+  // Send to Python bridge via Serial
+  // Format: RFID_IN:XX XX XX XX  or  RFID_OUT:XX XX XX XX
+  Serial.print(F("RFID_"));
+  Serial.print(direction);
+  Serial.print(F(":"));
+  Serial.println(uidStr);
+
+  // Halt card to prepare for next read
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
+}
+
+// =============================================
+// GATE CONTROL FUNCTIONS
+// =============================================
+void openEntrance() {
+  if (!isEntranceOpen) {
+    entranceServo.write(GATE_OPEN_ANGLE);
+    isEntranceOpen = true;
+    entranceOpenedAt = millis();
+    entranceLastSeen = millis();
   }
 }
 
-/**
- * Triggers the Ultrasonic sensor to measure distance in centimeters
- */
-long getDistance() {
-  // Clean trigger pin
-  digitalWrite(TRIG_PIN, LOW);
+void closeEntrance() {
+  if (isEntranceOpen) {
+    entranceServo.write(GATE_CLOSED_ANGLE);
+    isEntranceOpen = false;
+    entranceRfidOpened = false;
+    Serial.println(F("PASSED"));
+  }
+}
+
+void openExit() {
+  if (!isExitOpen) {
+    exitServo.write(GATE_OPEN_ANGLE);
+    isExitOpen = true;
+    exitOpenedAt = millis();
+    exitLastSeen = millis();
+  }
+}
+
+void closeExit() {
+  if (isExitOpen) {
+    exitServo.write(GATE_CLOSED_ANGLE);
+    isExitOpen = false;
+    exitRfidOpened = false;
+    Serial.println(F("EXIT_PASSED"));
+  }
+}
+
+// =============================================
+// ULTRASONIC SENSOR HANDLERS
+// Auto-close gates when vehicle has cleared
+// =============================================
+void handleEntranceSensor() {
+  if (!isEntranceOpen) return;
+
+  long dist = getDistance(ENTRANCE_TRIG_PIN, ENTRANCE_ECHO_PIN);
+  unsigned long now = millis();
+
+  if (dist >= MIN_DETECT_CM && dist <= MAX_DETECT_CM) {
+    // Vehicle still under gate — keep it open
+    entranceLastSeen = now;
+  } else if (now - entranceLastSeen >= VEHICLE_GRACE_MS) {
+    // Vehicle has cleared, close gate
+    closeEntrance();
+    Serial.println(F(">> ENTRANCE GATE CLOSED (AUTO)"));
+  }
+
+  // Safety: auto-close if open too long with no detection
+  if (now - entranceOpenedAt >= GATE_AUTO_CLOSE_MS && now - entranceLastSeen >= VEHICLE_GRACE_MS) {
+    closeEntrance();
+    Serial.println(F(">> ENTRANCE GATE CLOSED (TIMEOUT)"));
+  }
+}
+
+void handleExitSensor() {
+  if (!isExitOpen) return;
+
+  long dist = getDistance(EXIT_TRIG_PIN, EXIT_ECHO_PIN);
+  unsigned long now = millis();
+
+  if (dist >= MIN_DETECT_CM && dist <= MAX_DETECT_CM) {
+    exitLastSeen = now;
+  } else if (now - exitLastSeen >= VEHICLE_GRACE_MS) {
+    closeExit();
+    Serial.println(F(">> EXIT GATE CLOSED (AUTO)"));
+  }
+
+  if (now - exitOpenedAt >= GATE_AUTO_CLOSE_MS && now - exitLastSeen >= VEHICLE_GRACE_MS) {
+    closeExit();
+    Serial.println(F(">> EXIT GATE CLOSED (TIMEOUT)"));
+  }
+}
+
+// =============================================
+// ULTRASONIC DISTANCE READING
+// =============================================
+long getDistance(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
-  
-  // Send 10 microsecond pulse
-  digitalWrite(TRIG_PIN, HIGH);
+  digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
-  digitalWrite(TRIG_PIN, LOW);
-  
-  // Read echo time in microseconds
-  long duration = pulseIn(ECHO_PIN, HIGH, 30000); // 30ms timeout (~5 meters max)
-  
-  if (duration == 0) {
-    return -1; // Out of range or timeout
-  }
-  
-  // Convert duration to distance in centimeters (speed of sound is ~343 m/s)
-  long distance = duration * 0.034 / 2;
-  return distance;
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH, 30000);
+  if (duration == 0) return 999;  // No echo = far away
+  return duration * 0.034 / 2;
 }

@@ -7,7 +7,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Symfony\Component\Process\Process;
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
+use chillerlan\QRCode\Output\QROutputInterface;
 
 class UserController extends Controller
 {
@@ -169,46 +171,25 @@ class UserController extends Controller
             'plate' => $user->role === 'resident' ? ($user->plate_number ?? '') : '',
         ];
 
-        $pythonPath = env('MEMBER_CARD_PYTHON_PATH')
-            ?: 'C:\\Users\\joshs\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe';
+        try {
+            $options = new QROptions([
+                'outputType' => QROutputInterface::GDIMAGE_PNG,
+                'scale' => 10,
+                'outputBase64' => true,
+            ]);
 
-        if (! file_exists($pythonPath)) {
-            $pythonPath = 'python';
-        }
+            $qrcode = (new QRCode($options))->render(
+                json_encode($payload, JSON_UNESCAPED_SLASHES)
+            );
 
-        $script = <<<'PY'
-import base64
-import io
-import json
-import sys
-
-import qrcode
-
-payload = json.loads(base64.b64decode(sys.argv[1]).decode("utf-8"))
-image = qrcode.make(json.dumps(payload, separators=(",", ":")))
-buffer = io.BytesIO()
-image.save(buffer, format="PNG")
-print(base64.b64encode(buffer.getvalue()).decode("ascii"))
-PY;
-
-        $process = new Process([
-            $pythonPath,
-            '-c',
-            $script,
-            base64_encode(json_encode($payload)),
-        ]);
-        $process->setTimeout(10);
-        $process->run();
-
-        if (! $process->isSuccessful()) {
+            return response()->json([
+                'qr_code' => $qrcode,
+            ], 200);
+        } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Unable to generate member card QR code.',
-                'error' => trim($process->getErrorOutput()) ?: trim($process->getOutput()),
+                'error' => $e->getMessage(),
             ], 500);
         }
-
-        return response()->json([
-            'qr_code' => 'data:image/png;base64,' . trim($process->getOutput()),
-        ], 200);
     }
 }

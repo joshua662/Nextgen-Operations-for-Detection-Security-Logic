@@ -63,15 +63,29 @@ class AuthController extends Controller
             ->all();
     }
 
+    private function credentialRecipientFor(User $user): ?string
+    {
+        $email = trim((string) $user->email);
+
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return null;
+        }
+
+        return $email;
+    }
+
     private function sendPortalCredentials(User $user, string $plainPassword): ?string
     {
-        $credentialsMailbox = $user->email;
+        $credentialsMailbox = $this->credentialRecipientFor($user);
 
-        if (! filter_var($credentialsMailbox, FILTER_VALIDATE_EMAIL)) {
+        if ($credentialsMailbox === null) {
             return 'The registered user does not have a valid email address.';
         }
 
+        $credentialsMailbox = trim($credentialsMailbox);
+
         try {
+            \Illuminate\Support\Facades\Log::info("Sending credentials email to: " . $credentialsMailbox);
             Mail::to($credentialsMailbox)->send(new ResidentGateAccessWelcomeMail(
                 $user,
                 $plainPassword,
@@ -82,7 +96,7 @@ class AuthController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return $e->getMessage();
+            return 'Credentials were not sent to '.$credentialsMailbox.'. '.$e->getMessage();
         }
     }
 
@@ -99,7 +113,7 @@ class AuthController extends Controller
             'message' => $message,
             'mail_sent' => $mailError === null,
             'mail_error' => $mailError,
-            'mail_recipient' => $user->email,
+            'mail_recipient' => $this->credentialRecipientFor($user),
             'user' => $user,
         ], 201);
     }
