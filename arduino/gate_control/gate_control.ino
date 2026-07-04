@@ -20,7 +20,7 @@ const int GATE_OPEN_ANGLE = 90;
 const int MAX_DETECTION_DIST_CM = 60;  // Triggers gate if hand is closer than 60cm
 const int MIN_DETECTION_DIST_CM = 3;   // Ignores 1cm/2cm hardware noise/glitches
 
-const unsigned long SENSOR_POLL_INTERVAL_MS = 100; 
+const unsigned long SENSOR_POLL_INTERVAL_MS = 100;
 const unsigned long VEHICLE_CLEAR_GRACE_MS = 1500; // Time gate stays open after object leaves
 
 Servo entranceServo;
@@ -51,11 +51,9 @@ void setup() {
   digitalWrite(ENTRANCE_TRIG_PIN, LOW);
   digitalWrite(EXIT_TRIG_PIN, LOW);
 
-  // Re-initialize attach sequences
   entranceServo.attach(ENTRANCE_SERVO_PIN);
   exitServo.attach(EXIT_SERVO_PIN);
 
-  // Force position reset
   entranceServo.write(GATE_CLOSED_ANGLE);
   exitServo.write(GATE_CLOSED_ANGLE);
   
@@ -63,7 +61,7 @@ void setup() {
   isExitOpen = false;
 
   delay(500);
-  Serial.println("--- SYSTEM LIVE: WAVE HAND TO OPERATE ---");
+  Serial.println("--- SYSTEM LIVE: SERIAL GATE CONTROLLER ---");
   digitalWrite(RED_LED_PIN, LOW);
   digitalWrite(GREEN_LED_PIN, HIGH);
 }
@@ -74,13 +72,16 @@ void loop() {
     updateEntranceSensor();
     updateExitSensor();
   }
+
   handleSerialCommands();
 }
 
 void handleSerialCommands() {
   while (Serial.available() > 0) {
     char command = Serial.read();
-    if (command == '\n' || command == '\r') {
+    if (command == '
+' || command == '
+') {
       continue;
     }
 
@@ -135,19 +136,18 @@ void updateEntranceSensor() {
   long distance = getDistance(ENTRANCE_TRIG_PIN, ENTRANCE_ECHO_PIN);
   unsigned long now = millis();
   
-  if (distance < MIN_DETECTION_DIST_CM) return; // Drop bad readings
+  if (distance < MIN_DETECTION_DIST_CM) return;
 
   bool objectDetected = (distance <= MAX_DETECTION_DIST_CM);
 
   if (objectDetected) {
     entranceLastSeenAt = now;
     if (!isEntranceOpen) {
-      entranceServo.write(GATE_OPEN_ANGLE); // Direct pulse execution
+      entranceServo.write(GATE_OPEN_ANGLE);
       isEntranceOpen = true;
       Serial.println(">> ENTRANCE GATE OPEN (90 DEGREES)");
     }
-  } 
-  else if (isEntranceOpen && (now - entranceLastSeenAt >= VEHICLE_CLEAR_GRACE_MS)) {
+  } else if (isEntranceOpen && (now - entranceLastSeenAt >= VEHICLE_CLEAR_GRACE_MS)) {
     entranceServo.write(GATE_CLOSED_ANGLE);
     isEntranceOpen = false;
     Serial.println(">> ENTRANCE GATE CLOSED (0 DEGREES)");
@@ -158,19 +158,18 @@ void updateExitSensor() {
   long distance = getDistance(EXIT_TRIG_PIN, EXIT_ECHO_PIN);
   unsigned long now = millis();
 
-  if (distance < MIN_DETECTION_DIST_CM) return; // Drop bad readings
+  if (distance < MIN_DETECTION_DIST_CM) return;
 
   bool objectDetected = (distance <= MAX_DETECTION_DIST_CM);
 
   if (objectDetected) {
     exitLastSeenAt = now;
     if (!isExitOpen) {
-      exitServo.write(GATE_OPEN_ANGLE); // Direct pulse execution
+      exitServo.write(GATE_OPEN_ANGLE);
       isExitOpen = true;
       Serial.println(">> EXIT GATE OPEN (90 DEGREES)");
     }
-  } 
-  else if (isExitOpen && (now - exitLastSeenAt >= VEHICLE_CLEAR_GRACE_MS)) {
+  } else if (isExitOpen && (now - exitLastSeenAt >= VEHICLE_CLEAR_GRACE_MS)) {
     exitServo.write(GATE_CLOSED_ANGLE);
     isExitOpen = false;
     Serial.println(">> EXIT GATE CLOSED (0 DEGREES)");
@@ -184,10 +183,9 @@ long getDistance(int trigPin, int echoPin) {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  long duration = pulseIn(echoPin, HIGH, 30000); 
-
+  long duration = pulseIn(echoPin, HIGH, 30000);
   if (duration == 0) {
-    return -1; 
+    return -1;
   }
   return duration * 0.034 / 2;
 }

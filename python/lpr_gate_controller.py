@@ -110,11 +110,11 @@ def init_serial():
         return False
 
 def send_arduino_command(cmd):
-    """Sends a single character command ('O' or 'C') to the Arduino."""
+    """Sends a single character command ('O', 'X', 'C', 'Z') to the Arduino."""
     global gate_state
-    if cmd == 'O':
+    if cmd in ['O', 'X']:
         gate_state = "open"
-    elif cmd == 'C':
+    elif cmd in ['C', 'Z']:
         gate_state = "closed"
 
     if arduino and arduino.is_open:
