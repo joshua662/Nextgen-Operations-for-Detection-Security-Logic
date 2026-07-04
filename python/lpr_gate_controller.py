@@ -155,7 +155,6 @@ def serial_reader_thread():
                         if status in ["open", "closed"]:
                             gate_state = status
                     elif line.startswith("RFID_IN:") or line.startswith("RFID_OUT:"):
-                        # Direction-aware RFID scan from merged Arduino sketch
                         if line.startswith("RFID_IN:"):
                             rfid_uid = line[len("RFID_IN:"):].strip()
                             direction = "IN"
@@ -170,12 +169,11 @@ def serial_reader_thread():
                         verify_thread.daemon = True
                         verify_thread.start()
                     elif line.startswith("RFID:"):
-                        # Backward compatible: plain RFID: prefix (defaults to IN)
-                        rfid_uid = line.split(":")[1].strip()
-                        print(f"\n[RFID Card Tapped] UID: {rfid_uid} | Direction: IN")
+                        rfid_uid = line.split(":", 1)[1].strip()
+                        print(f"\n[RFID Card Tapped] UID: {rfid_uid}")
                         verify_thread = threading.Thread(
                             target=process_rfid_verification,
-                            args=(rfid_uid, "IN")
+                            args=(rfid_uid, None)
                         )
                         verify_thread.daemon = True
                         verify_thread.start()
@@ -437,41 +435,49 @@ def process_plate_verification(plate_number):
     else:
         print(f"ACCESS DENIED for plate: {plate_number}")
 
-def process_rfid_verification(rfid_uid, direction="IN"):
-    """Processes RFID verification and opens the correct gate if authorized.
-    
-    Direction determines which gate servo to open:
-      IN  -> Entrance gate (command 'O' to open, 'C' to close)
-      OUT -> Exit gate     (command 'X' to open, 'Z' to close)
-    """
+import re
+
+
+def normalize_rfid_uid(rfid_uid: str) -> str:
+    return re.sub(r'[^A-Fa-f0-9]', '', rfid_uid).upper()
+
+
+def process_rfid_verification(rfid_uid, direction=None):
+    """Processes RFID verification and opens the correct gate if authorized."""
+    normalized_uid = normalize_rfid_uid(rfid_uid)
     verify_url = f"{API_BASE_URL}/gate/verify"
     payload = {
-        "rfid_card_uid": rfid_uid,
-        "direction": direction
+        "rfid_card_uid": normalized_uid,
     }
-    
-    open_cmd = 'O' if direction == 'IN' else 'X'
-    close_cmd = 'C' if direction == 'IN' else 'Z'
-    gate_label = 'ENTRANCE' if direction == 'IN' else 'EXIT'
-    
-    print(f"Verifying RFID '{rfid_uid}' ({direction}) with Laravel API...")
+    if direction:
+        payload["direction"] = direction
+
+    print(f"Verifying RFID '{normalized_uid}' with Laravel API...")
+    print(f"Request payload: {payload}")
     try:
         response = requests.post(verify_url, json=payload, headers=headers, timeout=5)
         if response.status_code == 200:
             res_data = response.json()
+            print(f"Verify response: {res_data}")
             authorized = res_data.get("authorized", False)
-            
-            if authorized:
-                print(f"ACCESS GRANTED for RFID: {rfid_uid} -> Opening {gate_label} gate")
-                send_arduino_command(open_cmd)
-                
-                # Fallback close timer if no physical ultrasonic sensor
+            gate_command = res_data.get("gate_command")
+            gate_action = res_data.get("gate_action")
+            resident_user = res_data.get("resident_username") or res_data.get("resident_name")
+
+            if authorized and gate_command:
+                if resident_user:
+                    print(f"ACCESS GRANTED for RFID: {normalized_uid} -> Resident: {resident_user}")
+                else:
+                    print(f"ACCESS GRANTED for RFID: {normalized_uid}")
+                print(f"Backend gate action: {gate_action}")
+                send_arduino_command(gate_command)
                 if arduino is None:
+                    close_cmd = 'C' if gate_command == 'O' else 'Z'
                     time.sleep(7)
-                    print(f"Simulation: Timer expired, closing {gate_label} gate...")
+                    print(f"Simulation: Timer expired, closing gate...")
                     send_arduino_command(close_cmd)
             else:
-                print(f"ACCESS DENIED for RFID: {rfid_uid}")
+                print(f"ACCESS DENIED for RFID: {normalized_uid}")
         else:
             print(f"RFID verification failed (HTTP {response.status_code}): {response.text}")
     except Exception as e:

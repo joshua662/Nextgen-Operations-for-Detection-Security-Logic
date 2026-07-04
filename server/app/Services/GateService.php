@@ -33,6 +33,15 @@ class GateService
         return $filename;
     }
 
+    public static function normalizeRfidUid(?string $rfidCardUid): ?string
+    {
+        if (! $rfidCardUid) {
+            return null;
+        }
+
+        return strtoupper(preg_replace('/[^A-F0-9]/', '', $rfidCardUid));
+    }
+
     public static function formatLog(GateLog $log): GateLog
     {
         $log->capture_image = self::captureImageUrl($log->capture_image);
@@ -40,20 +49,24 @@ class GateService
         return $log;
     }
 
-    public static function verifyAccess(?string $plateNumber, ?string $rfidCardUid, string $direction, ?UploadedFile $image = null): array
+    public static function verifyAccess(?string $plateNumber, ?string $rfidCardUid, ?string $direction, ?UploadedFile $image = null): array
     {
         $resident = null;
         $guestRequest = null;
         $normalizedPlate = null;
 
-        if ($rfidCardUid) {
-            // Find resident by RFID Card UID
+        $normalizedRfidCardUid = self::normalizeRfidUid($rfidCardUid);
+
+        if ($normalizedRfidCardUid) {
+            // Find resident by normalized RFID Card UID
             $resident = User::with('gender')
                 ->where('role', 'resident')
                 ->where('is_deleted', false)
-                ->where('rfid_card_uid', $rfidCardUid)
+                ->whereRaw('UPPER(REPLACE(REPLACE(REPLACE(rfid_card_uid, " ", ""), "-", ""), ":", "")) = ?', [$normalizedRfidCardUid])
                 ->first();
         }
+
+        $direction = self::inferDirection($direction, $resident);
 
         // If no resident is found by RFID, and a plate number is provided, search by plate number
         if (! $resident && $plateNumber) {
@@ -92,14 +105,14 @@ class GateService
         $captureFile = self::storeCapture($image);
         $guestChanges = $guestRequest?->requested_changes ?? [];
 
-        // For RFID scans, if we matched a resident, grab their registered plate. 
+        // For RFID scans, if we matched a resident, grab their registered plate.
         // Otherwise, store a placeholder like "RFID:UID" or the actual plate if provided.
         $logPlate = $normalizedPlate;
         if (! $logPlate) {
             if ($resident && $resident->plate_number) {
                 $logPlate = strtoupper(preg_replace('/\s+/', '', $resident->plate_number));
             } else {
-                $logPlate = $rfidCardUid ? 'RFID:' . strtoupper($rfidCardUid) : 'UNKNOWN';
+                $logPlate = $normalizedRfidCardUid ? 'RFID:' . $normalizedRfidCardUid : 'UNKNOWN';
             }
         }
 
@@ -172,8 +185,33 @@ class GateService
         return [
             'authorized' => $authorized,
             'gate_status' => $system->fresh()->gate_status,
+            'direction' => strtoupper($direction),
+            'gate_action' => strtoupper($direction) === 'IN' ? 'OPEN_ENTRANCE' : 'OPEN_EXIT',
+            'gate_command' => strtoupper($direction) === 'IN' ? 'O' : 'X',
+            'resident_username' => $resident?->username,
+            'resident_name' => $resident?->owner_name,
             'log' => self::formatLog($log),
         ];
+    }
+
+    private static function inferDirection(?string $direction, ?User $resident = null): string
+    {
+        if ($direction) {
+            return strtoupper($direction);
+        }
+
+        if ($resident) {
+            $lastLog = GateLog::where('user_id', $resident->user_id)
+                ->orderByDesc('logged_at')
+                ->first();
+
+            if ($lastLog) {
+                return $lastLog->direction === 'IN' ? 'OUT' : 'IN';
+            }
+        }
+
+        $system = SystemStatus::current();
+        return $system->gate_status === 'open' ? 'OUT' : 'IN';
     }
 
     public static function verifyPlate(string $plateNumber, string $direction, ?UploadedFile $image = null): array

@@ -30,7 +30,7 @@ class GateController extends Controller
         $validated = $request->validate([
             'plate_number' => ['required_without:rfid_card_uid', 'nullable', 'string', 'max:20'],
             'rfid_card_uid' => ['required_without:plate_number', 'nullable', 'string', 'max:50'],
-            'direction' => ['required', 'in:IN,OUT,in,out'],
+            'direction' => ['nullable', 'in:IN,OUT,in,out'],
             'capture_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg'],
         ]);
 

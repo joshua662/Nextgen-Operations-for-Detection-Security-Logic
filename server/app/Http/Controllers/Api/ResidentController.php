@@ -164,8 +164,10 @@ class ResidentController extends Controller
             ],
         ]);
 
+        $normalizedRfid = strtoupper(preg_replace('/[^A-F0-9]/', '', $validated['rfid_card_uid']));
+
         $resident->update([
-            'rfid_card_uid' => $validated['rfid_card_uid'],
+            'rfid_card_uid' => $normalizedRfid,
         ]);
 
         return response()->json([

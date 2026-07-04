@@ -45,6 +45,18 @@ bool compareUID(byte *uid1, byte size1, byte *uid2, byte size2) {
   return true;
 }
 
+void sendUidToSerial(const char *prefix, byte *uid, byte size) {
+  Serial.print(prefix);
+  Serial.print(':');
+  for (byte i = 0; i < size; i++) {
+    if (uid[i] < 0x10) {
+      Serial.print('0');
+    }
+    Serial.print(uid[i], HEX);
+  }
+  Serial.println();
+}
+
 void setup() {
   Serial.begin(115200);
   while (!Serial) { ; }
@@ -84,9 +96,15 @@ void loop() {
 
   // --- Unified LOGIN / LOGOUT ---
   if (isWhiteCard) {
+    if (!whiteCardLoggedIn) {
+      sendUidToSerial("RFID_IN", mfrc522.uid.uidByte, mfrc522.uid.size);
+    } else {
+      sendUidToSerial("RFID_OUT", mfrc522.uid.uidByte, mfrc522.uid.size);
+    }
     toggleAccess(whiteCardLoggedIn, "White Card");
   }
   else if (isRegisteredFob) {
+    sendUidToSerial("RFID", mfrc522.uid.uidByte, mfrc522.uid.size);
     toggleAccess(fobLoggedIn, "Keychain Fob");
   }
   else if (!fobIsRegistered) {
@@ -94,10 +112,12 @@ void loop() {
     fobUIDSize = mfrc522.uid.size;
     fobIsRegistered = true;
     fobLoggedIn = true;
+    sendUidToSerial("RFID", mfrc522.uid.uidByte, mfrc522.uid.size);
     Serial.println(F("✨ KEYCHAIN FOB REGISTERED INDEFINITELY!"));
     Serial.println(F("🔓 LOGIN! (Keychain Fob)"));
   }
   else {
+    sendUidToSerial("RFID", mfrc522.uid.uidByte, mfrc522.uid.size);
     Serial.println(F("🔒 ACCESS DENIED! Unknown tag."));
   }
 
