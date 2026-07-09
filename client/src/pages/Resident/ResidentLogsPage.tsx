@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import type { GateLog } from "../../interfaces/GateInterface";
 import Spinner from "../../components/Spinner/Spinner";
@@ -6,13 +6,27 @@ import Spinner from "../../components/Spinner/Spinner";
 const ResidentLogsPage = () => {
     const [logs, setLogs] = useState<GateLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-    useEffect(() => {
-        GateAccessService.myGateLogs(1)
+    const fetchLogs = useCallback((showInitialLoading = false) => {
+        if (showInitialLoading) setLoading(true);
+        setRefreshing(true);
+
+        return GateAccessService.myGateLogs(1)
             .then((res) => setLogs(res.data.logs.data ?? []))
-            .finally(() => setLoading(false));
+            .catch((error) => {
+                console.error("Failed to load resident gate logs:", error);
+            })
+            .finally(() => {
+                if (showInitialLoading) setLoading(false);
+                setRefreshing(false);
+            });
     }, []);
+
+    useEffect(() => {
+        void fetchLogs(true);
+    }, [fetchLogs]);
 
     const today = new Date().toDateString();
     const entriesToday = logs.filter((log) => log.direction === "IN" && new Date(log.logged_at).toDateString() === today).length;
@@ -23,9 +37,19 @@ const ResidentLogsPage = () => {
 
     return (
         <div className="flex h-full w-full flex-1 flex-col gap-6">
-            <div>
-                <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Gate Access Logs</h1>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">Your personal IN/OUT history and access records</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Gate Access Logs</h1>
+                    <p className="mt-1 text-zinc-600 dark:text-zinc-400">Your personal IN/OUT history and access records</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => void fetchLogs()}
+                    disabled={refreshing}
+                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                >
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                </button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SystemStatus;
 use App\Services\GateService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class GateController extends Controller
 {
@@ -37,7 +38,7 @@ class GateController extends Controller
         $result = GateService::verifyAccess(
             $validated['plate_number'] ?? null,
             $validated['rfid_card_uid'] ?? null,
-            $validated['direction'],
+            $validated['direction'] ?? null,
             $request->file('capture_image')
         );
 
@@ -89,5 +90,66 @@ class GateController extends Controller
         $system->update(array_filter($validated));
 
         return response()->json(['system' => $system], 200);
+    }
+
+    public function checkPlate(Request $request)
+    {
+        $validated = $request->validate([
+            'plate_number' => ['required', 'string', 'max:20'],
+        ]);
+
+        return response()->json(
+            GateService::checkPlateRegistration($validated['plate_number']),
+            200
+        );
+    }
+
+    public function cameraSnapshot(Request $request)
+    {
+        $validated = $request->validate([
+            'location' => ['required', 'in:entrance,exit'],
+        ]);
+
+        $system = SystemStatus::current();
+        $streamUrl = $validated['location'] === 'exit'
+            ? $system->exit_camera_stream_url
+            : ($system->entrance_camera_stream_url ?? $system->camera_stream_url);
+
+        if (! $streamUrl) {
+            return response()->json(['message' => 'No camera configured for this location.'], 404);
+        }
+
+        $baseUrl = rtrim($streamUrl, '/');
+        $candidates = array_values(array_unique(array_filter([
+            $baseUrl . (str_contains($baseUrl, '?') ? '&' : '?') . 't=' . time(),
+            GateService::resolveCaptureUrl($streamUrl),
+            preg_replace('/\/stream\/?$/i', '/jpg', $baseUrl),
+        ])));
+
+        foreach ($candidates as $url) {
+            try {
+                $response = Http::timeout(6)
+                    ->withHeaders(['Accept' => 'image/*'])
+                    ->get($url . (str_contains($url, '?') ? '&' : '?') . 't=' . time());
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $contentType = $response->header('Content-Type') ?? 'image/jpeg';
+                if (! str_starts_with($contentType, 'image/')) {
+                    continue;
+                }
+
+                return response($response->body(), 200, [
+                    'Content-Type' => $contentType,
+                    'Cache-Control' => 'no-store, no-cache, must-revalidate',
+                ]);
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return response()->json(['message' => 'Unable to capture frame from camera.'], 502);
     }
 }

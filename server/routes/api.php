@@ -65,6 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::controller(GateController::class)->prefix('/gate')->group(function () {
             Route::get('/status', 'status');
+            Route::get('/camera-snapshot', 'cameraSnapshot');
+            Route::get('/check-plate', 'checkPlate');
             Route::put('/toggle', 'toggleGate');
             Route::put('/system-health', 'updateSystemHealth');
         });

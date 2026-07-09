@@ -27,6 +27,7 @@ export interface UserProfileModalProps {
     car_model?: string;
     car_color?: string;
     profile_picture?: string | null;
+    rfid_card_uid?: string | null;
   };
   onLogout: () => void;
 }
@@ -371,6 +372,9 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
                     <InfoField label="Email" value={user.email} compact />
                     <InfoField label="Username" value={user.username ? `@${user.username}` : undefined} compact />
                     <InfoField label="Account ID" value={`#${user.user_id}`} compact />
+                    {isResident && (
+                      <InfoField label="RFID UID" value={user.rfid_card_uid} compact />
+                    )}
                     <div className="rounded-lg border border-green-900/60 bg-[#16271e] p-5 shadow-inner">
                       <p className="text-[11px] font-bold uppercase tracking-widest text-[#4ade80]">Access Status</p>
                       <div className="mt-2.5 flex items-center gap-2.5 text-[15px] font-bold text-[#4ade80]">
@@ -388,6 +392,7 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
                       <input className={inputClass} value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} />
                     </EditField>
                     <InfoField label="Account ID" value={`#${user.user_id}`} compact />
+                    <InfoField label="RFID UID" value={user.rfid_card_uid} compact />
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">

@@ -20,6 +20,7 @@
     car_model?: string;
     car_color?: string;
     profile_picture?: string | null;
+    rfid_card_uid?: string | null;
   };
 
     token?: string;

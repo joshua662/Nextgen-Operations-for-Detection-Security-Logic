@@ -18,7 +18,13 @@ class DashboardController extends Controller
     {
         $today = Carbon::today();
 
-        $authorizedToday = GateLog::where('status', 'authorized')
+        $authorizedEntriesToday = GateLog::where('status', 'authorized')
+            ->where('direction', 'IN')
+            ->whereDate('logged_at', $today)
+            ->count();
+
+        $authorizedExitsToday = GateLog::where('status', 'authorized')
+            ->where('direction', 'OUT')
             ->whereDate('logged_at', $today)
             ->count();
 
@@ -47,7 +53,8 @@ class DashboardController extends Controller
             'entrance_camera_stream_url' => $system->entrance_camera_stream_url ?? $system->camera_stream_url,
             'exit_camera_stream_url' => $system->exit_camera_stream_url,
             'stats' => [
-                'authorized_entries' => $authorizedToday,
+                'authorized_entries' => $authorizedEntriesToday,
+                'authorized_exits' => $authorizedExitsToday,
                 'unauthorized_attempts' => $unauthorizedToday,
                 'total_residents' => $totalResidents,
                 'pending_update_requests' => $pendingRequests,

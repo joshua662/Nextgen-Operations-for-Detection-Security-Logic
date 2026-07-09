@@ -64,6 +64,10 @@ const GateAccessService = {
         exit_camera_stream_url?: string;
     }) => AxiosInstance.put("/gate/system-health", data),
     verifyPlate: (data: FormData) => AxiosInstance.post("/gate/verify", data),
+    checkPlate: (plate_number: string) =>
+        AxiosInstance.get(`/gate/check-plate?plate_number=${encodeURIComponent(plate_number)}`),
+    fetchCameraSnapshot: (location: "entrance" | "exit") =>
+        AxiosInstance.get(`/gate/camera-snapshot?location=${location}`, { responseType: "blob" }),
     residentLogin: (payload: Record<string, string>) =>
         AxiosInstance.post("/auth/resident/login", payload),
     residentRegister: (data: Record<string, unknown>) => AxiosInstance.post("/auth/resident/register", data),

@@ -72,21 +72,20 @@ def find_arduino_port():
     """Scans system serial ports to auto-detect a connected Arduino."""
     if serial is None:
         return None
-    
     ports = list(serial.tools.list_ports.comports())
-    for p in ports:
-        # Check description or hardware IDs for Arduino
-        desc = p.description.lower()
-        hwid = p.hwid.lower()
-        if "arduino" in desc or "ch340" in desc or "usb serial" in desc or "ftdi" in desc:
-            print(f"Auto-detected Arduino on port: {p.device}")
-            return p.device
+    if not ports:
+        return None
     
-    # Fallback to the first available COM/tty port if any
-    if ports:
-        print(f"No explicit Arduino device name found. Trying first available port: {ports[0].device}")
-        return ports[0].device
-    return None
+    # 1. Search for known Arduino and USB-to-Serial converter keywords
+    for p in ports:
+        desc = p.description.lower()
+        if any(kw in desc for kw in ["arduino", "ch340", "usb serial", "ftdi", "cp210", "usb-to-uart", "uart", "prolific", "ser"]):
+            print(f"Auto-detected Arduino on port: {p.device} ({p.description})")
+            return p.device
+            
+    # 2. Fallback: If ports exist but don't match keywords, use the first available port
+    print(f"Fallback: Auto-detecting first available port: {ports[0].device} ({ports[0].description})")
+    return ports[0].device   # Fallback to the first available COM/tty port if any
 
 def init_serial():
     global arduino
@@ -110,7 +109,7 @@ def init_serial():
         return False
 
 def send_arduino_command(cmd):
-    """Sends a single character command ('O', 'X', 'C', 'Z') to the Arduino."""
+    """Sends a single character command ('O', 'X', 'C', 'Z', 'N') to the Arduino."""
     global gate_state
     if cmd in ['O', 'X']:
         gate_state = "open"
@@ -478,8 +477,10 @@ def process_rfid_verification(rfid_uid, direction=None):
                     send_arduino_command(close_cmd)
             else:
                 print(f"ACCESS DENIED for RFID: {normalized_uid}")
+                send_arduino_command('N')
         else:
             print(f"RFID verification failed (HTTP {response.status_code}): {response.text}")
+            send_arduino_command('N')
     except Exception as e:
         print(f"Network error during RFID verification: {e}")
 

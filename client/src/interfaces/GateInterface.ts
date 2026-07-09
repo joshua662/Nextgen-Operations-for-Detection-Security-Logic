@@ -31,6 +31,25 @@ export interface GateLog {
     logged_at: string;
 }
 
+export interface VerifyPlateResponse {
+    authorized: boolean;
+    gate_status: 'open' | 'closed';
+    direction: 'IN' | 'OUT';
+    gate_action: string;
+    gate_command: string;
+    resident_username?: string;
+    resident_name?: string;
+    log: GateLog;
+}
+
+export interface CheckPlateResponse {
+    registered: boolean;
+    plate_number: string;
+    resident_name?: string | null;
+    car_model?: string | null;
+    car_color?: string | null;
+}
+
 export interface DashboardOverview {
     gate_status: 'open' | 'closed';
     camera_status: 'online' | 'offline';
@@ -42,6 +61,7 @@ export interface DashboardOverview {
     exit_camera_stream_url?: string;
     stats: {
         authorized_entries: number;
+        authorized_exits: number;
         unauthorized_attempts: number;
         total_residents: number;
         pending_update_requests: number;

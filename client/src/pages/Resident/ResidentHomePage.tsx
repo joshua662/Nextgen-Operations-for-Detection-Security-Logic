@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import type { GateLog, NotificationItem, UpdateRequestItem } from "../../interfaces/GateInterface";
 import { useAuth } from "../../contexts/AuthContext";
@@ -36,6 +36,7 @@ const ResidentHomePage = () => {
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [requests, setRequests] = useState<UpdateRequestItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [requestsLoading, setRequestsLoading] = useState(false);
     const [submittingGuest, setSubmittingGuest] = useState(false);
     const [activeModal, setActiveModal] = useState<ResidentModal>(null);
@@ -44,9 +45,11 @@ const ResidentHomePage = () => {
     const [guestForm, setGuestForm] = useState<GuestForm>(blankGuestForm);
     const [notice, setNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-    const loadDashboardData = () => {
-        setLoading(true);
-        Promise.all([
+    const loadDashboardData = useCallback((showInitialLoading = false) => {
+        if (showInitialLoading) setLoading(true);
+        setRefreshing(true);
+
+        return Promise.all([
             GateAccessService.myGateLogs(1),
             GateAccessService.loadNotifications(1),
         ])
@@ -54,8 +57,14 @@ const ResidentHomePage = () => {
                 setLogs(logsRes.data.logs.data ?? []);
                 setNotifications(notifRes.data.notifications.data ?? []);
             })
-            .finally(() => setLoading(false));
-    };
+            .catch((error) => {
+                console.error("Failed to load resident dashboard data:", error);
+            })
+            .finally(() => {
+                if (showInitialLoading) setLoading(false);
+                setRefreshing(false);
+            });
+    }, []);
 
     const loadRequests = () => {
         setRequestsLoading(true);
@@ -65,8 +74,8 @@ const ResidentHomePage = () => {
     };
 
     useEffect(() => {
-        loadDashboardData();
-    }, []);
+        void loadDashboardData(true);
+    }, [loadDashboardData]);
 
     useEffect(() => {
         if (activeModal === "guest") loadRequests();
@@ -88,12 +97,12 @@ const ResidentHomePage = () => {
 
     const markAllRead = async () => {
         await GateAccessService.markAllNotificationsRead();
-        loadDashboardData();
+        await loadDashboardData();
     };
 
     const markRead = async (id: number) => {
         await GateAccessService.markNotificationRead(id);
-        loadDashboardData();
+        await loadDashboardData();
     };
 
     const submitGuestAccess = async (event: FormEvent) => {
@@ -121,9 +130,19 @@ const ResidentHomePage = () => {
 
     return (
         <div className="flex h-full w-full flex-1 flex-col gap-6">
-            <div>
-                <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Welcome, {displayName}!</h1>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">Gate Security System - Resident Portal</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Welcome, {displayName}!</h1>
+                    <p className="mt-1 text-zinc-600 dark:text-zinc-400">Gate Security System - Resident Portal</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => void loadDashboardData()}
+                    disabled={refreshing}
+                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                >
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                </button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">

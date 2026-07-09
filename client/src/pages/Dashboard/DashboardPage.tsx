@@ -1,34 +1,31 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
-import type { DashboardOverview } from "../../interfaces/GateInterface";
+import type { DashboardOverview, VerifyPlateResponse } from "../../interfaces/GateInterface";
 import Spinner from "../../components/Spinner/Spinner";
 import { useAuth } from "../../contexts/AuthContext";
 import ResidentsPage from "../Residents/ResidentsPage";
 import GateLogsPage from "../GateLogs/GateLogsPage";
 import UpdateRequestsPage from "../UpdateRequests/UpdateRequestsPage";
 import ReportsPage from "../Reports/ReportsPage";
+import { usePlateReader } from "../../hooks/usePlateReader";
+import AnprPlateOverlay from "../../components/Camera/AnprPlateOverlay";
 
 type QuickActionKey = "residents" | "gate-logs" | "update-requests" | "reports";
 type CameraLocation = "entrance" | "exit";
 type CameraHealthStatus = "online" | "offline";
 
-const normalizeCameraStreamUrl = (raw: string) => {
+/** Keep the camera URL exactly as configured — only trim and add protocol if missing. */
+const sanitizeCameraUrl = (raw: string) => {
     const trimmed = raw.trim();
     if (!trimmed) return trimmed;
-
-    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
-    if (!/\/stream\/?$/i.test(withProtocol)) {
-        return `${withProtocol.replace(/\/+$/, "")}/stream`;
-    }
-
-    return withProtocol.replace(/\/stream\/?$/i, "/stream");
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
 };
 
 const resolveEntranceStreamUrl = (data: DashboardOverview) =>
-    normalizeCameraStreamUrl(data.entrance_camera_stream_url ?? data.camera_stream_url ?? "");
+    sanitizeCameraUrl(data.entrance_camera_stream_url ?? data.camera_stream_url ?? "");
 
 const resolveExitStreamUrl = (data: DashboardOverview) =>
-    normalizeCameraStreamUrl(data.exit_camera_stream_url ?? "");
+    sanitizeCameraUrl(data.exit_camera_stream_url ?? "");
 
 const QUICK_ACTIONS: {
     key: QuickActionKey;
@@ -60,18 +57,24 @@ const DashboardPage = () => {
     const [loading, setLoading] = useState(true);
     const [activeQuickAction, setActiveQuickAction] = useState<QuickActionKey | null>(null);
 
-    useEffect(() => {
-        GateAccessService.dashboardOverview()
-            .then((res) => setData(res.data))
-            .finally(() => setLoading(false));
+    const refreshDashboard = useCallback(() => {
+        return GateAccessService.dashboardOverview().then((res) => setData(res.data));
     }, []);
 
+    useEffect(() => {
+        refreshDashboard().finally(() => setLoading(false));
+    }, [refreshDashboard]);
+
+    const handlePlateVerified = useCallback((_result: VerifyPlateResponse) => {
+        void refreshDashboard();
+    }, [refreshDashboard]);
+
     const handleSaveCameraStream = (location: CameraLocation, streamUrl: string) => {
-        const normalizedUrl = normalizeCameraStreamUrl(streamUrl);
+        const savedUrl = sanitizeCameraUrl(streamUrl);
         const payload =
             location === "entrance"
-                ? { entrance_camera_stream_url: normalizedUrl, entrance_camera_status: "online" as const }
-                : { exit_camera_stream_url: normalizedUrl, exit_camera_status: "online" as const };
+                ? { entrance_camera_stream_url: savedUrl, entrance_camera_status: "online" as const }
+                : { exit_camera_stream_url: savedUrl, exit_camera_status: "online" as const };
 
         return GateAccessService.updateSystemHealth(payload).then(() => {
             if (!data) return;
@@ -79,9 +82,9 @@ const DashboardPage = () => {
             if (location === "entrance") {
                 setData({
                     ...data,
-                    entrance_camera_stream_url: normalizedUrl,
+                    entrance_camera_stream_url: savedUrl,
                     entrance_camera_status: "online",
-                    camera_stream_url: normalizedUrl,
+                    camera_stream_url: savedUrl,
                     camera_status: "online",
                 });
                 return;
@@ -89,7 +92,7 @@ const DashboardPage = () => {
 
             setData({
                 ...data,
-                exit_camera_stream_url: normalizedUrl,
+                exit_camera_stream_url: savedUrl,
                 exit_camera_status: "online",
             });
         });
@@ -150,9 +153,10 @@ const DashboardPage = () => {
                 <p className="mt-1 text-zinc-600 dark:text-zinc-400">Gate Security System - Security Guard Dashboard</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <StatCard label="Total Residents" value={data.stats.total_residents} />
-                <StatCard label="Today's Entries" value={data.stats.authorized_entries} />
+                <StatCard label="Entries Today" value={data.stats.authorized_entries} />
+                <StatCard label="Exits Today" value={data.stats.authorized_exits} />
                 <StatCard label="Pending Requests" value={data.stats.pending_update_requests} />
                 <StatCard label="Unauthorized Today" value={data.stats.unauthorized_attempts} danger />
             </div>
@@ -190,6 +194,7 @@ const DashboardPage = () => {
                         cameraStatus={data.entrance_camera_status ?? data.camera_status}
                         onSaveStreamUrl={(url) => handleSaveCameraStream("entrance", url)}
                         onStatusChange={(status) => handleCameraStatusChange("entrance", status)}
+                        onPlateVerified={handlePlateVerified}
                     />
                     <CameraFeedPanel
                         location="exit"
@@ -199,6 +204,7 @@ const DashboardPage = () => {
                         cameraStatus={data.exit_camera_status ?? "offline"}
                         onSaveStreamUrl={(url) => handleSaveCameraStream("exit", url)}
                         onStatusChange={(status) => handleCameraStatusChange("exit", status)}
+                        onPlateVerified={handlePlateVerified}
                     />
                 </div>
             </section>
@@ -215,6 +221,7 @@ const CameraFeedPanel = ({
     cameraStatus,
     onSaveStreamUrl,
     onStatusChange,
+    onPlateVerified,
 }: {
     location: CameraLocation;
     badge: "IN" | "OUT";
@@ -223,6 +230,7 @@ const CameraFeedPanel = ({
     cameraStatus: CameraHealthStatus | string;
     onSaveStreamUrl: (url: string) => Promise<void>;
     onStatusChange: (status: CameraHealthStatus) => void;
+    onPlateVerified?: (result: VerifyPlateResponse) => void;
 }) => {
     const [showConfigureModal, setShowConfigureModal] = useState(false);
     const [streamError, setStreamError] = useState(false);
@@ -231,6 +239,7 @@ const CameraFeedPanel = ({
     );
     const [cacheBuster, setCacheBuster] = useState(0);
     const lastReportedStatus = useRef<CameraHealthStatus | null>(null);
+    const streamImageRef = useRef<HTMLImageElement | null>(null);
 
     useEffect(() => {
         setLiveStatus(cameraStatus === "online" ? "online" : "offline");
@@ -272,6 +281,15 @@ const CameraFeedPanel = ({
 
     const effectiveStatus = streamUrl && !streamError ? liveStatus : "offline";
 
+    const { status: plateStatus, detectedPlate, lastResult, checkResult } = usePlateReader({
+        direction: badge,
+        cameraLocation: location,
+        streamUrl: streamUrl ?? "",
+        streamOnline: effectiveStatus === "online",
+        imageRef: streamImageRef,
+        onVerified: onPlateVerified,
+    });
+
     return (
         <>
             <div className="flex flex-col gap-3">
@@ -293,6 +311,7 @@ const CameraFeedPanel = ({
                     <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-zinc-900">
                         {streamUrl && !streamError ? (
                             <img
+                                ref={streamImageRef}
                                 key={`${location}-${streamUrl}-${cacheBuster}`}
                                 src={`${streamUrl}${streamUrl.includes("?") ? "&" : "?"}cb=${cacheBuster}`}
                                 alt={label}
@@ -340,6 +359,16 @@ const CameraFeedPanel = ({
                         <p className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-zinc-200 backdrop-blur-sm">
                             {badge} | {effectiveStatus}
                         </p>
+
+                        {effectiveStatus === "online" && (
+                            <AnprPlateOverlay
+                                status={plateStatus}
+                                detectedPlate={detectedPlate}
+                                lastResult={lastResult}
+                                checkResult={checkResult}
+                                streamOnline={effectiveStatus === "online"}
+                            />
+                        )}
                     </div>
                 </div>
 

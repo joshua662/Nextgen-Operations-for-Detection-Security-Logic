@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import AppLayout from "../layout/AppLayout";
 import ResidentLayout from "../layout/ResidentLayout";
 import EditGenderPage from "../pages/Gender/EditGenderPage";
@@ -7,6 +7,8 @@ import DeleteGenderPage from "../pages/Gender/DeleteGenderPage";
 import UserMainPage from "../pages/User/UserMainPage";
 import LoginPage from "../pages/Auth/LoginPage";
 import RegisterPage from "../pages/Auth/RegisterPage";
+import ResidentLoginPage from "../pages/Resident/Auth/ResidentLoginPage";
+import ResidentRegisterPage from "../pages/Resident/Auth/ResidentRegisterPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import ResidentsPage from "../pages/Residents/ResidentsPage";
 import GateLogsPage from "../pages/GateLogs/GateLogsPage";
@@ -31,8 +33,8 @@ const AppRoutes = () => {
                 <Route path="/" element={<LoginPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
-                <Route path="/resident/login" element={<Navigate to="/login" replace />} />
-                <Route path="/resident/register" element={<Navigate to="/register" replace />} />
+                <Route path="/resident/login" element={<ResidentLoginPage />} />
+                <Route path="/resident/register" element={<ResidentRegisterPage />} />
 
                 <Route
                     element={
