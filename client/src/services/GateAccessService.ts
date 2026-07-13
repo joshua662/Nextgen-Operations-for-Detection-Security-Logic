@@ -72,6 +72,7 @@ const GateAccessService = {
         AxiosInstance.post("/auth/resident/login", payload),
     residentRegister: (data: Record<string, unknown>) => AxiosInstance.post("/auth/resident/register", data),
     updateProfile: (data: Record<string, unknown>) => AxiosInstance.put("/auth/profile", data),
+    testConnection: (url: string) => AxiosInstance.post("/gate/test-connection", { url }),
 };
 
 export default GateAccessService;

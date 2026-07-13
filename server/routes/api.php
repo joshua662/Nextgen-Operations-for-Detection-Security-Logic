@@ -23,8 +23,10 @@ Route::controller(AuthController::class)->prefix('/auth')->group(function () {
 });
 
 Route::get('/gender/publicGenders', [GenderController::class, 'loadGenders']);
+Route::get('/gender/loadGenders', [GenderController::class, 'loadGenders']);
 
 Route::post('/gate/verify', [GateController::class, 'verify']);
+Route::get('/gate/camera-stream-proxy', [GateController::class, 'cameraStreamProxy']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::controller(AuthController::class)->prefix('/auth')->group(function () {
@@ -34,7 +36,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::controller(GenderController::class)->prefix('/gender')->group(function () {
-        Route::get('/loadGenders', 'loadGenders');
         Route::get('/getGender/{genderID}', 'getGender');
         Route::post('/storeGender', 'storeGender');
         Route::put('/updateGender/{gender}', 'updateGender');
@@ -69,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/check-plate', 'checkPlate');
             Route::put('/toggle', 'toggleGate');
             Route::put('/system-health', 'updateSystemHealth');
+            Route::post('/test-connection', 'testConnection');
         });
 
         Route::controller(GateLogController::class)->prefix('/gate-log')->group(function () {

@@ -42,16 +42,23 @@ class DashboardController extends Controller
             ->map(fn ($log) => GateService::formatLog($log));
 
         $system = SystemStatus::current();
+        $system->checkHealth();
+        $system->refresh();
+
+        $entranceUrl = $system->entrance_camera_stream_url ?: $system->camera_stream_url ?: env('ESP32_CAM_ENTRANCE_STREAM_URL', env('ESP32_CAM_STREAM_URL', 'http://192.168.2.100:81/stream'));
+        $exitUrl = $system->exit_camera_stream_url ?: env('ESP32_CAM_EXIT_STREAM_URL', 'http://192.168.2.105:81/stream');
 
         return response()->json([
             'gate_status' => $system->gate_status,
-            'camera_status' => $system->entrance_camera_status ?? $system->camera_status,
-            'entrance_camera_status' => $system->entrance_camera_status ?? $system->camera_status,
-            'exit_camera_status' => $system->exit_camera_status ?? 'offline',
+            'camera_status' => $system->entrance_camera_status,
+            'entrance_camera_status' => $system->entrance_camera_status,
+            'exit_camera_status' => $system->exit_camera_status,
             'sensor_status' => $system->sensor_status,
-            'camera_stream_url' => $system->entrance_camera_stream_url ?? $system->camera_stream_url,
-            'entrance_camera_stream_url' => $system->entrance_camera_stream_url ?? $system->camera_stream_url,
-            'exit_camera_stream_url' => $system->exit_camera_stream_url,
+            'camera_stream_url' => $entranceUrl,
+            'entrance_camera_stream_url' => $entranceUrl,
+            'exit_camera_stream_url' => $exitUrl,
+            'entrance_active_plate' => SystemStatus::getActivePlateInfo('IN'),
+            'exit_active_plate' => SystemStatus::getActivePlateInfo('OUT'),
             'stats' => [
                 'authorized_entries' => $authorizedEntriesToday,
                 'authorized_exits' => $authorizedExitsToday,

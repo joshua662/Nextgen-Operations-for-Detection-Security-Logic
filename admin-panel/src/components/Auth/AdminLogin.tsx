@@ -55,6 +55,7 @@ const AdminLogin = () => {
 
     useEffect(() => {
         if (!registrationOpen) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         refreshCaptcha();
         adminAuthApi
             .loadGenders()
@@ -102,7 +103,7 @@ const AdminLogin = () => {
                 email: form.email.trim(),
             });
             setForm(emptyForm());
-            showToast((res as any)?.data?.message ?? "Registration complete. Credentials were sent to the registered email.", false);
+            showToast((res as { data?: { message?: string } })?.data?.message ?? "Registration complete. Credentials were sent to the registered email.", false);
         } catch (error) {
             const err = error as {
                 response?: { data?: { message?: string; errors?: Record<string, string[]> } };

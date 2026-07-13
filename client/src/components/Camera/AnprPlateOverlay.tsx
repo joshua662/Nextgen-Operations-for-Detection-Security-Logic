@@ -35,12 +35,18 @@ const AnprPlateOverlay = ({
             ? formatPlateDisplay(detectedPlate)
             : "";
 
-    if (!plate) return null;
+    if (!plate && !isScanning) return null;
 
     const registered = plate ? (checkResult?.registered ?? lastResult?.authorized) : undefined;
 
     const accent =
-        registered === false ? ACCENT_RED : registered === true ? ACCENT_GREEN : ACCENT_IDLE;
+        registered === false
+            ? ACCENT_RED
+            : registered === true
+              ? ACCENT_GREEN
+              : isScanning
+                ? "#eab308"
+                : ACCENT_IDLE;
 
     const model = checkResult?.car_model || log?.car_model || "—";
     const color = checkResult?.car_color || log?.car_color || "—";
@@ -74,65 +80,83 @@ const AnprPlateOverlay = ({
                             ? registered
                                 ? "0 0 8px rgba(0,255,65,0.5)"
                                 : "0 0 8px rgba(239,68,68,0.5)"
-                            : undefined,
+                            : "0 0 6px rgba(234,179,8,0.4)",
                     animation: isScanning ? "anpr-pulse 1.2s ease-in-out infinite" : undefined,
                 }}
-            />
+            >
+                {/* Laser scan line effect */}
+                {isScanning && !plate && (
+                    <div
+                        className="absolute left-0 right-0 h-0.5 bg-yellow-400 shadow-[0_0_8px_#eab308]"
+                        style={{
+                            animation: "scan-laser 2s linear infinite",
+                        }}
+                    />
+                )}
+            </div>
 
             <PlateCornerBrackets accent={accent} />
 
-            <svg className="absolute inset-0 h-full w-full" aria-hidden>
-                <line
-                    x1={`${boxRight}%`}
-                    y1={`${boxCenterY}%`}
-                    x2="72%"
-                    y2="32%"
-                    stroke={accent}
-                    strokeWidth="2"
-                />
-            </svg>
+            {plate && (
+                <>
+                    <svg className="absolute inset-0 h-full w-full" aria-hidden>
+                        <line
+                            x1={`${boxRight}%`}
+                            y1={`${boxCenterY}%`}
+                            x2="72%"
+                            y2="32%"
+                            stroke={accent}
+                            strokeWidth="2"
+                        />
+                    </svg>
 
-            <div
-                className="absolute right-[4%] top-[18%] min-w-[148px] max-w-[55%] border-2 bg-black/92 px-3 py-2.5 font-mono text-[11px] leading-relaxed shadow-lg sm:text-xs"
-                style={{ borderColor: accent, color: accent }}
-            >
-                <p className="font-bold tracking-wide">
-                    {plate || "--------"}
-                    <span className="font-normal opacity-80"> (PH)</span>
-                </p>
-                <p className="mt-1 opacity-90">
-                    Model: <span className="text-white">{model}</span>
-                </p>
-                <p className="opacity-90">
-                    Color: <span className="text-white">{color}</span>
-                </p>
-                {owner && (
-                    <p className="opacity-90">
-                        Owner: <span className="text-white">{owner}</span>
-                    </p>
-                )}
-                <p className="mt-1.5 font-bold uppercase tracking-wider">
-                    Status:{" "}
-                    <span
-                        className={
-                            isScanning
-                                ? "text-yellow-300"
-                                : registered === true
-                                  ? "text-[#00ff41]"
-                                  : registered === false
-                                    ? "text-red-400"
-                                    : "text-zinc-400"
-                        }
+                    <div
+                        className="absolute right-[4%] top-[18%] min-w-[148px] max-w-[55%] border-2 bg-black/92 px-3 py-2.5 font-mono text-[11px] leading-relaxed shadow-lg sm:text-xs"
+                        style={{ borderColor: accent, color: accent }}
                     >
-                        {statusLabel}
-                    </span>
-                </p>
-            </div>
+                        <p className="font-bold tracking-wide">
+                            {plate}
+                            <span className="font-normal opacity-80"> (PH)</span>
+                        </p>
+                        <p className="mt-1 opacity-90">
+                            Model: <span className="text-white">{model}</span>
+                        </p>
+                        <p className="opacity-90">
+                            Color: <span className="text-white">{color}</span>
+                        </p>
+                        {owner && (
+                            <p className="opacity-90">
+                                Owner: <span className="text-white">{owner}</span>
+                            </p>
+                        )}
+                        <p className="mt-1.5 font-bold uppercase tracking-wider">
+                            Status:{" "}
+                            <span
+                                className={
+                                    isScanning
+                                        ? "text-yellow-300"
+                                        : registered === true
+                                          ? "text-[#00ff41]"
+                                          : registered === false
+                                            ? "text-red-400"
+                                            : "text-zinc-400"
+                                }
+                            >
+                                {statusLabel}
+                            </span>
+                        </p>
+                    </div>
+                </>
+            )}
 
             <style>{`
                 @keyframes anpr-pulse {
                     0%, 100% { opacity: 1; }
                     50% { opacity: 0.45; }
+                }
+                @keyframes scan-laser {
+                    0%, 100% { top: 0%; }
+                    50% { top: 100%; }
                 }
             `}</style>
         </div>

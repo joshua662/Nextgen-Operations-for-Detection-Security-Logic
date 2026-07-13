@@ -74,6 +74,7 @@ export const TagIcon = () => (
     </svg>
 );
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const adminNavItems: NavItem[] = [
     { path: "/dashboard", label: "Dashboard", icon: <HomeIcon /> },
     { path: "/activity-logs", label: "Activity Logs", icon: <ActivityIcon /> },
@@ -82,6 +83,7 @@ export const adminNavItems: NavItem[] = [
     { path: "/genders", label: "Genders", icon: <TagIcon /> },
 ];
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const residentNavItems: NavItem[] = [
     { path: "/resident/home", label: "Dashboard", icon: <HomeIcon /> },
     { path: "/resident/help", label: "Help & Support", icon: <HelpIcon /> },

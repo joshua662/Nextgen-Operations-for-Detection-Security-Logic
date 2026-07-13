@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 import { createPortal } from 'react-dom'
 import Spinner from '../Spinner/Spinner'
 
@@ -38,7 +38,7 @@ const FieldTrailingIcon = ({ kind }: { kind?: TrailingIconName }) => {
 const UnderlineField = ({
     label, name, type = "text", value, onChange, placeholder, required, error, trailingIcon
 }: {
-    label: string, name: string, type?: string, value: string, onChange: (e: any) => void,
+    label: string, name: string, type?: string, value: string, onChange: (e: ChangeEvent<HTMLInputElement>) => void,
     placeholder?: string, required?: boolean, error?: string, trailingIcon?: TrailingIconName
 }) => {
     const borderTone = error ? "border-red-400" : "border-white/20 focus-within:border-violet-400";
@@ -113,6 +113,7 @@ const RegistrationModal = ({
     useEffect(() => {
         if (isOpen) {
             if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsAnimatingOut(false);
             setModalMounted(true);
         } else if (modalMounted) {

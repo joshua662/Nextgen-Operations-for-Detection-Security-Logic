@@ -68,6 +68,22 @@ export interface DashboardOverview {
         unread_notifications: number;
     };
     recent_logs: GateLog[];
+    entrance_active_plate?: {
+        plate_number: string;
+        status: 'idle' | 'scanning' | 'detected' | 'verifying' | 'verified' | 'error';
+        authorized: boolean;
+        resident_name?: string | null;
+        car_model?: string | null;
+        car_color?: string | null;
+    } | null;
+    exit_active_plate?: {
+        plate_number: string;
+        status: 'idle' | 'scanning' | 'detected' | 'verifying' | 'verified' | 'error';
+        authorized: boolean;
+        resident_name?: string | null;
+        car_model?: string | null;
+        car_color?: string | null;
+    } | null;
 }
 
 export interface TrafficChart {

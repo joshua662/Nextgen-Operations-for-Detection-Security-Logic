@@ -69,7 +69,7 @@ const EditUserFormModal: FC<EditUserFormModalProps> = ({
       formData.append("birth_date", birthDate);
       formData.append("username", username);
 
-      const res = await UserService.updateUser(user?.user_id!, formData);
+      const res = await UserService.updateUser(user?.user_id ?? 0, formData);
 
       if (res.status === 200) {
         setExistingProfilePicture(
@@ -95,9 +95,10 @@ const EditUserFormModal: FC<EditUserFormModalProps> = ({
           res.status
         );
       }
-    } catch (error: any) {
-      if (error.response && error.response.status === 422) {
-        setErrors(error.response.data.errors);
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } };
+      if (err.response && err.response.status === 422) {
+        setErrors(err.response.data?.errors ?? {});
       } else {
         console.error(
           "Unexpected server error occurred during updating user: ",

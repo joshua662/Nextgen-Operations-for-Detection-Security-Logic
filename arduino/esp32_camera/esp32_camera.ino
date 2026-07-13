@@ -36,7 +36,7 @@ const int STREAM_PORT = 81;
 #if CAMERA_ROLE == CAMERA_ROLE_ENTRANCE
   const char* CAMERA_LOCATION = "ENTRANCE";
   const char* DASHBOARD_LABEL = "Entrance Camera";
-  #define DEFAULT_STATIC_IP_4 104
+  #define DEFAULT_STATIC_IP_4 102
 #elif CAMERA_ROLE == CAMERA_ROLE_EXIT
   const char* CAMERA_LOCATION = "EXIT";
   const char* DASHBOARD_LABEL = "Exit Camera";
@@ -203,7 +203,7 @@ void setup() {
   }
 
   sensor_t * s = esp_camera_sensor_get();
-  s->set_framesize(s, FRAMESIZE_SVGA);
+  s->set_framesize(s, FRAMESIZE_VGA);
 
   WiFi.mode(WIFI_STA);
 #if USE_STATIC_IP

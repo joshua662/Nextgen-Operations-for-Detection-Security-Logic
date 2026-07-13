@@ -31,6 +31,7 @@ export const useGuardActivityLogs = (
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     const handle = window.setTimeout(() => {
       guardApi
@@ -39,7 +40,7 @@ export const useGuardActivityLogs = (
         .finally(() => setLoading(false))
     }, 200)
     return () => window.clearTimeout(handle)
-  }, [filters.event_type, filters.search])
+  }, [filters.event_type, filters.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { logs, loading }
 }

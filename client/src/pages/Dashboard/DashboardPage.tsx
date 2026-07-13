@@ -21,11 +21,38 @@ const sanitizeCameraUrl = (raw: string) => {
     return /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
 };
 
-const resolveEntranceStreamUrl = (data: DashboardOverview) =>
-    sanitizeCameraUrl(data.entrance_camera_stream_url ?? data.camera_stream_url ?? "");
+/** API base URL — must match AxiosInstance config */
+const API_BASE = "http://127.0.0.1:8000/api";
 
-const resolveExitStreamUrl = (data: DashboardOverview) =>
-    sanitizeCameraUrl(data.exit_camera_stream_url ?? "");
+/**
+ * Build a proxy URL that streams the ESP32-CAM feed through the Laravel backend.
+ * This avoids mixed-content (HTTPS → HTTP) blocks and the ESP32-CAM single-client limit.
+ * Falls back to the direct URL if the camera URL is empty.
+ */
+const buildProxyStreamUrl = (location: CameraLocation, directUrl: string): string => {
+    const sanitized = sanitizeCameraUrl(directUrl);
+    if (!sanitized) return "";
+    // Get the auth token from localStorage so the proxy request is authenticated
+    const token = localStorage.getItem("token");
+    const params = new URLSearchParams({ location });
+    if (token) params.append("token", token);
+    return `${API_BASE}/gate/camera-stream-proxy?${params.toString()}`;
+};
+
+const resolveEntranceStreamUrl = (data: DashboardOverview) => {
+    const rawUrl = data.entrance_camera_stream_url || data.camera_stream_url || "rtsp://admin:password@192.168.2.103:554/ch0_0.h264";
+    if (rawUrl.toLowerCase().startsWith("rtsp://") || data.entrance_camera_status === "online" || data.camera_status === "online") {
+        return `${API_BASE.replace(/\/api$/, "")}/camera_entrance.jpg`;
+    }
+    return buildProxyStreamUrl("entrance", rawUrl);
+};
+
+const resolveExitStreamUrl = (data: DashboardOverview) => {
+    if (data.exit_camera_status === "online") {
+        return `${API_BASE.replace(/\/api$/, "")}/camera_exit.jpg`;
+    }
+    return buildProxyStreamUrl("exit", data.exit_camera_stream_url || "http://192.168.2.105:81/stream");
+};
 
 const QUICK_ACTIONS: {
     key: QuickActionKey;
@@ -63,8 +90,13 @@ const DashboardPage = () => {
 
     useEffect(() => {
         refreshDashboard().finally(() => setLoading(false));
+        const intervalId = setInterval(() => {
+            void refreshDashboard();
+        }, 4000);
+        return () => clearInterval(intervalId);
     }, [refreshDashboard]);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handlePlateVerified = useCallback((_result: VerifyPlateResponse) => {
         void refreshDashboard();
     }, [refreshDashboard]);
@@ -191,20 +223,24 @@ const DashboardPage = () => {
                         label="Entrance Camera"
                         badge="IN"
                         streamUrl={resolveEntranceStreamUrl(data)}
+                        directStreamUrl={data.entrance_camera_stream_url || data.camera_stream_url || "rtsp://admin:password@192.168.2.103:554/ch0_0.h264"}
                         cameraStatus={data.entrance_camera_status ?? data.camera_status}
                         onSaveStreamUrl={(url) => handleSaveCameraStream("entrance", url)}
                         onStatusChange={(status) => handleCameraStatusChange("entrance", status)}
                         onPlateVerified={handlePlateVerified}
+                        activePlate={data.entrance_active_plate}
                     />
                     <CameraFeedPanel
                         location="exit"
                         label="Exit Camera"
                         badge="OUT"
                         streamUrl={resolveExitStreamUrl(data)}
+                        directStreamUrl={data.exit_camera_stream_url || "http://192.168.2.105:81/stream"}
                         cameraStatus={data.exit_camera_status ?? "offline"}
                         onSaveStreamUrl={(url) => handleSaveCameraStream("exit", url)}
                         onStatusChange={(status) => handleCameraStatusChange("exit", status)}
                         onPlateVerified={handlePlateVerified}
+                        activePlate={data.exit_active_plate}
                     />
                 </div>
             </section>
@@ -218,19 +254,23 @@ const CameraFeedPanel = ({
     label,
     badge,
     streamUrl,
+    directStreamUrl,
     cameraStatus,
     onSaveStreamUrl,
     onStatusChange,
     onPlateVerified,
+    activePlate,
 }: {
     location: CameraLocation;
     badge: "IN" | "OUT";
     label: string;
     streamUrl?: string;
+    directStreamUrl?: string;
     cameraStatus: CameraHealthStatus | string;
     onSaveStreamUrl: (url: string) => Promise<void>;
     onStatusChange: (status: CameraHealthStatus) => void;
     onPlateVerified?: (result: VerifyPlateResponse) => void;
+    activePlate?: DashboardOverview["entrance_active_plate"];
 }) => {
     const [showConfigureModal, setShowConfigureModal] = useState(false);
     const [streamError, setStreamError] = useState(false);
@@ -242,14 +282,27 @@ const CameraFeedPanel = ({
     const streamImageRef = useRef<HTMLImageElement | null>(null);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLiveStatus(cameraStatus === "online" ? "online" : "offline");
     }, [cameraStatus]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStreamError(false);
         lastReportedStatus.current = null;
         setCacheBuster((prev) => prev + 1);
     }, [streamUrl]);
+
+    useEffect(() => {
+        if (liveStatus !== "online" || !streamUrl || !streamUrl.endsWith(".jpg")) return;
+
+        // Dynamic 150ms interval (7 FPS) to refresh the static frame without locking the single-threaded server
+        const intervalId = setInterval(() => {
+            setCacheBuster((prev) => prev + 1);
+        }, 150);
+
+        return () => clearInterval(intervalId);
+    }, [liveStatus, streamUrl]);
 
     const reportStatus = (status: CameraHealthStatus) => {
         setLiveStatus(status);
@@ -291,101 +344,114 @@ const CameraFeedPanel = ({
     });
 
     return (
-        <>
-            <div className="flex flex-col gap-3">
-                <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{label}</h3>
-                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badgeClass}`}>{badge}</span>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setShowConfigureModal(true)}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                        >
-                            Configure
-                        </button>
+        <div className="flex flex-col gap-3">
+            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{label}</h3>
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badgeClass}`}>{badge}</span>
                     </div>
-
-                    <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-zinc-900">
-                        {streamUrl && !streamError ? (
-                            <img
-                                ref={streamImageRef}
-                                key={`${location}-${streamUrl}-${cacheBuster}`}
-                                src={`${streamUrl}${streamUrl.includes("?") ? "&" : "?"}cb=${cacheBuster}`}
-                                alt={label}
-                                className="h-full w-full object-cover"
-                                onLoad={handleStreamLoad}
-                                onError={handleStreamError}
-                            />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center p-4 text-center text-zinc-400">
-                                <svg
-                                    className="h-10 w-10 text-zinc-600 dark:text-zinc-500"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth="1.5"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                    />
-                                </svg>
-                                <p className="mt-2 text-sm font-semibold text-zinc-300">Stream Offline or Failed</p>
-                                <p className="mt-1 max-w-xs text-[11px] text-zinc-500">
-                                    Could not connect to <code>{streamUrl || "no URL configured"}</code>.
-                                </p>
-                                <div className="mt-3 flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleRetryStream}
-                                        className="rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[11px] font-semibold text-zinc-200 hover:bg-zinc-700"
-                                    >
-                                        Retry
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowConfigureModal(true)}
-                                        className="rounded bg-blue-600/10 px-2.5 py-1 text-[11px] font-semibold text-blue-400 hover:bg-blue-600/20"
-                                    >
-                                        Configure
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        <p className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-zinc-200 backdrop-blur-sm">
-                            {badge} | {effectiveStatus}
-                        </p>
-
-                        {effectiveStatus === "online" && (
-                            <AnprPlateOverlay
-                                status={plateStatus}
-                                detectedPlate={detectedPlate}
-                                lastResult={lastResult}
-                                checkResult={checkResult}
-                                streamOnline={effectiveStatus === "online"}
-                            />
-                        )}
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowConfigureModal(true)}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                        Configure
+                    </button>
                 </div>
 
-                <CameraHealthPanel
-                    label={label}
-                    status={effectiveStatus}
-                    streamUrl={streamUrl}
-                    hasStreamUrl={Boolean(streamUrl)}
-                />
+                <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-zinc-900">
+                    {streamUrl && !streamError ? (
+                        <img
+                            ref={streamImageRef}
+                            key={`${location}-${streamUrl}-${cacheBuster}`}
+                            src={`${streamUrl}${streamUrl.includes("?") ? "&" : "?"}cb=${cacheBuster}`}
+                            alt={label}
+                            className="h-full w-full object-cover"
+                            onLoad={handleStreamLoad}
+                            onError={handleStreamError}
+                        />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center p-4 text-center text-zinc-400">
+                            <svg
+                                className="h-10 w-10 text-zinc-600 dark:text-zinc-500"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                />
+                            </svg>
+                            <p className="mt-2 text-sm font-semibold text-zinc-300">Stream Offline or Failed</p>
+                            <p className="mt-1 max-w-xs text-[11px] text-zinc-500">
+                                Could not connect to <code>{directStreamUrl || "no URL configured"}</code>.
+                            </p>
+                            <div className="mt-3 flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleRetryStream}
+                                    className="rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[11px] font-semibold text-zinc-200 hover:bg-zinc-700"
+                                >
+                                    Retry
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfigureModal(true)}
+                                    className="rounded bg-blue-600/10 px-2.5 py-1 text-[11px] font-semibold text-blue-400 hover:bg-blue-600/20"
+                                >
+                                    Configure
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    <p className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-zinc-200 backdrop-blur-sm">
+                        {badge} | {effectiveStatus}
+                    </p>
+
+                    {effectiveStatus === "online" && (
+                        <AnprPlateOverlay
+                            status={activePlate ? activePlate.status : plateStatus}
+                            detectedPlate={activePlate ? activePlate.plate_number : detectedPlate}
+                            lastResult={activePlate ? {
+                                authorized: activePlate.authorized,
+                                resident_name: activePlate.resident_name,
+                                log: {
+                                    plate_number: activePlate.plate_number,
+                                    car_model: activePlate.car_model,
+                                    car_color: activePlate.car_color,
+                                    owner_name: activePlate.resident_name,
+                                }
+                            } as any : lastResult}
+                            checkResult={activePlate ? {
+                                registered: activePlate.authorized,
+                                plate_number: activePlate.plate_number,
+                                resident_name: activePlate.resident_name,
+                                car_model: activePlate.car_model,
+                                car_color: activePlate.car_color,
+                            } : checkResult}
+                            streamOnline={effectiveStatus === "online"}
+                        />
+                    )}
+                </div>
             </div>
+
+            <CameraHealthPanel
+                label={label}
+                status={effectiveStatus}
+                streamUrl={streamUrl}
+                hasStreamUrl={Boolean(streamUrl)}
+            />
 
             {showConfigureModal && (
                 <CameraConfigureModal
                     label={label}
                     badge={badge}
                     location={location}
-                    streamUrl={streamUrl}
+                    streamUrl={directStreamUrl}
                     onClose={() => setShowConfigureModal(false)}
                     onSave={(url) =>
                         onSaveStreamUrl(url).then(() => {
@@ -398,7 +464,7 @@ const CameraFeedPanel = ({
                     }
                 />
             )}
-        </>
+        </div>
     );
 };
 
@@ -434,12 +500,6 @@ const CameraHealthPanel = ({
                     status={hasStreamUrl ? (isOnline ? "connected" : "disconnected") : "not configured"}
                     indicator={hasStreamUrl ? (isOnline ? "success" : "danger") : "neutral"}
                 />
-                <div className="flex flex-col gap-1 text-sm">
-                    <span className="text-zinc-600 dark:text-zinc-400">Stream URL</span>
-                    <span className="break-all font-mono text-[11px] text-zinc-900 dark:text-zinc-100">
-                        {streamUrl || "No URL configured"}
-                    </span>
-                </div>
             </div>
         </div>
     );
@@ -460,8 +520,13 @@ const CameraConfigureModal = ({
     onClose: () => void;
     onSave: (url: string) => Promise<void>;
 }) => {
+    const defaultUrl = location === "exit" ? "http://192.168.2.105:81/stream" : "rtsp://admin:password@192.168.2.103:554/ch0_0.h264";
+
+    // Determine the raw stream URL to show in input (empty by default, unless they saved one)
     const [streamUrlInput, setStreamUrlInput] = useState(streamUrl || "");
     const [saving, setSaving] = useState(false);
+    const [testingConnection, setTestingConnection] = useState(false);
+    const [connectionResult, setConnectionResult] = useState<{ success: boolean; message: string } | null>(null);
     const [error, setError] = useState("");
 
     useEffect(() => {
@@ -484,6 +549,40 @@ const CameraConfigureModal = ({
         onSave(trimmed)
             .catch(() => setError(`Failed to update ${label.toLowerCase()} stream URL.`))
             .finally(() => setSaving(false));
+    };
+
+    const handleTestConnection = async () => {
+        const trimmed = streamUrlInput.trim();
+        if (!trimmed) {
+            setError("Stream URL is required.");
+            return;
+        }
+
+        setTestingConnection(true);
+        setConnectionResult(null);
+        setError("");
+
+        try {
+            const res = await GateAccessService.testConnection(trimmed);
+            if (res.data.online) {
+                setConnectionResult({
+                    success: true,
+                    message: "Connection Successful! The ESP32-CAM is online and reachable.",
+                });
+            } else {
+                setConnectionResult({
+                    success: false,
+                    message: res.data.message || "Connection Failed. Camera is offline or unreachable.",
+                });
+            }
+        } catch (err) {
+            setConnectionResult({
+                success: false,
+                message: "Connection Failed. Server error or network issue.",
+            });
+        } finally {
+            setTestingConnection(false);
+        }
     };
 
     const badgeClass =
@@ -539,11 +638,7 @@ const CameraConfigureModal = ({
                                 setStreamUrlInput(e.target.value);
                                 setError("");
                             }}
-                            placeholder={
-                                location === "exit"
-                                    ? "e.g. http://192.168.2.105:81/stream"
-                                    : "e.g. http://192.168.2.104:81/stream"
-                            }
+                            placeholder={defaultUrl}
                             className="mt-1.5 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
                         />
                         {error && (
@@ -567,14 +662,60 @@ const CameraConfigureModal = ({
                     </button>
                     <button
                         type="button"
+                        onClick={handleTestConnection}
+                        disabled={testingConnection || saving}
+                        className="rounded-md border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950 disabled:opacity-60"
+                    >
+                        {testingConnection ? "Testing..." : "Test Connection"}
+                    </button>
+                    <button
+                        type="button"
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={saving || testingConnection}
                         className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                     >
                         {saving ? "Saving..." : "Save"}
                     </button>
                 </div>
             </div>
+
+            {connectionResult && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setConnectionResult(null)}>
+                    <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-800" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col items-center text-center">
+                            {connectionResult.success ? (
+                                <div className="mb-4 rounded-full bg-emerald-100 p-3 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            ) : (
+                                <div className="mb-4 rounded-full bg-red-100 p-3 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                            )}
+                            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                                {connectionResult.success ? "Connection Succeeded" : "Connection Failed"}
+                            </h3>
+                            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                                {connectionResult.message}
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setConnectionResult(null)}
+                                className={`mt-5 w-full rounded-md px-4 py-2 text-sm font-semibold text-white transition ${connectionResult.success
+                                        ? "bg-emerald-600 hover:bg-emerald-700"
+                                        : "bg-red-600 hover:bg-red-700"
+                                    }`}
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -584,11 +725,10 @@ const StatusBadge = ({ status }: { status: CameraHealthStatus }) => {
 
     return (
         <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${
-                isOnline
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                    : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-            }`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${isOnline
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                }`}
         >
             <span
                 className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-red-500"}`}
@@ -653,8 +793,8 @@ const QuickActionButton = ({ children, onClick, primary }: { children: ReactNode
         type="button"
         onClick={onClick}
         className={`inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${primary
-                ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-                : "border border-zinc-300 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-700"
+            ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+            : "border border-zinc-300 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-700"
             }`}
     >
         {children}

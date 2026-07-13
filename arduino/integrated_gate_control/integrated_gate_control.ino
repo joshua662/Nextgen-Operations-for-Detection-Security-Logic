@@ -11,8 +11,10 @@
 // Set to 0 if only using a single RFID reader
 #define DUAL_RFID_READERS 0
 
-// Set to 1 so ultrasonic sensors open the matching gate when an object is detected.
-#define SENSOR_AUTO_OPEN_GATES 1
+// Set to 1 to allow entrance ultrasonic sensor to auto-open gate (usually 0 for security)
+#define SENSOR_ENTRANCE_AUTO_OPEN 0
+// Set to 1 to allow exit ultrasonic sensor to auto-open gate (usually 1 for free exit)
+#define SENSOR_EXIT_AUTO_OPEN 1
 
 // --- Pin Definitions (Restored original pins for servos & sensors to match existing wiring) ---
 const int ENTRANCE_TRIG_PIN = 3;
@@ -291,7 +293,7 @@ void updateEntranceSensor() {
   bool objectDetected = (distance > 0 && distance <= MAX_DETECTION_DIST_CM);
 
   if (objectDetected) {
-    #if SENSOR_AUTO_OPEN_GATES
+    #if SENSOR_ENTRANCE_AUTO_OPEN
     openEntranceGate();
     #endif
     entranceLastSeenAt = now;
@@ -309,7 +311,7 @@ void updateExitSensor() {
   bool objectDetected = (distance > 0 && distance <= MAX_DETECTION_DIST_CM);
 
   if (objectDetected) {
-    #if SENSOR_AUTO_OPEN_GATES
+    #if SENSOR_EXIT_AUTO_OPEN
     openExitGate();
     #endif
     exitLastSeenAt = now;

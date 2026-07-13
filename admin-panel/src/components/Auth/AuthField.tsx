@@ -1,5 +1,28 @@
 import { useState, type ChangeEvent, type FC, type ReactNode } from "react";
 
+const EyeIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white/85" aria-hidden>
+        <path
+            d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"
+            fill="currentColor"
+            opacity="0.9"
+        />
+        <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+    </svg>
+);
+
+const EyeOffIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white/85" aria-hidden>
+        <path
+            d="M3 3l18 18M9.88 9.88a3 3 0 0 0 4.24 4.24M10.73 5.08C11.15 5.03 11.57 5 12 5c7 0 10 7 10 7a21.23 21.23 0 0 1-3.49 4.36M6.11 6.11C4.14 7.55 2.5 10 2.5 10s3 7 10 7c1.07 0 2.05-.17 2.95-.49"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </svg>
+);
+
 interface AuthFieldProps {
     label: string;
     name: string;
@@ -33,29 +56,6 @@ const AuthField: FC<AuthFieldProps> = ({
 
     const inputClass =
         "w-full rounded-xl border border-violet-200/28 bg-indigo-950/45 px-4 py-3.5 text-sm text-white placeholder:text-violet-200/45 outline-none transition focus:border-violet-200/55 focus:bg-indigo-950/58 focus:ring-2 focus:ring-violet-400/22 [color-scheme:dark]";
-
-    const EyeIcon = () => (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white/85" aria-hidden>
-            <path
-                d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"
-                fill="currentColor"
-                opacity="0.9"
-            />
-            <circle cx="12" cy="12" r="2.5" fill="currentColor" />
-        </svg>
-    );
-
-    const EyeOffIcon = () => (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white/85" aria-hidden>
-            <path
-                d="M3 3l18 18M9.88 9.88a3 3 0 0 0 4.24 4.24M10.73 5.08C11.15 5.03 11.57 5 12 5c7 0 10 7 10 7a21.23 21.23 0 0 1-3.49 4.36M6.11 6.11C4.14 7.55 2.5 10 2.5 10s3 7 10 7c1.07 0 2.05-.17 2.95-.49"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
 
     return (
         <div className="mb-4">

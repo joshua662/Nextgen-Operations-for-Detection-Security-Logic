@@ -18,7 +18,7 @@ const ResidentRegisterPage = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        GenderService.loadGenders().then((r) => setGenders(r.data.genders ?? []));
+        GenderService.loadPublicGenders().then((r) => setGenders(r.data.genders ?? []));
     }, []);
 
     const handleSubmit = async (e: FormEvent) => {

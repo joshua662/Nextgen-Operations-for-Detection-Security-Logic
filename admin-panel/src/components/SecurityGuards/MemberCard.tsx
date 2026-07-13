@@ -176,6 +176,7 @@ export const MemberCardModal = ({ isOpen, user, onClose }: MemberCardModalProps)
     if (!isOpen) return
 
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQrDataUrl('')
     setQrError('')
     setQrLoading(true)

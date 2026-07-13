@@ -160,7 +160,7 @@ const AuthForm = ({
             }
 
             const res = isSecurityGuard
-                ? await securityGuardRegister(payload as any)
+                ? await securityGuardRegister(payload as Record<string, string>)
                 : await GateAccessService.residentRegister({
                     ...payload,
                     contact_number: admissionForm.contact_number.trim(),
@@ -169,7 +169,7 @@ const AuthForm = ({
 
             setRegistrationSuccess(true);
             setAdmissionForm(emptyAdmissionForm());
-            const successMsg = (res as any)?.data?.message ?? "Registration successful.";
+            const successMsg = (res as { data?: { message?: string } })?.data?.message ?? "Registration successful.";
             showToast(successMsg, false);
         } catch (error) {
             handleApiError(error);

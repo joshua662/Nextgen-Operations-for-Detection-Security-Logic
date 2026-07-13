@@ -192,6 +192,7 @@ const RegistrationModal = ({
     useEffect(() => {
         if (isOpen) {
             if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsAnimatingOut(false);
             setIsMounted(true);
         } else if (isMounted) {
@@ -208,6 +209,7 @@ const RegistrationModal = ({
 
     useEffect(() => {
         if (registrationSuccess) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setToastVisible(true);
         }
     }, [registrationSuccess]);
@@ -220,6 +222,7 @@ const RegistrationModal = ({
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (isOpen) refreshCaptcha();
     }, [isOpen, refreshCaptcha]);
 

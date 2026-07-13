@@ -58,9 +58,9 @@ class GateService
         $normalizedRfidCardUid = self::normalizeRfidUid($rfidCardUid);
 
         if ($normalizedRfidCardUid) {
-            // Find resident by normalized RFID Card UID
+            // Find resident or security guard by normalized RFID Card UID
             $resident = User::with('gender')
-                ->where('role', 'resident')
+                ->whereIn('role', ['resident', 'security_guard'])
                 ->where('is_deleted', false)
                 ->whereRaw('UPPER(REPLACE(REPLACE(REPLACE(rfid_card_uid, " ", ""), "-", ""), ":", "")) = ?', [$normalizedRfidCardUid])
                 ->first();
@@ -209,7 +209,7 @@ class GateService
     private static function findByPlate(string $normalizedPlate): array
     {
         $resident = User::with('gender')
-            ->where('role', 'resident')
+            ->whereIn('role', ['resident', 'security_guard'])
             ->where('is_deleted', false)
             ->whereRaw('UPPER(REPLACE(plate_number, " ", "")) = ?', [$normalizedPlate])
             ->first();
