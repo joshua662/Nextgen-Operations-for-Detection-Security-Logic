@@ -37,8 +37,8 @@ const Modal: FC<ModalProps> = ({
   );
 
   const contentClasses = isFullScreen
-    ? "relative w-full h-full rounded-lg bg-surface-card flex flex-col"
-    : "relative w-full sm:max-w-md md:max-w-lg lg:max-w-2xl rounded-lg bg-surface-card max-h[90vh] flex flex-col";
+    ? "relative w-full h-full rounded-lg bg-white/70 backdrop-blur-xl border border-white/30 shadow-2xl flex flex-col text-gray-900"
+    : "relative w-full sm:max-w-md md:max-w-lg lg:max-w-2xl rounded-lg bg-white/70 backdrop-blur-xl border border-white/30 shadow-2xl max-h-[90vh] flex flex-col text-gray-900";
 
   useEffect(() => {
     if (isOpen) {

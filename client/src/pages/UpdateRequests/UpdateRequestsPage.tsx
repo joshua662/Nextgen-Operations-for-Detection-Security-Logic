@@ -1,7 +1,30 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import type { UpdateRequestItem } from "../../interfaces/GateInterface";
-import Spinner from "../../components/Spinner/Spinner";
+
+const UpdateRequestsSkeleton = () => (
+    <div className="animate-pulse grid gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+            <div className="h-8 w-56 rounded bg-zinc-200 dark:bg-zinc-700" />
+            <div className="space-y-3">
+                {[1, 2].map((i) => (
+                    <div key={i} className="h-24 rounded-xl bg-zinc-100 dark:bg-zinc-800/50" />
+                ))}
+            </div>
+            <div className="h-32 rounded-xl bg-zinc-100 dark:bg-zinc-800/50" />
+        </div>
+
+        <div className="space-y-4">
+            <div className="h-8 w-56 rounded bg-zinc-200 dark:bg-zinc-700" />
+            <div className="space-y-3">
+                {[1, 2].map((i) => (
+                    <div key={i} className="h-24 rounded-xl bg-zinc-100 dark:bg-zinc-800/50" />
+                ))}
+            </div>
+            <div className="h-32 rounded-xl bg-zinc-100 dark:bg-zinc-800/50" />
+        </div>
+    </div>
+);
 
 const UpdateRequestsPage = () => {
     const [requests, setRequests] = useState<UpdateRequestItem[]>([]);
@@ -68,26 +91,32 @@ const UpdateRequestsPage = () => {
                 </label>
             </div>
 
-            {loading ? <div className="flex justify-center p-8"><Spinner size="md" /></div> : (
-                <>
-                    <RequestSection title="Profile Update Requests" tone="blue" requests={profileRequests} onSelect={setSelectedRequest} emptyText="No profile update requests found" />
-                    <InfoPanel tone="blue" title="Profile Update Requests" items={[
-                        "Residents can update personal information",
-                        "Modify vehicle details including plate, model, and color",
-                        "Update contact numbers and residential address",
-                        "All changes require admin approval",
-                        "Residents receive notifications upon decision",
-                    ]} />
+            {loading ? <UpdateRequestsSkeleton /> : (
+                <div className="grid gap-6 lg:grid-cols-2">
+                    {/* Left side: Profile Update Request */}
+                    <div className="space-y-6">
+                        <RequestSection title="Profile Update Requests" tone="blue" requests={profileRequests} onSelect={setSelectedRequest} emptyText="No profile update requests found" />
+                        <InfoPanel tone="blue" title="Profile Update Requests" items={[
+                            "Residents can update personal information",
+                            "Modify vehicle details including plate, model, and color",
+                            "Update contact numbers and residential address",
+                            "All changes require admin approval",
+                            "Residents receive notifications upon decision",
+                        ]} />
+                    </div>
 
-                    <RequestSection title="Guest Access Requests" tone="purple" requests={guestRequests} onSelect={setSelectedRequest} emptyText="No guest access requests found" />
-                    <InfoPanel tone="purple" title="Guest Vehicle Access Requests" items={[
-                        "Residents can request visitor vehicle access",
-                        "Capture complete guest owner personal details",
-                        "Record guest vehicle information including plate, model, and color",
-                        "Set specific access dates and reasons",
-                        "Approved guests can pass through the gate on the selected date",
-                    ]} />
-                </>
+                    {/* Right side: Guest Access Request */}
+                    <div className="space-y-6">
+                        <RequestSection title="Guest Access Requests" tone="purple" requests={guestRequests} onSelect={setSelectedRequest} emptyText="No guest access requests found" />
+                        <InfoPanel tone="purple" title="Guest Vehicle Access Requests" items={[
+                            "Residents can request visitor vehicle access",
+                            "Capture complete guest owner personal details",
+                            "Record guest vehicle information including plate, model, and color",
+                            "Set specific access dates and reasons",
+                            "Approved guests can pass through the gate on the selected date",
+                        ]} />
+                    </div>
+                </div>
             )}
 
             {selectedRequest && (

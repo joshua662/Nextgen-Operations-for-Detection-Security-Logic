@@ -13,11 +13,12 @@ const GateAccessService = {
     updateResident: (id: number, data: Record<string, unknown>) => AxiosInstance.put(`/resident/updateResident/${id}`, data),
     destroyResident: (id: number) => AxiosInstance.delete(`/resident/destroyResident/${id}`),
 
-    loadGateLogs: (page: number, filters: { direction?: string; status?: string; search?: string } = {}) => {
+    loadGateLogs: (page: number, filters: { direction?: string; status?: string; search?: string; period?: string } = {}) => {
         const params = new URLSearchParams({ page: String(page) });
         if (filters.direction) params.append("direction", filters.direction);
         if (filters.status) params.append("status", filters.status);
         if (filters.search) params.append("search", filters.search);
+        if (filters.period) params.append("period", filters.period);
         return AxiosInstance.get(`/gate-log/loadGateLogs?${params}`);
     },
 

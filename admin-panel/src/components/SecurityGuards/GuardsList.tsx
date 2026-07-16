@@ -14,6 +14,39 @@ const roleTabs: { value: StaffRole; label: string }[] = [
 
 const roleLabel = (role: string) => (role === 'resident' ? 'Resident' : 'Security Guard')
 
+const StaffTableSkeleton = ({ selectedRole }: { selectedRole: 'security_guard' | 'resident' }) => {
+  return (
+    <div className="animate-pulse">
+      <div className="overflow-x-auto rounded-lg border border-white/5 bg-[#18181b]">
+        <table className="w-full text-left text-sm text-zinc-300">
+          <thead className="bg-[#202024] text-[11px] font-semibold uppercase tracking-wider text-zinc-500 border-b border-white/5">
+            <tr>
+              <th className="px-6 py-4">Name</th>
+              <th className="px-6 py-4">Role</th>
+              <th className="px-6 py-4">Username</th>
+              <th className="px-6 py-4">Email</th>
+              {selectedRole === 'resident' && <th className="px-6 py-4">RFID UID</th>}
+              <th className="px-6 py-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <tr key={i} className="border-b border-white/5">
+                <td className="px-6 py-4"><div className="h-4 w-36 rounded bg-zinc-800" /></td>
+                <td className="px-6 py-4"><div className="h-4 w-24 rounded bg-zinc-800" /></td>
+                <td className="px-6 py-4"><div className="h-4 w-20 rounded bg-zinc-800" /></td>
+                <td className="px-6 py-4"><div className="h-4 w-40 rounded bg-zinc-800" /></td>
+                {selectedRole === 'resident' && <td className="px-6 py-4"><div className="h-4 w-24 rounded bg-zinc-800" /></td>}
+                <td className="px-6 py-4"><div className="h-6 w-12 rounded bg-zinc-800" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 const GuardsList = () => {
   const [search, setSearch] = useState('')
   const { guards, loading, error, refresh } = useGuards(search)
@@ -62,7 +95,7 @@ const GuardsList = () => {
 
       {error && <p className="text-sm text-red-400">{error}</p>}
       {loading ? (
-        <p className="py-10 text-sm text-zinc-500">Loading staff users...</p>
+        <StaffTableSkeleton selectedRole={selectedRole} />
       ) : (
         <AdminDataTable
           columns={

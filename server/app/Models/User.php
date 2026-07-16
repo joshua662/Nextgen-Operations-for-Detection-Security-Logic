@@ -43,6 +43,7 @@ class User extends Authenticatable
         'car_color',
         'rfid_card_uid',
         'is_deleted',
+        'is_approved',
     ];
 
     /**
@@ -63,6 +64,7 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'is_approved' => 'boolean',
         ];
     }
 

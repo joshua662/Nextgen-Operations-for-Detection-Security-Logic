@@ -27,6 +27,16 @@ class GateLogController extends Controller
                     $q->where('user_id', $request->user()->user_id);
                 }
             })
+            ->when($request->period, function ($q) use ($request) {
+                $period = $request->period;
+                $start = match ($period) {
+                    'week' => Carbon::now()->startOfWeek(),
+                    'month' => Carbon::now()->startOfMonth(),
+                    'year' => Carbon::now()->startOfYear(),
+                    default => Carbon::today(),
+                };
+                $q->where('logged_at', '>=', $start);
+            })
             ->orderByDesc('logged_at')
             ->paginate(20);
 

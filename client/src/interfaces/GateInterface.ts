@@ -84,6 +84,12 @@ export interface DashboardOverview {
         car_model?: string | null;
         car_color?: string | null;
     } | null;
+    car_monitor?: {
+        daily?: { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+        weekly?: { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+        monthly?: { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+        yearly?: { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+    };
 }
 
 export interface TrafficChart {

@@ -150,6 +150,12 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if (! $user->is_approved) {
+            return response()->json([
+                'message' => 'Your account is pending approval by the administrator.',
+            ], 403);
+        }
+
         if ($user->role !== $expectedRole) {
             return response()->json([
                 'message' => $this->portalRoleDeniedMessage($user->role, $portalLabel),
@@ -180,6 +186,10 @@ class AuthController extends Controller
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             ActivityLogService::loginFailureAdminPortal($request, $validated['username']);
             return response()->json(['message' => 'The provided credentials are incorrect.'], 401);
+        }
+
+        if (! $user->is_approved) {
+            return response()->json(['message' => 'Your account is pending approval by the administrator.'], 403);
         }
 
         if (! in_array($user->role, ['security_guard', 'resident'])) {
@@ -271,6 +281,12 @@ class AuthController extends Controller
             }
         }
 
+        if (! $user->is_approved) {
+            return response()->json([
+                'message' => 'Your account is pending approval by the administrator.',
+            ], 403);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         ActivityLogService::residentPortalSuccess($request, $user);
@@ -279,6 +295,32 @@ class AuthController extends Controller
             'user' => $user,
             'token' => $token,
         ], 200);
+    }
+
+    private function createAdminApprovalNotification(User $user, string $plainPassword)
+    {
+        $admins = User::where('role', 'admin')
+            ->where('is_deleted', false)
+            ->get();
+
+        $payload = json_encode([
+            'target_user_id' => $user->user_id,
+            'username' => $user->username,
+            'plain_password' => $plainPassword,
+            'email' => $user->email,
+            'name' => "{$user->first_name} {$user->last_name}",
+            'role' => $user->role,
+        ]);
+
+        foreach ($admins as $admin) {
+            \App\Models\Notification::create([
+                'user_id' => $admin->user_id,
+                'title' => 'New Registration Pending Approval',
+                'message' => $payload,
+                'type' => 'registration_approval',
+                'is_read' => false,
+            ]);
+        }
     }
 
     private function registerPortalUser(Request $request, string $role)
@@ -309,7 +351,17 @@ class AuthController extends Controller
             'username' => $username,
             'password' => $plainPassword,
             'is_deleted' => false,
+            'is_approved' => ($role === 'admin'),
         ]);
+
+        if ($role !== 'admin') {
+            $this->createAdminApprovalNotification($user, $plainPassword);
+            return $this->registrationResponse(
+                $user,
+                $plainPassword,
+                'Registration successful. Your account is pending administrator approval.',
+            );
+        }
 
         $mailError = $this->sendPortalCredentials($user, $plainPassword);
 
@@ -373,17 +425,15 @@ class AuthController extends Controller
                 : null,
             'car_model' => $validated['car_model'] ?? null,
             'car_color' => $validated['car_color'] ?? null,
+            'is_approved' => false,
         ]);
 
-        $mailError = $this->sendPortalCredentials($user, $plainPassword);
+        $this->createAdminApprovalNotification($user, $plainPassword);
 
         return $this->registrationResponse(
             $user,
             $plainPassword,
-            $mailError
-                ? 'Registration successful, but sending credentials email failed. Check mail_error.'
-                : 'Registration successful. Login credentials have been sent to the registered email address.',
-            $mailError,
+            'Registration successful. Your account is pending administrator approval.',
         );
     }
 

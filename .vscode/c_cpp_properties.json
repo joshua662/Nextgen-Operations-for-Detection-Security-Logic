@@ -1,50 +1,50 @@
 {
-    "configurations": [
-        {
-            "name": "Arduino",
-            "includePath": [
-                "${workspaceFolder}/**",
-                "C:/Users/joshs/Documents/Arduino/libraries/**",
-                "C:/Users/joshs/Documents/Arduino/libraries/MFRC522/src",
-                "C:/Users/joshs/Documents/Arduino/libraries/Servo/src",
-                "C:/Users/joshs/Documents/Arduino/libraries/NewPing/src",
-                "C:/Users/joshs/AppData/Local/Arduino15/packages/arduino/hardware/avr/**",
-                "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/**",
-                "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/**",
-                "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/cores/esp32",
-                "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/variants/esp32cam",
-                "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi/src",
-                "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/tools/**"
-            ],
-            "browse": {
-                "path": [
-                    "${workspaceFolder}/**",
-                    "C:/Users/joshs/Documents/Arduino/libraries/**",
-                    "C:/Users/joshs/AppData/Local/Arduino15/packages/arduino/hardware/avr/**",
-                    "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/**",
-                    "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/**",
-                    "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/cores/esp32",
-                    "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/variants/esp32cam",
-                    "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi/src",
-                    "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/tools/**"
-                ],
-                "limitSymbolsToIncludedHeaders": true
-            },
-            "defines": [
-                "ARDUINO=10819",
-                "ARDUINO_ARCH_AVR",
-                "ARDUINO_ARCH_ESP32",
-                "_AVR_ATmega328P_",
-                "ESP32",
-                "ARDUINO_ESP32_DEV",
-                "ARDUINO_ESP32CAM",
-                "CORE_DEBUG_LEVEL=0"
-            ],
-            "compilerPath": "",
-            "cStandard": "c11",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "windows-gcc-x64"
-        }
-    ],
-    "version": 4
+  "configurations": [
+    {
+      "name": "Arduino",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "C:/Users/joshu/Documents/Arduino/libraries/**",
+        "C:/Users/joshu/Documents/Arduino/libraries/MFRC522/src",
+        "C:/Users/joshu/Documents/Arduino/libraries/Servo/src",
+        "C:/Users/joshu/Documents/Arduino/libraries/NewPing/src",
+        "C:/Users/joshu/AppData/Local/Arduino15/packages/arduino/hardware/avr/**",
+        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/**",
+        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/**",
+        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/cores/esp32",
+        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/variants/esp32cam",
+        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi/src",
+        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/tools/**"
+      ],
+      "browse": {
+        "path": [
+          "${workspaceFolder}/**",
+          "C:/Users/joshu/Documents/Arduino/libraries/**",
+          "C:/Users/joshu/AppData/Local/Arduino15/packages/arduino/hardware/avr/**",
+          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/**",
+          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/**",
+          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/cores/esp32",
+          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/variants/esp32cam",
+          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi/src",
+          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/tools/**"
+        ],
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "defines": [
+        "ARDUINO=10819",
+        "ARDUINO_ARCH_AVR",
+        "ARDUINO_ARCH_ESP32",
+        "_AVR_ATmega328P_",
+        "ESP32",
+        "ARDUINO_ESP32_DEV",
+        "ARDUINO_ESP32CAM",
+        "CORE_DEBUG_LEVEL=0"
+      ],
+      "compilerPath": "",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-gcc-x64"
+    }
+  ],
+  "version": 4
 }

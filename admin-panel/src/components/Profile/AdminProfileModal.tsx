@@ -13,9 +13,9 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
   const userInitials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || 'A'
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-opacity" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md transition-opacity" onClick={onClose}>
       <div 
-        className="w-full max-w-[1100px] max-h-[95vh] overflow-y-auto rounded-xl bg-[#1e1e1e] shadow-2xl scrollbar-thin scrollbar-thumb-zinc-700" 
+        className="w-full max-w-[1100px] max-h-[95vh] overflow-y-auto rounded-xl bg-[#1e1e24]/75 backdrop-blur-xl border border-white/10 shadow-2xl scrollbar-thin scrollbar-thumb-zinc-700" 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 sm:p-6 lg:p-8 text-white">
@@ -54,29 +54,33 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
             <div className="flex flex-col gap-6">
-              <div className="rounded-xl border border-[#333] bg-[#242424] p-6">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
                 <div className="mb-5 flex items-center gap-3">
-                  <div className="h-6 w-6 rounded-md bg-[#2d3a56]"></div>
+                  <div className="h-6 w-6 rounded-md bg-[#2d3a56] flex items-center justify-center">
+                    <svg className="h-3.5 w-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
                   <h4 className="text-[17px] font-bold text-white">Personal Information</h4>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
+                  <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                     <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">First Name</p>
                     <p className="mt-1.5 text-[15px] font-semibold text-gray-100">{user.first_name}</p>
                   </div>
-                  <div className="rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
+                  <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                     <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Last Name</p>
                     <p className="mt-1.5 text-[15px] font-semibold text-gray-100">{user.last_name}</p>
                   </div>
-                  <div className="rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
+                  <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                     <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Age</p>
                     <p className="mt-1.5 text-[15px] font-bold text-gray-100">—</p>
                   </div>
-                  <div className="rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
+                  <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                     <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Contact Number</p>
                     <p className="mt-1.5 text-[15px] font-bold text-gray-100">—</p>
                   </div>
-                  <div className="col-span-1 sm:col-span-2 rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
+                  <div className="col-span-1 sm:col-span-2 rounded-lg border border-white/5 bg-black/25 p-4">
                     <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Address</p>
                     <p className="mt-1.5 text-[15px] font-bold text-gray-100">—</p>
                   </div>
@@ -86,25 +90,29 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
               
             </div>
 
-            <div className="h-fit rounded-xl border border-[#333] bg-[#242424] p-6">
+            <div className="h-fit rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
               <div className="mb-5 flex items-center gap-3">
-                <div className="h-6 w-6 rounded-md bg-[#243e30]"></div>
+                <div className="h-6 w-6 rounded-md bg-[#243e30] flex items-center justify-center">
+                  <svg className="h-3.5 w-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
                 <h4 className="text-[17px] font-bold text-white">Account Information</h4>
               </div>
               <div className="flex flex-col gap-4">
-                <div className="rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
+                <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                   <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Email</p>
                   <p className="mt-1.5 text-[14px] font-medium text-gray-100">{user.email || 'joshsimpas6@gmail.com'}</p>
                 </div>
-                <div className="rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
+                <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                   <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Username</p>
                   <p className="mt-1.5 text-[14px] font-medium text-gray-100">{user.username}</p>
                 </div>
-                <div className="rounded-lg border border-[#333] bg-[#1b1b1b] p-4">
+                <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                   <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Account ID</p>
                   <p className="mt-1.5 text-[14px] font-bold text-gray-100">#{user.user_id}</p>
                 </div>
-                <div className="rounded-lg border border-green-900/60 bg-[#16271e] p-5 shadow-inner">
+                <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-5 shadow-inner">
                   <p className="text-[11px] font-bold uppercase tracking-widest text-[#4ade80]">Access Status</p>
                   <div className="mt-2.5 flex items-center gap-2.5 text-[15px] font-bold text-[#4ade80]">
                     <span className="h-3 w-3 rounded-full bg-[#4ade80]"></span>

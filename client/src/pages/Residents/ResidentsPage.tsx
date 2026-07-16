@@ -38,6 +38,42 @@ const emptyForm = (): ResidentForm => ({
     car_color: "",
 });
 
+const ResidentsSkeleton = () => (
+    <div className="animate-pulse space-y-4">
+        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+            <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                <thead className="bg-zinc-50 dark:bg-zinc-900">
+                    <tr>
+                        <Head>Name</Head>
+                        <Head>Plate Number</Head>
+                        <Head>Contact</Head>
+                        <Head>Address</Head>
+                        <Head>Car Info</Head>
+                        <Head>Actions</Head>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-700 dark:bg-zinc-800">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <tr key={i}>
+                            <td className="px-6 py-4"><div className="h-4 w-28 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-4 w-20 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-4 w-36 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-4 w-32 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4">
+                                <div className="flex gap-2">
+                                    <div className="h-6 w-10 rounded bg-zinc-200 dark:bg-zinc-700" />
+                                    <div className="h-6 w-12 rounded bg-zinc-200 dark:bg-zinc-700" />
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
 const ResidentsPage = () => {
     const [residents, setResidents] = useState<ResidentRow[]>([]);
     const [genders, setGenders] = useState<{ gender_id: number; gender: string }[]>([]);
@@ -49,31 +85,63 @@ const ResidentsPage = () => {
     const [form, setForm] = useState(emptyForm());
     const [message, setMessage] = useState("");
 
-    const loadResidents = useCallback((query: string) => {
-        GateAccessService.loadResidents(1, query)
-            .then((res) => setResidents(res.data.residents.data ?? []))
-            .finally(() => setLoading(false));
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    const loadResidents = useCallback((pageNum: number, query: string, append = false) => {
+        if (pageNum === 1) {
+            setLoading(true);
+        } else {
+            setLoadingMore(true);
+        }
+
+        GateAccessService.loadResidents(pageNum, query)
+            .then((res) => {
+                const fetchedData = res.data.residents.data ?? [];
+                const lastPage = res.data.residents.last_page ?? 1;
+
+                if (append) {
+                    setResidents((prev) => [...prev, ...fetchedData]);
+                } else {
+                    setResidents(fetchedData);
+                }
+
+                setHasMore(pageNum < lastPage);
+                setPage(pageNum);
+            })
+            .finally(() => {
+                setLoading(false);
+                setLoadingMore(false);
+            });
     }, []);
 
     useEffect(() => {
-        loadResidents("");
+        loadResidents(1, "");
         GenderService.loadGenders().then((res) => setGenders(res.data.genders ?? []));
     }, [loadResidents]);
 
     useEffect(() => {
         const handle = window.setTimeout(() => {
-            setLoading(true);
-            loadResidents(search);
+            loadResidents(1, search);
         }, 250);
 
         return () => window.clearTimeout(handle);
     }, [loadResidents, search]);
 
-    const openCreate = () => {
-        setEditing(null);
-        setForm(emptyForm());
-        setModalOpen(true);
+    const loadNextPage = () => {
+        if (loading || loadingMore || !hasMore) return;
+        loadResidents(page + 1, search, true);
     };
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget;
+        const isNearBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 10;
+        if (isNearBottom && hasMore && !loadingMore && !loading) {
+            loadNextPage();
+        }
+    };
+
 
     const openEdit = (resident: ResidentRow) => {
         setEditing(resident);
@@ -115,7 +183,7 @@ const ResidentsPage = () => {
 
         setModalOpen(false);
         setLoading(true);
-        loadResidents(search);
+        loadResidents(1, search);
     };
 
     const deleteResident = async () => {
@@ -125,7 +193,7 @@ const ResidentsPage = () => {
         setMessage("Resident deleted.");
         setDeleteTarget(null);
         setLoading(true);
-        loadResidents(search);
+        loadResidents(1, search);
     };
 
     return (
@@ -135,9 +203,6 @@ const ResidentsPage = () => {
                     <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Residents Management</h2>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">Manage resident profiles and information</p>
                 </div>
-                <button type="button" onClick={openCreate} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
-                    Add New Resident
-                </button>
             </div>
 
             {message && (
@@ -149,44 +214,69 @@ const ResidentsPage = () => {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search by name, plate number, or contact..."
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 transition focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 transition focus:border-transparent focus:ring-2 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                 />
 
-                {loading ? <div className="flex justify-center p-8"><Spinner size="md" /></div> : (
-                    <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
-                        <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                            <thead className="bg-zinc-50 dark:bg-zinc-900">
-                                <tr>
-                                    <Head>Name</Head>
-                                    <Head>Plate Number</Head>
-                                    <Head>Contact</Head>
-                                    <Head>Address</Head>
-                                    <Head>Car Info</Head>
-                                    <Head>Actions</Head>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-700 dark:bg-zinc-800">
-                                {residents.length > 0 ? residents.map((resident) => (
-                                    <tr key={resident.user_id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
-                                        <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{fullName(resident)}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 font-mono text-zinc-900 dark:text-zinc-100">{resident.plate_number || "-"}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{resident.contact_number || "-"}</td>
-                                        <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{limitText(resident.address || "-", 30)}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{resident.car_model || resident.car_color ? `${resident.car_model || "N/A"} - ${resident.car_color || "N/A"}` : "N/A"}</td>
-                                        <td className="whitespace-nowrap px-6 py-4">
-                                            <div className="flex gap-2">
-                                                <button type="button" onClick={() => openEdit(resident)} className="rounded px-2 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20">Edit</button>
-                                                <button type="button" onClick={() => setDeleteTarget(resident)} className="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">Delete</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )) : (
+                {loading ? <ResidentsSkeleton /> : (
+                    <div className="space-y-4">
+                        <div 
+                            onScroll={handleScroll}
+                            className="max-h-[420px] overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                        >
+                            <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700 relative">
+                                <thead className="bg-zinc-50 dark:bg-zinc-900 sticky top-0 z-10">
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">No residents found</td>
+                                        <Head>Name</Head>
+                                        <Head>Plate Number</Head>
+                                        <Head>Contact</Head>
+                                        <Head>Address</Head>
+                                        <Head>Car Info</Head>
+                                        <Head>Actions</Head>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-700 dark:bg-zinc-800">
+                                    {residents.length > 0 ? residents.map((resident) => (
+                                        <tr key={resident.user_id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
+                                            <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{fullName(resident)}</td>
+                                            <td className="whitespace-nowrap px-6 py-4 font-mono text-zinc-900 dark:text-zinc-100">{resident.plate_number || "-"}</td>
+                                            <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{resident.contact_number || "-"}</td>
+                                            <td className="px-6 py-4 text-zinc-900 dark:text-zinc-100">{limitText(resident.address || "-", 30)}</td>
+                                            <td className="whitespace-nowrap px-6 py-4 text-zinc-900 dark:text-zinc-100">{resident.car_model || resident.car_color ? `${resident.car_model || "N/A"} - ${resident.car_color || "N/A"}` : "N/A"}</td>
+                                            <td className="whitespace-nowrap px-6 py-4">
+                                                <div className="flex gap-2">
+                                                    <button type="button" onClick={() => openEdit(resident)} className="rounded px-2 py-1 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-700/50">Edit</button>
+                                                    <button type="button" onClick={() => setDeleteTarget(resident)} className="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">No residents found</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {hasMore && (
+                            <div className="flex justify-center pt-2">
+                                <button
+                                    type="button"
+                                    onClick={loadNextPage}
+                                    disabled={loadingMore}
+                                    className="px-4 py-2 text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors disabled:opacity-50"
+                                >
+                                    {loadingMore ? (
+                                        <div className="flex items-center gap-2">
+                                            <Spinner size="sm" />
+                                            <span>Loading more residents...</span>
+                                        </div>
+                                    ) : (
+                                        "Scroll down or click here to load more"
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -246,7 +336,7 @@ const ResidentModal = ({
             <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-800">
                 <div className="mb-6 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${editing ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"}`}>
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${editing ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" : "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"}`}>
                             {editing ? <EditIcon /> : <PlusIcon />}
                         </div>
                         <h3 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{editing ? "Edit Resident" : "Add New Resident"}</h3>
@@ -261,7 +351,7 @@ const ResidentModal = ({
                         <Field label="Last Name" value={form.last_name} onChange={(value) => setForm({ ...form, last_name: value })} required />
                         <label className="block">
                             <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Gender *</span>
-                            <select value={form.gender} onChange={(event) => setForm({ ...form, gender: event.target.value })} required className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100">
+                            <select value={form.gender} onChange={(event) => setForm({ ...form, gender: event.target.value })} required className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100">
                                 <option value="">Select</option>
                                 {genders.map((gender) => <option key={gender.gender_id} value={gender.gender_id}>{gender.gender}</option>)}
                             </select>
@@ -291,7 +381,7 @@ const ResidentModal = ({
 
                     <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-700 sm:flex-row sm:justify-end">
                         <button type="button" onClick={onClose} className="px-6 py-3 text-sm font-medium text-zinc-900 transition hover:text-zinc-600 dark:text-zinc-100 dark:hover:text-zinc-300">Cancel</button>
-                        <button type="submit" className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">{editing ? "Update Resident" : "Create Resident"}</button>
+                        <button type="submit" className="rounded-lg bg-zinc-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">{editing ? "Update Resident" : "Create Resident"}</button>
                     </div>
                 </form>
             </div>
@@ -303,9 +393,9 @@ const Field = ({ label, value, onChange, type = "text", required, textarea, mono
     <label className="block">
         <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}{required ? " *" : ""}</span>
         {textarea ? (
-            <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} required={required} className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100" />
+            <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} required={required} className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100" />
         ) : (
-            <input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} className={`w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100 ${mono ? "font-mono uppercase" : ""}`} />
+            <input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} className={`w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:ring-2 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100 ${mono ? "font-mono uppercase" : ""}`} />
         )}
     </label>
 );

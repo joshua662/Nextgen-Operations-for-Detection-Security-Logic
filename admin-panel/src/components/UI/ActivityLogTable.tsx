@@ -6,6 +6,8 @@ interface ActivityLogTableProps {
   logs: ActivityLogEntry[]
   loading?: boolean
   emptyMessage?: string
+  hideContext?: boolean
+  hideIpAddress?: boolean
 }
 
 const formatEventLabel = (eventType: string) =>
@@ -27,14 +29,49 @@ const formatContext = (context: Record<string, unknown> | null | undefined) => {
   return JSON.stringify(context)
 }
 
+const TableSkeleton = ({ hideContext, hideIpAddress }: { hideContext: boolean; hideIpAddress: boolean }) => {
+  return (
+    <div className="admin-table-wrap overflow-x-auto animate-pulse">
+      <table className="admin-table w-full min-w-[960px] text-sm">
+        <thead>
+          <tr>
+            <AdminTh>Time</AdminTh>
+            <AdminTh>Event</AdminTh>
+            <AdminTh>Identifier</AdminTh>
+            <AdminTh>User</AdminTh>
+            {!hideIpAddress && <AdminTh>IP Address</AdminTh>}
+            {!hideContext && <AdminTh>Context</AdminTh>}
+          </tr>
+        </thead>
+        <tbody>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <tr key={i} className="admin-table-row border-b border-white/5">
+              <td className="px-5 py-5"><div className="h-4 w-32 rounded bg-zinc-800" /></td>
+              <td className="px-5 py-5"><div className="h-6 w-24 rounded bg-zinc-800" /></td>
+              <td className="px-5 py-5"><div className="h-4 w-20 rounded bg-zinc-800" /></td>
+              <td className="px-5 py-5"><div className="h-4 w-36 rounded bg-zinc-800" /></td>
+              {!hideIpAddress && <td className="px-5 py-5"><div className="h-4 w-24 rounded bg-zinc-800" /></td>}
+              {!hideContext && <td className="px-5 py-5"><div className="h-4 w-40 rounded bg-zinc-800" /></td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 const ActivityLogTable = ({
   logs,
   loading = false,
   emptyMessage = 'No activity logs found.',
+  hideContext = false,
+  hideIpAddress = false,
 }: ActivityLogTableProps) => {
   if (loading) {
-    return <p className="py-10 text-sm text-zinc-500">Loading activity...</p>
+    return <TableSkeleton hideContext={hideContext} hideIpAddress={hideIpAddress} />
   }
+
+  const colSpan = 6 - (hideContext ? 1 : 0) - (hideIpAddress ? 1 : 0)
 
   return (
     <div className="admin-table-wrap overflow-x-auto">
@@ -45,8 +82,8 @@ const ActivityLogTable = ({
             <AdminTh>Event</AdminTh>
             <AdminTh>Identifier</AdminTh>
             <AdminTh>User</AdminTh>
-            <AdminTh>IP Address</AdminTh>
-            <AdminTh>Context</AdminTh>
+            {!hideIpAddress && <AdminTh>IP Address</AdminTh>}
+            {!hideContext && <AdminTh>Context</AdminTh>}
           </tr>
         </thead>
         <tbody>
@@ -70,17 +107,21 @@ const ActivityLogTable = ({
                     <span className="text-zinc-500">N/A</span>
                   )}
                 </AdminTd>
-                <AdminTd accent mono>
-                  {log.ip_address ?? '—'}
-                </AdminTd>
-                <AdminTd mono muted>
-                  {formatContext(log.context)}
-                </AdminTd>
+                {!hideIpAddress && (
+                  <AdminTd accent mono>
+                    {log.ip_address ?? '—'}
+                  </AdminTd>
+                )}
+                {!hideContext && (
+                  <AdminTd mono muted>
+                    {formatContext(log.context)}
+                  </AdminTd>
+                )}
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={6} className="px-5 py-12 text-center text-sm text-zinc-500">
+              <td colSpan={colSpan} className="px-5 py-12 text-center text-sm text-zinc-500">
                 {emptyMessage}
               </td>
             </tr>

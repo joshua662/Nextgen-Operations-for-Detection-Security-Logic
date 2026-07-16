@@ -30,24 +30,88 @@ const blankGuestForm: GuestForm = {
     access_reason: "",
 };
 
+const ResidentDashboardSkeleton = () => (
+    <div className="flex h-full w-full flex-1 flex-col gap-6 animate-pulse">
+        {/* Header */}
+        <div className="space-y-2">
+            <div className="h-8 w-60 rounded bg-zinc-200 dark:bg-zinc-800" />
+            <div className="h-4 w-80 rounded bg-zinc-200 dark:bg-zinc-800" />
+        </div>
+
+        {/* 3 Summary Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-900 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <div className="h-4 w-20 rounded bg-zinc-200 dark:bg-zinc-800" />
+                        <div className="h-5 w-5 rounded bg-zinc-200 dark:bg-zinc-800" />
+                    </div>
+                    <div className="h-7 w-40 rounded bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="h-3.5 w-24 rounded bg-zinc-200 dark:bg-zinc-800" />
+                </div>
+            ))}
+        </div>
+
+        {/* Grid layout for Recent Notifications & Quick Links */}
+        <div className="grid gap-4 lg:grid-cols-3">
+            {/* Notifications Column */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800 lg:col-span-2 space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                    <div className="h-5 w-36 rounded bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="h-4 w-14 rounded bg-zinc-200 dark:bg-zinc-800" />
+                </div>
+                {[1, 2, 3].map((i) => (
+                    <div key={i} className="rounded-r-lg border-l-4 border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900 space-y-2.5">
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-28 rounded bg-zinc-200 dark:bg-zinc-800" />
+                        </div>
+                        <div className="h-3.5 w-full rounded bg-zinc-200 dark:bg-zinc-800" />
+                        <div className="h-3 w-3/4 rounded bg-zinc-200 dark:bg-zinc-800" />
+                    </div>
+                ))}
+            </div>
+
+            {/* Quick Links Column */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800 space-y-4">
+                <div className="h-5 w-24 rounded bg-zinc-200 dark:bg-zinc-800 mb-2" />
+                {[1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50/50 dark:bg-zinc-900/30">
+                        <div className="h-10 w-10 rounded-lg bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                            <div className="h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-800" />
+                            <div className="h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-800" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
 const ResidentHomePage = () => {
     const { user } = useAuth();
     const [logs, setLogs] = useState<GateLog[]>([]);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [requests, setRequests] = useState<UpdateRequestItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [requestsLoading, setRequestsLoading] = useState(false);
     const [submittingGuest, setSubmittingGuest] = useState(false);
     const [activeModal, setActiveModal] = useState<ResidentModal>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [currentTime, setCurrentTime] = useState<Date>(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
     const [openRequest, setOpenRequest] = useState<number | null>(null);
     const [guestForm, setGuestForm] = useState<GuestForm>(blankGuestForm);
     const [notice, setNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
     const loadDashboardData = useCallback((showInitialLoading = false) => {
         if (showInitialLoading) setLoading(true);
-        setRefreshing(true);
 
         return Promise.all([
             GateAccessService.myGateLogs(1),
@@ -62,7 +126,6 @@ const ResidentHomePage = () => {
             })
             .finally(() => {
                 if (showInitialLoading) setLoading(false);
-                setRefreshing(false);
             });
     }, []);
 
@@ -81,7 +144,7 @@ const ResidentHomePage = () => {
         if (activeModal === "guest") loadRequests();
     }, [activeModal]);
 
-    if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+    if (loading) return <ResidentDashboardSkeleton />;
 
     const displayName = [user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ") || "Resident";
     const recentNotifications = notifications.slice(0, 5);
@@ -130,19 +193,20 @@ const ResidentHomePage = () => {
 
     return (
         <div className="flex h-full w-full flex-1 flex-col gap-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-5">
                 <div>
                     <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Welcome, {displayName}!</h1>
                     <p className="mt-1 text-zinc-600 dark:text-zinc-400">Gate Security System - Resident Portal</p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => void loadDashboardData()}
-                    disabled={refreshing}
-                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                >
-                    {refreshing ? "Refreshing..." : "Refresh"}
-                </button>
+                {/* Date & Time display (auto-refreshing clock) */}
+                <div className="flex items-center gap-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 px-4 py-2.5 text-zinc-800 dark:text-zinc-200 self-start md:self-auto">
+                    <svg className="w-4 h-4 text-blue-600 dark:text-[#C5A073]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-mono text-sm tracking-wide">
+                        {currentTime.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} {currentTime.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -366,11 +430,11 @@ const DashboardModal = ({
     return (
         <div className="fixed inset-0 z-[100] overflow-y-auto">
             <div className="flex min-h-screen items-center justify-center px-4 py-8">
-                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-                <div className={`relative w-full ${maxWidth} rounded-2xl bg-white p-5 shadow-2xl dark:bg-zinc-800 md:p-6`}>
-                    <div className="mb-5 flex items-center justify-between gap-4 border-b border-zinc-200 pb-4 dark:border-zinc-700">
-                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{title}</h2>
-                        <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">x</button>
+                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+                <div className={`relative w-full ${maxWidth} rounded-2xl border border-white/10 bg-[#1e1e24]/80 p-5 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 md:p-6 text-zinc-100`}>
+                    <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/5 pb-4">
+                        <h2 className="text-2xl font-bold text-white">{title}</h2>
+                        <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-white">x</button>
                     </div>
                     {children}
                 </div>
@@ -536,9 +600,9 @@ const RequestDetailModal = ({ request, onClose }: { request?: UpdateRequestItem;
     return (
         <div className="fixed inset-0 z-[120] overflow-y-auto">
             <div className="flex min-h-screen items-center justify-center px-4 py-10">
-                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-                <div className="relative w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-800">
-                    <div className="mb-6 flex items-start justify-between gap-4 border-b border-zinc-200 pb-4 dark:border-zinc-700">
+                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+                <div className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-[#1e1e24]/80 p-6 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 text-zinc-100">
+                    <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/5 pb-4">
                         <div>
                             <div className="mb-3 flex flex-wrap items-center gap-3">
                                 <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">GUEST ACCESS</span>
@@ -547,12 +611,12 @@ const RequestDetailModal = ({ request, onClose }: { request?: UpdateRequestItem;
                             </div>
                             <p className="text-sm text-zinc-500 dark:text-zinc-400">Submitted on {new Date(request.created_at).toLocaleString()}</p>
                         </div>
-                        <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">x</button>
+                        <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-white">x</button>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
                         {entries.map(([key, value]) => (
-                            <div key={key} className="rounded bg-zinc-50 p-3 dark:bg-zinc-700/50">
+                            <div key={key} className="rounded border border-white/5 bg-black/25 p-3">
                                 <p className="mb-1 text-xs font-semibold uppercase text-zinc-600 dark:text-zinc-400">{labelize(key)}</p>
                                 <p className="break-words text-sm text-zinc-900 dark:text-zinc-100">{String(value || "N/A")}</p>
                             </div>
@@ -560,7 +624,7 @@ const RequestDetailModal = ({ request, onClose }: { request?: UpdateRequestItem;
                     </div>
 
                     {request.admin_notes && (
-                        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                        <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
                             <strong>Admin notes:</strong> {request.admin_notes}
                         </div>
                     )}

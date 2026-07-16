@@ -1,6 +1,6 @@
 import type { FC, ReactNode } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import Spinner from "../components/Spinner/Spinner"
+import PortalSkeleton from "../components/Skeleton/PortalSkeleton"
 import { Navigate } from "react-router-dom"
 
 interface ProtectedRouteProps {
@@ -11,11 +11,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({children}) => {
     const {user, loading} = useAuth()
 
     if(loading) {
-        return (
-            <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
-                <Spinner size="lg"/>
-            </div>
-        );
+        return <PortalSkeleton />;
     }
 
     if(!user) {

@@ -1,15 +1,16 @@
-import { Navigate, NavLink, Outlet, Route, Routes, useNavigate } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, Route, Routes, useNavigate, useLocation } from 'react-router-dom'
 import AdminLogin from './components/Auth/AdminLogin'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import AdminPage from './pages/AdminPage'
 import GuardsPage from './pages/GuardsPage'
 import NotificationsPage from './pages/NotificationsPage'
 import ReportsPage from './pages/ReportsPage'
-import SettingsPage from './pages/SettingsPage'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AdminProfileModal from './components/Profile/AdminProfileModal'
 import SidebarHoverLabel from './components/Sidebar/SidebarHoverLabel'
 import { usePersistedSidebarCollapsed } from './hooks/usePersistedSidebarCollapsed'
+import { adminNotificationsApi } from './services/adminApi'
+import PortalSkeleton from './components/Skeleton/PortalSkeleton'
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'gate-admin-sidebar-collapsed'
 
@@ -37,12 +38,6 @@ const UsersIcon = () => (
   </svg>
 )
 
-const TagIcon = () => (
-  <svg className="h-[20px] w-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-  </svg>
-)
-
 const ChevronUpDownIcon = () => (
   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
@@ -50,8 +45,8 @@ const ChevronUpDownIcon = () => (
 )
 
 const navLinkClass = (isCollapsed: boolean) => ({ isActive }: { isActive: boolean }) =>
-  `flex items-center transition-all duration-200 ${
-    isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3.5 px-3.5 py-2.5'
+  `flex items-center transition-all duration-300 ease-in-out ${
+    isCollapsed ? 'px-3.5 py-2.5 gap-0' : 'px-3.5 py-2.5 gap-3.5'
   } rounded-[10px] text-[14.5px] font-medium ${
     isActive
       ? 'bg-[#3c3c3c] text-white shadow-inner'
@@ -64,13 +59,31 @@ const ProtectedLayout = () => {
   const [profileOpen, setProfileOpen] = useState(false)
   const { isCollapsed, toggleCollapsed } = usePersistedSidebarCollapsed(SIDEBAR_COLLAPSED_STORAGE_KEY)
   const navigate = useNavigate()
+  const location = useLocation()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+
+    const loadUnreadCount = () => {
+      adminNotificationsApi.getNotifications()
+        .then((res) => {
+          const list = Array.isArray(res.data.notifications)
+            ? res.data.notifications
+            : (res.data.notifications as any).data ?? []
+          const unread = list.filter((n: any) => !n.is_read).length
+          setUnreadCount(unread)
+        })
+        .catch(() => {})
+    }
+
+    loadUnreadCount()
+    const interval = setInterval(loadUnreadCount, 15000)
+    return () => clearInterval(interval)
+  }, [user])
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-900">
-        <p className="text-sm text-zinc-500">Loading admin portal...</p>
-      </div>
-    )
+    return <PortalSkeleton />
   }
 
   if (!user) {
@@ -127,31 +140,34 @@ const ProtectedLayout = () => {
           <SidebarHoverLabel label="Gate Security" isCollapsed={isCollapsed} variant="dark" className="w-full">
             <button
               onClick={toggleCollapsed}
-              className={`flex items-center focus:outline-none cursor-pointer transition-all ${
-                isCollapsed ? 'justify-center w-full' : 'gap-3.5'
+              className={`flex items-center focus:outline-none cursor-pointer transition-all duration-300 ease-in-out ${
+                isCollapsed ? 'justify-center w-full gap-0' : 'gap-3.5'
               }`}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-white text-lg font-extrabold text-black shadow-md">
                 G
               </div>
-              {!isCollapsed && (
-                <span className="truncate font-bold text-white text-lg tracking-wide text-start animate-fade-in">
-                  Gate Security
-                </span>
-              )}
+              <span className={`truncate font-bold text-white text-lg tracking-wide text-start transition-all duration-300 ease-in-out origin-left ${
+                isCollapsed ? 'w-0 opacity-0 scale-90 pointer-events-none ml-0' : 'w-auto opacity-100 scale-100 ml-2.5'
+              }`}>
+                Gate Security
+              </span>
             </button>
           </SidebarHoverLabel>
         </div>
 
-        <div className={`flex-1 py-6 ${isCollapsed ? 'overflow-visible px-2' : 'overflow-y-auto px-4'}`}>
-          {!isCollapsed ? (
-            <p className="mb-4 px-2 text-[12.5px] font-bold uppercase tracking-widest text-zinc-500 animate-fade-in">
+        <div className={`flex-1 py-6 transition-all duration-300 ${isCollapsed ? 'overflow-visible px-2' : 'overflow-y-auto px-4'}`}>
+          <div className="relative overflow-hidden h-6 mb-4">
+            <p className={`absolute left-2 text-[12.5px] font-bold uppercase tracking-widest text-zinc-500 transition-all duration-300 ease-in-out origin-left ${
+              isCollapsed ? 'opacity-0 scale-90 pointer-events-none translate-x-[-10px]' : 'opacity-100 scale-100 translate-x-0'
+            }`}>
               Platform
             </p>
-          ) : (
-            <div className="border-b border-white/5 my-3 mx-2 animate-fade-in" />
-          )}
+            <div className={`absolute inset-x-2 bottom-2 border-b border-white/5 transition-all duration-300 ease-in-out ${
+              isCollapsed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
+            }`} />
+          </div>
           <ul className="space-y-1.5">
             <li>
               <SidebarHoverLabel label="Dashboard" isCollapsed={isCollapsed} variant="dark">
@@ -159,7 +175,11 @@ const ProtectedLayout = () => {
                   <span className="shrink-0 h-5 w-5 flex items-center justify-center">
                     <HomeIcon />
                   </span>
-                  {!isCollapsed && <span>Dashboard</span>}
+                  <span className={`transition-all duration-300 ease-in-out origin-left truncate ${
+                    isCollapsed ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
+                  }`}>
+                    Dashboard
+                  </span>
                 </NavLink>
               </SidebarHoverLabel>
             </li>
@@ -169,17 +189,35 @@ const ProtectedLayout = () => {
                   <span className="shrink-0 h-5 w-5 flex items-center justify-center">
                     <ChartBarIcon />
                   </span>
-                  {!isCollapsed && <span>Activity Logs</span>}
+                  <span className={`transition-all duration-300 ease-in-out origin-left truncate ${
+                    isCollapsed ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
+                  }`}>
+                    Activity Logs
+                  </span>
                 </NavLink>
               </SidebarHoverLabel>
             </li>
             <li>
               <SidebarHoverLabel label="Notifications" isCollapsed={isCollapsed} variant="dark">
                 <NavLink to="/notifications" onClick={closeSidebar} className={navLinkClass(isCollapsed)}>
-                  <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                  <span className="shrink-0 h-5 w-5 flex items-center justify-center relative">
                     <BellIcon />
+                    <span className={`absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-[#18181b] transition-all duration-300 ease-in-out ${
+                      isCollapsed && unreadCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'
+                    }`}>
+                      {unreadCount}
+                    </span>
                   </span>
-                  {!isCollapsed && <span>Notifications</span>}
+                  <div className={`flex items-center justify-between w-full transition-all duration-300 ease-in-out origin-left truncate ${
+                    isCollapsed ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
+                  }`}>
+                    <span>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-none text-white shadow-sm ml-2">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
                 </NavLink>
               </SidebarHoverLabel>
             </li>
@@ -189,49 +227,43 @@ const ProtectedLayout = () => {
                   <span className="shrink-0 h-5 w-5 flex items-center justify-center">
                     <UsersIcon />
                   </span>
-                  {!isCollapsed && <span>Staff Users</span>}
-                </NavLink>
-              </SidebarHoverLabel>
-            </li>
-            <li>
-              <SidebarHoverLabel label="Genders" isCollapsed={isCollapsed} variant="dark">
-                <NavLink to="/settings" onClick={closeSidebar} className={navLinkClass(isCollapsed)}>
-                  <span className="shrink-0 h-5 w-5 flex items-center justify-center">
-                    <TagIcon />
+                  <span className={`transition-all duration-300 ease-in-out origin-left truncate ${
+                    isCollapsed ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
+                  }`}>
+                    Staff Users
                   </span>
-                  {!isCollapsed && <span>System</span>}
                 </NavLink>
               </SidebarHoverLabel>
             </li>
           </ul>
         </div>
         
-        <div className={`border-t border-white/5 ${isCollapsed ? 'overflow-visible p-2 flex justify-center' : 'p-4'}`}>
+        <div className={`border-t border-white/5 transition-all duration-300 ${isCollapsed ? 'p-2 flex justify-center' : 'p-4'}`}>
           <SidebarHoverLabel label={userName} isCollapsed={isCollapsed} variant="dark" className={isCollapsed ? 'flex justify-center' : 'w-full'}>
             <button 
               type="button"
               onClick={() => setProfileOpen(true)}
-              className={`flex items-center transition hover:bg-[#2a2a2a] cursor-pointer ${
-                isCollapsed ? 'h-10 w-10 justify-center rounded-lg bg-zinc-800 text-white' : 'w-full gap-3.5 rounded-xl p-2.5 text-left'
+              className={`flex items-center transition-all duration-300 ease-in-out hover:bg-[#2a2a2a] cursor-pointer w-full rounded-xl ${
+                isCollapsed ? 'p-1 gap-0' : 'p-2.5 gap-3.5'
               }`}
               aria-label={isCollapsed ? userName : 'Click to view profile'}
             >
-              <div className={`flex shrink-0 items-center justify-center text-sm font-bold text-white ${
-                isCollapsed ? '' : 'h-11 w-11 rounded-xl bg-zinc-800 tracking-wider'
+              <div className={`flex shrink-0 items-center justify-center text-sm font-bold text-white rounded-xl bg-zinc-800 transition-all duration-300 ease-in-out ${
+                isCollapsed ? 'h-10 w-10 tracking-normal' : 'h-11 w-11 tracking-wider'
               }`}>
                 {userInitials}
               </div>
-              {!isCollapsed && (
-                <>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-bold text-white">{userName}</p>
-                    <p className="truncate text-[13px] text-zinc-400">{user.email || 'admin@pdp.com'}</p>
-                  </div>
-                  <div className="text-zinc-400">
-                    <ChevronUpDownIcon />
-                  </div>
-                </>
-              )}
+              <div className={`flex flex-1 items-center justify-between min-w-0 transition-all duration-300 ease-in-out origin-left truncate ${
+                isCollapsed ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
+              }`}>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[14px] font-bold text-white">{userName}</p>
+                  <p className="truncate text-[13px] text-zinc-400">{user.email || 'admin@pdp.com'}</p>
+                </div>
+                <div className="text-zinc-400 ml-2">
+                  <ChevronUpDownIcon />
+                </div>
+              </div>
             </button>
           </SidebarHoverLabel>
         </div>
@@ -239,7 +271,7 @@ const ProtectedLayout = () => {
 
       {/* Main content */}
       <main className={`min-h-screen bg-[#121212] pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-[76px]' : 'lg:ml-[260px]'}`}>
-        <div className="flex h-full w-full flex-1 flex-col gap-4 p-4 lg:p-8">
+        <div key={location.pathname} className="flex h-full w-full flex-1 flex-col gap-4 p-4 lg:p-8 animate-fade-in-up">
           <Outlet />
         </div>
       </main>
@@ -262,7 +294,6 @@ const AppRoutes = () => (
       <Route path="guards/*" element={<GuardsPage />} />
       <Route path="reports/*" element={<ReportsPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
-      <Route path="settings" element={<SettingsPage />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>

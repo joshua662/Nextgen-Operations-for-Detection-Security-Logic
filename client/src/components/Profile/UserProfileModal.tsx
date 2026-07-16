@@ -168,13 +168,13 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
   const fieldError = (key: string) => fieldErrors[key]?.[0];
 
   const inputClass =
-    "mt-1.5 w-full rounded-lg border border-[#333] bg-[#1b1b1b] px-3 py-2 text-sm text-gray-100 outline-none focus:border-blue-500";
+    "mt-1.5 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-100 outline-none focus:border-blue-500 focus:bg-black/50 transition-colors";
 
   return (
     <>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-opacity" onClick={onClose}>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md transition-opacity" onClick={onClose}>
         <div
-          className="w-full max-w-[1100px] max-h-[95vh] overflow-y-auto rounded-xl bg-[#1e1e1e] shadow-2xl scrollbar-thin scrollbar-thumb-zinc-700"
+          className="w-full max-w-[1100px] max-h-[95vh] overflow-y-auto rounded-xl bg-[#1e1e24]/75 backdrop-blur-xl border border-white/10 shadow-2xl scrollbar-thin scrollbar-thumb-zinc-700"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-4 sm:p-6 lg:p-8 text-white">
@@ -252,7 +252,7 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
               <div className="flex flex-col gap-6">
-                <div className="rounded-xl border border-[#333] bg-[#242424] p-6">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
                   <div className="mb-5 flex items-center gap-3">
                     <div className="h-6 w-6 rounded-md bg-[#2d3a56] flex items-center justify-center">
                       <svg className="h-3.5 w-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -318,7 +318,7 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
                 </div>
 
                 {isResident && (
-                  <div className="rounded-xl border border-[#333] bg-[#242424] p-6">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
                     <div className="mb-5 flex items-center gap-3">
                       <div className="h-6 w-6 rounded-md bg-[#3f2a4f] flex items-center justify-center">
                         <svg className="h-3.5 w-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -357,7 +357,7 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
 
               </div>
 
-              <div className="h-fit rounded-xl border border-[#333] bg-[#242424] p-6">
+              <div className="h-fit rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
                 <div className="mb-5 flex items-center gap-3">
                   <div className="h-6 w-6 rounded-md bg-[#243e30] flex items-center justify-center">
                     <svg className="h-3.5 w-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -450,8 +450,8 @@ const InfoField = ({
   compact?: boolean;
   highlight?: boolean;
 }) => (
-  <div className={`rounded-lg border p-4 ${highlight ? "border-blue-900/50 bg-[#1c2230]" : "border-[#333] bg-[#1b1b1b]"}`}>
-    <p className={`text-[11px] font-bold uppercase tracking-widest ${highlight ? "text-[#4d82c2]" : "text-gray-500"}`}>{label}</p>
+  <div className={`rounded-lg border p-4 ${highlight ? "border-blue-500/30 bg-blue-500/10" : "border-white/5 bg-black/25"}`}>
+    <p className={`text-[11px] font-bold uppercase tracking-widest ${highlight ? "text-blue-400" : "text-gray-500"}`}>{label}</p>
     <p className={`mt-1.5 ${compact ? "text-[14px] font-medium" : "text-[15px] font-bold"} text-gray-100`}>{value || "—"}</p>
   </div>
 );
@@ -507,9 +507,9 @@ const ProfileActionModal = ({
       : "bg-blue-600 hover:bg-blue-500";
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
       <button type="button" aria-label="Close modal" onClick={onClose} className="absolute inset-0" />
-      <div className="relative w-full max-w-md rounded-xl border border-[#333] bg-[#202020] p-6 text-white shadow-2xl">
+      <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-[#1e1e24]/90 p-6 text-white shadow-2xl backdrop-blur-xl">
         <div className={`mb-4 rounded-lg border px-4 py-3 ${toneClass}`}>
           <h3 className="text-lg font-bold">{title}</h3>
           <p className="mt-1 text-sm opacity-90">{message}</p>

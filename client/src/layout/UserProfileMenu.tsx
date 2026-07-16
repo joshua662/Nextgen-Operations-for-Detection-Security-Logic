@@ -38,40 +38,36 @@ const UserProfileMenu = ({ onViewProfile, variant = "sidebar", isCollapsed = fal
     );
 
     if (variant === "sidebar") {
-        if (isCollapsed) {
-            return (
-                <SidebarHoverLabel label={fullName || "My Profile"} isCollapsed={isCollapsed} className="w-full flex justify-center">
+        return (
+            <div className="relative hidden lg:block w-full">
+                <SidebarHoverLabel label={fullName || "My Profile"} isCollapsed={isCollapsed} className={isCollapsed ? "w-full flex justify-center" : "w-full"}>
                     <button
                         type="button"
                         onClick={onViewProfile}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700 text-sm font-bold text-zinc-900 dark:text-white transition hover:bg-zinc-300 dark:hover:bg-zinc-600 cursor-pointer"
+                        className={`flex items-center transition-all duration-300 ease-in-out hover:bg-[#2a2a2a] cursor-pointer w-full rounded-lg ${
+                            isCollapsed ? "p-1 gap-0" : "p-2 gap-3"
+                        }`}
+                        title="Click to view profile"
                         aria-label={fullName || "My Profile"}
                     >
-                        {initials}
+                        <span className={`flex shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-sm font-semibold text-white transition-all duration-300 ease-in-out ${
+                            isCollapsed ? "h-10 w-10" : "h-8 w-8"
+                        }`}>
+                            {initials}
+                        </span>
+                        <div className={`flex flex-1 items-center justify-between min-w-0 transition-all duration-300 ease-in-out origin-left truncate ${
+                            isCollapsed ? "w-0 opacity-0 scale-90 pointer-events-none" : "w-auto opacity-100 scale-100"
+                        }`}>
+                            <span className="grid min-w-0 flex-1 text-sm leading-tight text-left">
+                                <span className="truncate font-semibold text-white">{fullName || "User"}</span>
+                                <span className="truncate text-xs text-zinc-400">{user?.user?.email ?? user?.user?.username}</span>
+                            </span>
+                            <svg className="h-4 w-4 shrink-0 text-zinc-400 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                            </svg>
+                        </div>
                     </button>
                 </SidebarHoverLabel>
-            );
-        }
-
-        return (
-            <div className="relative hidden lg:block">
-                <button
-                    type="button"
-                    onClick={onViewProfile}
-                    className="flex w-full items-center gap-3 rounded-lg p-2 text-start hover:bg-zinc-200 dark:hover:bg-zinc-800 transition cursor-pointer"
-                    title="Click to view profile"
-                >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700 text-sm font-semibold text-zinc-900 dark:text-white">
-                        {initials}
-                    </span>
-                    <span className="grid min-w-0 flex-1 text-sm leading-tight">
-                        <span className="truncate font-semibold text-zinc-900 dark:text-zinc-100">{fullName || "User"}</span>
-                        <span className="truncate text-xs text-zinc-500 dark:text-zinc-400">{user?.user?.email ?? user?.user?.username}</span>
-                    </span>
-                    <svg className="h-4 w-4 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-                    </svg>
-                </button>
             </div>
         );
     }
@@ -80,10 +76,10 @@ const UserProfileMenu = ({ onViewProfile, variant = "sidebar", isCollapsed = fal
         <button
             type="button"
             onClick={onViewProfile}
-            className="flex rounded-full ring-2 ring-zinc-300 transition hover:ring-zinc-400 focus:outline-none focus:ring-4 focus:ring-zinc-400/50 dark:ring-zinc-600 cursor-pointer"
+            className="flex rounded-full ring-2 ring-[#C5A073]/30 transition hover:ring-[#C5A073]/50 focus:outline-none focus:ring-4 focus:ring-[#C5A073]/20 cursor-pointer"
             title="Click to view profile"
         >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 text-sm font-semibold text-zinc-900 dark:bg-zinc-700 dark:text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-white">
                 {initials}
             </span>
         </button>

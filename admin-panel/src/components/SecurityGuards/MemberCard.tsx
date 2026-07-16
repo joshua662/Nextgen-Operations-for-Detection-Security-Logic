@@ -216,8 +216,8 @@ export const MemberCardModal = ({ isOpen, user, onClose }: MemberCardModalProps)
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#1e1e1e] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md" onClick={onClose}>
+      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#1e1e24]/80 backdrop-blur-xl shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
           <div>
             <h3 className="text-xl font-bold text-white">Member Card</h3>

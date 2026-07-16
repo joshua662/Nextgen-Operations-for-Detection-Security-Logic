@@ -279,9 +279,9 @@ const RequestModal = ({ request, onClose }: { request?: UpdateRequestItem; onClo
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex min-h-screen items-center justify-center px-4 py-10">
-                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-white/80 backdrop-blur-sm dark:bg-zinc-900/80" />
-                <div className="relative w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-800">
-                    <div className="mb-6 flex items-start justify-between gap-4 border-b border-zinc-200 pb-4 dark:border-zinc-700">
+                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+                <div className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-[#1e1e24]/80 p-6 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 text-zinc-100">
+                    <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/5 pb-4">
                         <div>
                             <div className="mb-3 flex flex-wrap items-center gap-3">
                                 <span className={`rounded-full px-3 py-1 text-xs font-bold ${isGuest ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"}`}>
@@ -292,12 +292,12 @@ const RequestModal = ({ request, onClose }: { request?: UpdateRequestItem; onClo
                             </div>
                             <p className="text-sm text-zinc-500 dark:text-zinc-400">Submitted on {new Date(request.created_at).toLocaleString()}</p>
                         </div>
-                        <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">x</button>
+                        <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-white">x</button>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
                         {entries.map(([key, value]) => (
-                            <div key={key} className="rounded bg-zinc-50 p-3 dark:bg-zinc-700/50">
+                            <div key={key} className="rounded border border-white/5 bg-black/25 p-3">
                                 <p className="mb-1 text-xs font-semibold uppercase text-zinc-600 dark:text-zinc-400">{labelize(key)}</p>
                                 <p className="break-words text-sm text-zinc-900 dark:text-zinc-100">{String(value || "N/A")}</p>
                             </div>
@@ -305,7 +305,7 @@ const RequestModal = ({ request, onClose }: { request?: UpdateRequestItem; onClo
                     </div>
 
                     {request.admin_notes && (
-                        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                        <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
                             <strong>Admin notes:</strong> {request.admin_notes}
                         </div>
                     )}

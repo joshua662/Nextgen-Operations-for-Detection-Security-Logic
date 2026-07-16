@@ -104,5 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', 'index');
         Route::put('/{notification}/read', 'markRead');
         Route::put('/read-all', 'markAllRead');
+        Route::post('/{notification}/approve', 'approve');
+        Route::post('/{notification}/reject', 'reject');
     });
 });

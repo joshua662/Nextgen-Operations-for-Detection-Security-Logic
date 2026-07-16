@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import GateAccessService from "../../services/GateAccessService";
 import type { DashboardOverview, VerifyPlateResponse } from "../../interfaces/GateInterface";
-import Spinner from "../../components/Spinner/Spinner";
 import { useAuth } from "../../contexts/AuthContext";
 import ResidentsPage from "../Residents/ResidentsPage";
 import GateLogsPage from "../GateLogs/GateLogsPage";
@@ -41,17 +41,18 @@ const buildProxyStreamUrl = (location: CameraLocation, directUrl: string): strin
 
 const resolveEntranceStreamUrl = (data: DashboardOverview) => {
     const rawUrl = data.entrance_camera_stream_url || data.camera_stream_url || "rtsp://admin:password@192.168.2.103:554/ch0_0.h264";
-    if (rawUrl.toLowerCase().startsWith("rtsp://") || data.entrance_camera_status === "online" || data.camera_status === "online") {
+    if (rawUrl.toLowerCase().startsWith("rtsp://")) {
         return `${API_BASE.replace(/\/api$/, "")}/camera_entrance.jpg`;
     }
     return buildProxyStreamUrl("entrance", rawUrl);
 };
 
 const resolveExitStreamUrl = (data: DashboardOverview) => {
-    if (data.exit_camera_status === "online") {
+    const rawUrl = data.exit_camera_stream_url || "http://192.168.2.105:81/stream";
+    if (rawUrl.toLowerCase().startsWith("rtsp://")) {
         return `${API_BASE.replace(/\/api$/, "")}/camera_exit.jpg`;
     }
-    return buildProxyStreamUrl("exit", data.exit_camera_stream_url || "http://192.168.2.105:81/stream");
+    return buildProxyStreamUrl("exit", rawUrl);
 };
 
 const QUICK_ACTIONS: {
@@ -62,11 +63,6 @@ const QUICK_ACTIONS: {
         {
             key: "residents",
             label: "Manage Residents",
-            primary: true,
-        },
-        {
-            key: "gate-logs",
-            label: "View Gate Logs",
         },
         {
             key: "update-requests",
@@ -78,11 +74,76 @@ const QUICK_ACTIONS: {
         },
     ];
 
+const ClientDashboardSkeleton = () => (
+    <div className="space-y-6 animate-pulse">
+        {/* Header */}
+        <div className="space-y-2">
+            <div className="h-8 w-64 rounded bg-zinc-800" />
+            <div className="h-4 w-96 rounded bg-zinc-800" />
+        </div>
+
+        {/* Stat cards (5 items) */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-28 rounded-xl border border-white/5 bg-[#18181b] p-6 space-y-4">
+                    <div className="h-4 w-28 rounded bg-zinc-800" />
+                    <div className="h-8 w-16 rounded bg-zinc-800" />
+                </div>
+            ))}
+        </div>
+
+        {/* Analytics Grid Skeleton */}
+        <div className="grid gap-6 lg:grid-cols-2">
+            <div className="h-[320px] rounded-xl border border-white/5 bg-[#18181b] p-6" />
+            <div className="h-[320px] rounded-xl border border-white/5 bg-[#18181b] p-6" />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="rounded-xl border border-white/5 bg-[#18181b] p-6 space-y-4">
+            <div className="h-6 w-36 rounded bg-zinc-800" />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-12 rounded-lg bg-zinc-850" />
+                ))}
+            </div>
+        </div>
+
+        {/* Live Camera Feeds */}
+        <div className="rounded-xl border border-white/5 bg-[#18181b] p-4 space-y-4">
+            <div className="h-6 w-44 rounded bg-zinc-800" />
+            <div className="grid gap-6 lg:grid-cols-2">
+                {[1, 2].map((i) => (
+                    <div key={i} className="rounded-xl border border-white/5 bg-zinc-900 p-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div className="h-5 w-36 rounded bg-zinc-800" />
+                            <div className="h-6 w-12 rounded bg-zinc-800" />
+                        </div>
+                        <div className="h-[280px] rounded-lg bg-zinc-850" />
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
 const DashboardPage = () => {
     const { user } = useAuth();
     const [data, setData] = useState<DashboardOverview | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeQuickAction, setActiveQuickAction] = useState<QuickActionKey | null>(null);
+    const [chartData, setChartData] = useState<{ labels: string[]; values: number[] } | null>(null);
+    const [weekOffset, setWeekOffset] = useState(0);
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [currentTime, setCurrentTime] = useState<Date>(new Date());
+    const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'year'>('today');
+    const [trafficDetailsPeriod, setTrafficDetailsPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly' | null>(null);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     const refreshDashboard = useCallback(() => {
         return GateAccessService.dashboardOverview().then((res) => setData(res.data));
@@ -95,6 +156,44 @@ const DashboardPage = () => {
         }, 4000);
         return () => clearInterval(intervalId);
     }, [refreshDashboard]);
+
+    useEffect(() => {
+        GateAccessService.trafficChart("monthly")
+            .then((res) => {
+                const data = res.data;
+                const values = data.labels.map((_: any, i: number) => (data.authorized[i] ?? 0) + (data.unauthorized[i] ?? 0));
+                const labels = data.labels.map((lbl: string) => lbl.split(" ")[0]);
+                setChartData({ labels, values });
+            })
+            .catch((err) => console.error(err));
+    }, []);
+
+    // Calculate week dates based on weekOffset
+    const weekDates = useMemo(() => {
+        const today = new Date();
+        const currentWeekStart = new Date(today);
+        currentWeekStart.setDate(today.getDate() - today.getDay() + (weekOffset * 7));
+        return Array.from({ length: 7 }).map((_, i) => {
+            const d = new Date(currentWeekStart);
+            d.setDate(currentWeekStart.getDate() + i);
+            return d;
+        });
+    }, [weekOffset]);
+
+    const monthYearLabel = useMemo(() => {
+        if (weekDates.length === 0) return "";
+        return weekDates[3].toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    }, [weekDates]);
+
+    const chartMax = useMemo(() => {
+        return Math.max(...(chartData?.values ?? []), 10);
+    }, [chartData]);
+
+    const activeResidentsPercentage = useMemo(() => {
+        if (!data || data.stats.total_residents === 0) return 65;
+        const ratio = Math.round(((data.stats.authorized_entries + data.stats.unauthorized_attempts) / data.stats.total_residents) * 100);
+        return Math.min(Math.max(ratio, 45), 98);
+    }, [data]);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handlePlateVerified = useCallback((_result: VerifyPlateResponse) => {
@@ -173,29 +272,252 @@ const DashboardPage = () => {
         return () => window.removeEventListener("keydown", handleEscape);
     }, [activeQuickAction]);
 
-    if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+    if (loading) return <ClientDashboardSkeleton />;
     if (!data) return <p className="text-zinc-500">Unable to load dashboard.</p>;
 
     const displayName = [user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ") || "Admin";
 
     return (
-        <div className="flex h-full w-full flex-1 flex-col gap-6 rounded-xl">
-            <div>
-                <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Welcome, {displayName}!</h1>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">Gate Security System - Security Guard Dashboard</p>
+        <div className="flex h-full w-full flex-1 flex-col gap-6 rounded-xl text-zinc-100">
+            {/* Header Section */}
+            <div className="flex flex-col gap-4 border-b border-white/5 pb-5">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-zinc-100">Resident Car Entry & Exit Monitor</h1>
+                        <p className="mt-1 text-zinc-400">Gate Security System - Security Guard Dashboard (Welcome, {displayName})</p>
+                    </div>
+                    {/* Date & Time display (auto-refreshing clock) */}
+                    <div className="flex items-center gap-2.5 rounded-lg bg-zinc-900/60 border border-white/5 px-4 py-2.5 text-zinc-200">
+                        <svg className="w-4 h-4 text-[#C5A073]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-mono text-sm tracking-wide">
+                            {currentTime.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} {currentTime.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </span>
+                    </div>
+                </div>
+
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                <StatCard label="Total Residents" value={data.stats.total_residents} />
-                <StatCard label="Entries Today" value={data.stats.authorized_entries} />
-                <StatCard label="Exits Today" value={data.stats.authorized_exits} />
-                <StatCard label="Pending Requests" value={data.stats.pending_update_requests} />
-                <StatCard label="Unauthorized Today" value={data.stats.unauthorized_attempts} danger />
+            {/* Key Metrics Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <MetricCard
+                    label="Daily Count"
+                    sub="Cars passed today"
+                    value={data.car_monitor?.daily?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits)}
+                    trend={data.car_monitor?.daily?.trend ?? "up"}
+                    diff={data.car_monitor?.daily?.diff ?? 0}
+                    isActive={timeFilter === "today"}
+                    onClick={() => {
+                        setTimeFilter("today");
+                        setTrafficDetailsPeriod("daily");
+                    }}
+                />
+                <MetricCard
+                    label="Weekly Count"
+                    sub="Cars passed this week"
+                    value={data.car_monitor?.weekly?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 6}
+                    trend={data.car_monitor?.weekly?.trend ?? "up"}
+                    diff={data.car_monitor?.weekly?.diff ?? 0}
+                    isActive={timeFilter === "week"}
+                    onClick={() => {
+                        setTimeFilter("week");
+                        setTrafficDetailsPeriod("weekly");
+                    }}
+                />
+                <MetricCard
+                    label="Monthly Count"
+                    sub="Cars passed this month"
+                    value={data.car_monitor?.monthly?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 24}
+                    trend={data.car_monitor?.monthly?.trend ?? "down"}
+                    diff={data.car_monitor?.monthly?.diff ?? 0}
+                    isActive={timeFilter === "month"}
+                    onClick={() => {
+                        setTimeFilter("month");
+                        setTrafficDetailsPeriod("monthly");
+                    }}
+                />
+                <MetricCard
+                    label="Yearly Count"
+                    sub="Cars passed this year"
+                    value={data.car_monitor?.yearly?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 280}
+                    trend={data.car_monitor?.yearly?.trend ?? "up"}
+                    diff={data.car_monitor?.yearly?.diff ?? 0}
+                    isActive={timeFilter === "year"}
+                    onClick={() => {
+                        setTimeFilter("year");
+                        setTrafficDetailsPeriod("yearly");
+                    }}
+                />
             </div>
 
-            <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
-                <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">Quick Actions</h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Styled Visual Analytics Section */}
+            <div className="grid gap-6 lg:grid-cols-2">
+                {/* Total Gate Traffic Bar Chart */}
+                <div className="rounded-xl border border-white/5 bg-[#18181b] p-6 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 className="text-base font-bold text-zinc-100">Total Gate Traffic</h3>
+                            <p className="text-xs text-zinc-500 mt-0.5">Monthly authorized and unauthorized log entries</p>
+                        </div>
+                        <a
+                            href="/gate-logs"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setActiveQuickAction("gate-logs");
+                            }}
+                            className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 hover:bg-[#C5A073] text-zinc-400 hover:text-[#121212] transition-colors border border-white/5"
+                            title="View full gate logs"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </a>
+                    </div>
+
+                    <div className="flex items-end gap-3 sm:gap-4 md:gap-6 h-52 relative px-2">
+                        {/* Gridlines background */}
+                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="w-full border-t border-white/5" />
+                            ))}
+                            <div className="w-full border-b border-white/5" />
+                        </div>
+
+                        {chartData && chartData.labels.length > 0 ? (
+                            chartData.labels.map((label, idx) => {
+                                const val = chartData.values[idx] ?? 0;
+                                const pct = (val / chartMax) * 85;
+                                const isCurrentMonth = idx === chartData.labels.length - 1;
+                                return (
+                                    <div key={idx} className="flex flex-col items-center gap-2 flex-1 z-10 group">
+                                        <div className="relative w-full flex flex-col justify-end items-center h-40 bg-zinc-900/40 rounded-full overflow-visible">
+                                            {/* Tooltip */}
+                                            <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20">
+                                                <span className="bg-zinc-800 text-zinc-100 text-[10px] font-medium rounded px-2 py-1 shadow-lg whitespace-nowrap">
+                                                    {val} entries
+                                                </span>
+                                                <span className="w-1.5 h-1.5 bg-zinc-800 rotate-45 -mt-1" />
+                                            </div>
+                                            
+                                            {/* Bar Fill */}
+                                            <div
+                                                style={{ height: `${pct}%` }}
+                                                className={`w-3.5 sm:w-6 md:w-8 rounded-full transition-all duration-500 cursor-pointer ${
+                                                    isCurrentMonth
+                                                        ? 'bg-[#C5A073]'
+                                                        : 'bg-zinc-800 hover:bg-zinc-700'
+                                                }`}
+                                            />
+                                        </div>
+                                        <span className={`text-[11px] font-medium ${isCurrentMonth ? 'text-[#C5A073] font-bold' : 'text-zinc-500'}`}>
+                                            {label}
+                                        </span>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">No data available</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Weekly Calendar & Community Growth Card */}
+                <div className="rounded-xl border border-white/5 bg-[#18181b] p-6 flex flex-col justify-between">
+                    {/* Week Calendar Header & Days */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <button
+                                type="button"
+                                onClick={() => setWeekOffset((prev) => prev - 1)}
+                                className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors border border-white/5"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <h3 className="text-sm font-bold text-zinc-100">{monthYearLabel}</h3>
+                            <button
+                                type="button"
+                                onClick={() => setWeekOffset((prev) => prev + 1)}
+                                className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors border border-white/5"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Horizontal Days Row */}
+                        <div className="grid grid-cols-7 gap-2 text-center pb-4 border-b border-white/5">
+                            {weekDates.map((date, idx) => {
+                                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                                const isSelected = selectedDate.toDateString() === date.toDateString();
+                                const isToday = new Date().toDateString() === date.toDateString();
+                                return (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setSelectedDate(date)}
+                                        className={`flex flex-col items-center gap-1.5 py-2.5 rounded-full transition-all duration-200 ${
+                                            isSelected
+                                                ? 'bg-[#C5A073] text-[#121212] font-semibold'
+                                                : isToday
+                                                ? 'bg-zinc-900/60 text-zinc-100 border border-zinc-700/60'
+                                                : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
+                                        }`}
+                                    >
+                                        <span className="text-[10px] uppercase tracking-wider">{dayName}</span>
+                                        <span className="text-sm font-bold">{date.getDate()}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Growth Progress Area */}
+                    <div className="mt-4 flex items-center justify-between bg-zinc-900/40 rounded-2xl p-4 border border-white/5">
+                        <div>
+                          <h4 className="text-sm font-bold text-zinc-100">Community growth</h4>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-emerald-450 text-xs font-semibold">↗ 0.9%</span>
+                            <span className="text-[11px] text-zinc-500">from last month</span>
+                          </div>
+                        </div>
+                        
+                        {/* SVG Circular Progress Wheel */}
+                        <div className="relative flex items-center justify-center w-16 h-16">
+                            <svg className="w-full h-full transform -rotate-90">
+                                <circle
+                                    cx="32"
+                                    cy="32"
+                                    r="26"
+                                    stroke="#27272a"
+                                    strokeWidth="5"
+                                    fill="transparent"
+                                />
+                                <circle
+                                    cx="32"
+                                    cy="32"
+                                    r="26"
+                                    stroke="#C5A073"
+                                    strokeWidth="5"
+                                    fill="transparent"
+                                    strokeDasharray={2 * Math.PI * 26}
+                                    strokeDashoffset={2 * Math.PI * 26 * (1 - activeResidentsPercentage / 100)}
+                                    strokeLinecap="round"
+                                    className="transition-all duration-500"
+                                />
+                            </svg>
+                            <div className="absolute text-xs font-bold text-zinc-100">{activeResidentsPercentage}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <section className="rounded-xl border border-white/5 bg-[#18181b] p-6">
+                <h2 className="mb-4 text-xl font-bold text-zinc-100">Quick Actions</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {QUICK_ACTIONS.map((action) => (
                         <QuickActionButton
                             key={action.key}
@@ -215,8 +537,8 @@ const DashboardPage = () => {
                 />
             )}
 
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <h2 className="mb-4 font-semibold text-zinc-900 dark:text-zinc-100">Live Camera Feeds</h2>
+            <section className="rounded-xl border border-white/5 bg-[#18181b] p-4">
+                <h2 className="mb-4 font-semibold text-zinc-100">Live Camera Feeds</h2>
                 <div className="grid gap-6 lg:grid-cols-2">
                     <CameraFeedPanel
                         location="entrance"
@@ -244,6 +566,14 @@ const DashboardPage = () => {
                     />
                 </div>
             </section>
+
+            {trafficDetailsPeriod && (
+                <TrafficDetailsModal
+                    period={trafficDetailsPeriod}
+                    onClose={() => setTrafficDetailsPeriod(null)}
+                    monitorStats={data.car_monitor?.[trafficDetailsPeriod]}
+                />
+            )}
 
         </div>
     );
@@ -345,16 +675,16 @@ const CameraFeedPanel = ({
 
     return (
         <div className="flex flex-col gap-3">
-            <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+            <div className="rounded-lg border border-white/5 bg-zinc-900/30 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{label}</h3>
+                        <h3 className="text-sm font-semibold text-zinc-100">{label}</h3>
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badgeClass}`}>{badge}</span>
                     </div>
                     <button
                         type="button"
                         onClick={() => setShowConfigureModal(true)}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="text-xs font-medium text-zinc-400 hover:text-[#C5A073]"
                     >
                         Configure
                     </button>
@@ -442,7 +772,6 @@ const CameraFeedPanel = ({
             <CameraHealthPanel
                 label={label}
                 status={effectiveStatus}
-                streamUrl={streamUrl}
                 hasStreamUrl={Boolean(streamUrl)}
             />
 
@@ -471,20 +800,18 @@ const CameraFeedPanel = ({
 const CameraHealthPanel = ({
     label,
     status,
-    streamUrl,
     hasStreamUrl,
 }: {
     label: string;
     status: CameraHealthStatus;
-    streamUrl?: string;
     hasStreamUrl: boolean;
 }) => {
     const isOnline = status === "online";
 
     return (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
+        <div className="rounded-lg border border-white/5 bg-zinc-900/40 p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                     {label} — System Health
                 </h4>
                 <StatusBadge status={status} />
@@ -592,17 +919,17 @@ const CameraConfigureModal = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
             role="dialog"
             aria-modal="true"
             aria-labelledby="camera-configure-title"
             onClick={onClose}
         >
             <div
-                className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-800"
+                className="w-full max-w-lg rounded-xl border border-white/10 bg-[#1e1e24]/80 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 text-zinc-100"
                 onClick={(event) => event.stopPropagation()}
             >
-                <div className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-700">
+                <div className="flex items-start justify-between gap-4 border-b border-white/5 px-5 py-4">
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 id="camera-configure-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
@@ -639,7 +966,7 @@ const CameraConfigureModal = ({
                                 setError("");
                             }}
                             placeholder={defaultUrl}
-                            className="mt-1.5 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                            className="mt-1.5 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-white/20 dark:bg-black/30 dark:text-zinc-100"
                         />
                         {error && (
                             <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
@@ -652,11 +979,11 @@ const CameraConfigureModal = ({
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-700">
+                <div className="flex justify-end gap-2 border-t border-white/5 px-5 py-4">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        className="rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/5 dark:border-white/10 dark:text-zinc-300 dark:hover:bg-white/5"
                     >
                         Cancel
                     </button>
@@ -739,47 +1066,331 @@ const StatusBadge = ({ status }: { status: CameraHealthStatus }) => {
     );
 };
 
-const StatCard = ({ label, value, danger }: { label: string; value: number; danger?: boolean }) => (
-    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-900">
-        <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{label}</h3>
-        <p className={`mt-2 text-3xl font-bold ${danger ? "text-red-600 dark:text-red-400" : "text-zinc-900 dark:text-zinc-100"}`}>{value}</p>
-    </div>
-);
 
-const QuickActionModal = ({ action, onClose }: { action: (typeof QUICK_ACTIONS)[number]; onClose: () => void }) => (
-    <div
-        className="fixed inset-0 z-50 bg-black/60 p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="quick-action-title"
-        onClick={onClose}
-    >
+const MetricCard = ({
+    label,
+    sub,
+    value,
+    trend,
+    diff,
+    isActive,
+    onClick,
+}: {
+    label: string;
+    sub: string;
+    value: number;
+    trend: "up" | "down";
+    diff: number;
+    isActive: boolean;
+    onClick?: () => void;
+}) => {
+    const isUp = trend === "up";
+    return (
         <div
-            className="mx-auto flex h-[calc(100vh-2rem)] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-800"
-            onClick={(event) => event.stopPropagation()}
+            onClick={onClick}
+            className={`rounded-xl border p-6 transition-all duration-300 cursor-pointer ${
+                isActive
+                    ? "border-[#C5A073]/50 bg-[#C5A073]/5 shadow-md shadow-[#C5A073]/5 scale-[1.01]"
+                    : "border-white/5 bg-[#18181b] hover:border-white/10 hover:scale-[1.005]"
+            }`}
         >
-            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-700">
-                <div>
-                    <h2 id="quick-action-title" className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{action.label}</h2>
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-white"
-                    aria-label="Close popup"
-                >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+            <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-zinc-400">{label}</span>
+                <span className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                    isUp ? "bg-emerald-500/10 text-emerald-450" : "bg-red-500/10 text-red-455"
+                }`}>
+                    {isUp ? "↑" : "↓"} {diff}
+                </span>
             </div>
-
-            <div className="flex-1 overflow-y-auto bg-white p-5 dark:bg-zinc-800">
-                <QuickActionContent actionKey={action.key} />
-            </div>
+            <p className="mt-2 text-3xl font-bold text-zinc-100">{value}</p>
+            <span className="mt-1 block text-xs text-zinc-500">{sub}</span>
         </div>
-    </div>
-);
+    );
+};
+
+interface TrafficLog {
+    gate_log_id: number;
+    plate_number: string;
+    owner_name?: string | null;
+    car_model?: string | null;
+    car_color?: string | null;
+    direction: 'IN' | 'OUT';
+    status: 'authorized' | 'unauthorized';
+    logged_at: string;
+    image_path?: string | null;
+}
+
+const TrafficDetailsModal = ({
+    period,
+    onClose,
+    monitorStats,
+}: {
+    period: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    onClose: () => void;
+    monitorStats?: { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+}) => {
+    const [logs, setLogs] = useState<TrafficLog[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+
+    const apiPeriod = period === 'daily' ? 'today' : period === 'weekly' ? 'week' : period === 'monthly' ? 'month' : 'year';
+    const periodLabel = period === 'daily' ? 'Daily' : period === 'weekly' ? 'Weekly' : period === 'monthly' ? 'Monthly' : 'Yearly';
+
+    const entriesVal = monitorStats?.entries ?? 0;
+    const exitsVal = monitorStats?.exits ?? 0;
+    const totalVal = monitorStats?.count ?? 0;
+    const maxVal = Math.max(totalVal, 1);
+
+    const entriesPct = (entriesVal / maxVal) * 100;
+    const exitsPct = (exitsVal / maxVal) * 100;
+    const totalPct = (totalVal / maxVal) * 100;
+
+    useEffect(() => {
+        setLoading(true);
+        setLogs([]);
+        setPage(1);
+        setHasMore(true);
+
+        GateAccessService.loadGateLogs(1, { period: apiPeriod })
+            .then((res) => {
+                const fetched = res.data.logs.data ?? [];
+                setLogs(fetched);
+                setHasMore(res.data.logs.next_page_url !== null);
+            })
+            .catch((err) => console.error(err))
+            .finally(() => setLoading(false));
+    }, [apiPeriod]);
+
+    const loadMore = () => {
+        if (!hasMore || loading) return;
+        const nextPage = page + 1;
+        setPage(nextPage);
+
+        GateAccessService.loadGateLogs(nextPage, { period: apiPeriod })
+            .then((res) => {
+                const fetched = res.data.logs.data ?? [];
+                setLogs((prev) => [...prev, ...fetched]);
+                setHasMore(res.data.logs.next_page_url !== null);
+            })
+            .catch((err) => console.error(err));
+    };
+
+    // Body scroll lock
+    useEffect(() => {
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, []);
+
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[9999] bg-black/75 p-4 backdrop-blur-md flex items-center justify-center"
+            role="dialog"
+            aria-modal="true"
+            onClick={onClose}
+        >
+            <div
+                className="mx-auto flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24] shadow-2xl backdrop-blur-xl text-zinc-100"
+                onClick={(event) => event.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-white">{periodLabel} Traffic Details</h2>
+                        <p className="text-xs text-zinc-400 mt-1">Detailed list of car entries and exits for this period</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                        aria-label="Close popup"
+                    >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Summary banner */}
+                <div className="grid grid-cols-3 divide-x divide-white/5 border-b border-white/5 bg-zinc-950/40 py-4 px-6 text-center">
+                    <div>
+                        <span className="block text-xs text-zinc-400 font-medium uppercase tracking-wider">Entries</span>
+                        <span className="block text-2xl font-bold text-zinc-100 mt-1">{monitorStats?.entries ?? 0}</span>
+                    </div>
+                    <div>
+                        <span className="block text-xs text-zinc-400 font-medium uppercase tracking-wider">Exits</span>
+                        <span className="block text-2xl font-bold text-red-450 mt-1">{monitorStats?.exits ?? 0}</span>
+                    </div>
+                    <div>
+                        <span className="block text-xs text-zinc-400 font-medium uppercase tracking-wider">Total Passes</span>
+                        <span className="block text-2xl font-bold text-[#C5A073] mt-1">{monitorStats?.count ?? 0}</span>
+                    </div>
+                </div>
+
+                {/* Content area */}
+                <div className="flex-1 overflow-y-auto p-6">
+                    {loading ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="h-14 rounded-lg bg-zinc-900 animate-pulse border border-white/5" />
+                            ))}
+                        </div>
+                    ) : logs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-6 max-w-xl mx-auto bg-zinc-900/50 rounded-xl border border-white/5 space-y-6 my-4">
+                            <div className="text-center">
+                                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Traffic Proportion Graph</h3>
+                                <p className="text-[11px] text-zinc-500 mt-1">Comparison view of vehicle counts for this period</p>
+                            </div>
+
+                            <div className="w-full space-y-4">
+                                {/* Entries Bar */}
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs font-semibold">
+                                        <span className="text-zinc-300">Entries</span>
+                                        <span className="text-emerald-450">{entriesVal} ({Math.round(entriesPct)}%)</span>
+                                    </div>
+                                    <div className="h-2.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${entriesPct}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Exits Bar */}
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs font-semibold">
+                                        <span className="text-zinc-300">Exits</span>
+                                        <span className="text-red-455">{exitsVal} ({Math.round(exitsPct)}%)</span>
+                                    </div>
+                                    <div className="h-2.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-red-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${exitsPct}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Total Passes Bar */}
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs font-semibold">
+                                        <span className="text-zinc-300">Total Passes</span>
+                                        <span className="text-[#C5A073]">{totalVal} ({Math.round(totalPct)}%)</span>
+                                    </div>
+                                    <div className="h-2.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-[#C5A073] rounded-full transition-all duration-500"
+                                            style={{ width: `${totalPct}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="overflow-x-auto rounded-lg border border-white/5">
+                                <table className="w-full min-w-[700px] border-collapse bg-zinc-900 text-left">
+                                    <thead className="border-b border-white/5 bg-zinc-950 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                                        <tr>
+                                            <th className="px-5 py-3">Resident / Owner</th>
+                                            <th className="px-5 py-3">Plate Number</th>
+                                            <th className="px-5 py-3">Vehicle Details</th>
+                                            <th className="px-5 py-3">Direction</th>
+                                            <th className="px-5 py-3">Logged At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5 text-sm text-zinc-300">
+                                        {logs.map((log) => (
+                                            <tr key={log.gate_log_id} className="transition hover:bg-white/5">
+                                                <td className="px-5 py-4 font-semibold text-zinc-100">{log.owner_name || "Guest/Unknown"}</td>
+                                                <td className="px-5 py-4 font-mono text-zinc-200">{log.plate_number}</td>
+                                                <td className="px-5 py-4 text-xs text-zinc-400">
+                                                    {log.car_model || "—"} {log.car_color ? `(${log.car_color})` : ""}
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                        log.direction === 'IN'
+                                                            ? 'bg-emerald-500/10 text-emerald-450'
+                                                            : 'bg-red-500/10 text-red-450'
+                                                    }`}>
+                                                        {log.direction === 'IN' ? 'Entry' : 'Exit'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-4 text-zinc-400 text-xs">
+                                                    {new Date(log.logged_at).toLocaleDateString()} {new Date(log.logged_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {hasMore && (
+                                <div className="text-center pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={loadMore}
+                                        className="rounded-lg border border-[#C5A073] bg-[#C5A073]/5 px-6 py-2 text-sm font-semibold text-[#C5A073] transition hover:bg-[#C5A073]/15"
+                                    >
+                                        Load More logs
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
+const QuickActionModal = ({ action, onClose }: { action: (typeof QUICK_ACTIONS)[number]; onClose: () => void }) => {
+    useEffect(() => {
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, []);
+
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[9999] bg-black/70 p-4 backdrop-blur-md flex items-center justify-center"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quick-action-title"
+            onClick={onClose}
+        >
+            <div
+                className="mx-auto flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24]/85 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/85 text-zinc-100"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="flex items-start justify-between gap-4 border-b border-white/5 px-5 py-4">
+                    <div>
+                        <h2 id="quick-action-title" className="text-xl font-bold text-white">{action.label}</h2>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                        aria-label="Close popup"
+                    >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto bg-transparent p-5">
+                    <QuickActionContent actionKey={action.key} />
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};
 
 const QuickActionContent = ({ actionKey }: { actionKey: QuickActionKey }) => {
     if (actionKey === "residents") return <ResidentsPage />;
@@ -793,8 +1404,8 @@ const QuickActionButton = ({ children, onClick, primary }: { children: ReactNode
         type="button"
         onClick={onClick}
         className={`inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition ${primary
-            ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-            : "border border-zinc-300 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-700"
+            ? "bg-[#C5A073] text-[#121212] shadow-sm hover:bg-[#b08e64]"
+            : "border border-white/10 text-zinc-300 hover:bg-zinc-800 hover:text-white"
             }`}
     >
         {children}
@@ -819,8 +1430,8 @@ const HealthRow = ({
 
     return (
         <div className="flex items-center justify-between gap-4 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">{label}</span>
-            <span className="inline-flex items-center gap-1.5 font-medium capitalize text-zinc-900 dark:text-zinc-100">
+            <span className="text-zinc-400">{label}</span>
+            <span className="inline-flex items-center gap-1.5 font-medium capitalize text-zinc-100">
                 <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
                 {status}
             </span>

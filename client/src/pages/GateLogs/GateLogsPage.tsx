@@ -1,7 +1,39 @@
 import { useEffect, useState } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import type { GateLog } from "../../interfaces/GateInterface";
-import Spinner from "../../components/Spinner/Spinner";
+
+const GateLogsSkeleton = () => (
+    <div className="animate-pulse space-y-4">
+        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+            <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                <thead className="bg-zinc-50 dark:bg-zinc-900">
+                    <tr>
+                        <Head>Timestamp</Head>
+                        <Head>Plate Number</Head>
+                        <Head>Owner Name</Head>
+                        <Head>Car Info</Head>
+                        <Head>Direction</Head>
+                        <Head>Status</Head>
+                        <Head>Image</Head>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-700 dark:bg-zinc-800">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <tr key={i}>
+                            <td className="px-6 py-4"><div className="h-4 w-32 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-4 w-20 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-4 w-36 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-4 w-28 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-4 w-12 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-6 w-16 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                            <td className="px-6 py-4"><div className="h-10 w-16 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
 
 const GateLogsPage = () => {
     const [logs, setLogs] = useState<GateLog[]>([]);
@@ -46,7 +78,7 @@ const GateLogsPage = () => {
                 </select>
             </div>
 
-            {loading ? <div className="flex justify-center p-8"><Spinner size="md" /></div> : (
+            {loading ? <GateLogsSkeleton /> : (
                 <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
                     <table className="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
                         <thead className="bg-zinc-50 dark:bg-zinc-900">

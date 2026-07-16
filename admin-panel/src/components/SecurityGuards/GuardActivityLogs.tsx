@@ -14,9 +14,17 @@ interface GuardActivityLogsProps {
   compact?: boolean
   title?: string
   userId?: number
+  hideContext?: boolean
+  hideIpAddress?: boolean
 }
 
-const GuardActivityLogs = ({ compact = false, title = 'Guard Activity Logs', userId }: GuardActivityLogsProps) => {
+const GuardActivityLogs = ({
+  compact = false,
+  title = 'Guard Activity Logs',
+  userId,
+  hideContext = true,
+  hideIpAddress = false,
+}: GuardActivityLogsProps) => {
   const [eventType, setEventType] = useState('')
   const [search, setSearch] = useState('')
   const { logs, loading } = useGuardActivityLogs({ event_type: eventType, search })
@@ -60,6 +68,8 @@ const GuardActivityLogs = ({ compact = false, title = 'Guard Activity Logs', use
         logs={filtered}
         loading={loading}
         emptyMessage="No guard activity logs found."
+        hideContext={hideContext}
+        hideIpAddress={hideIpAddress}
       />
     </div>
   )

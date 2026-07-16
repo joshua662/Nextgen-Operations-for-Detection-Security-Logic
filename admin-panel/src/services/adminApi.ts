@@ -49,7 +49,32 @@ export const adminAuthApi = {
 
   dashboardOverview: () => adminApi.get('/dashboard/overview'),
 
+  trafficChart: (period: string) =>
+    adminApi.get<{
+      period: string
+      labels: string[]
+      authorized: number[]
+      unauthorized: number[]
+    }>('/dashboard/traffic-chart?period=' + period),
+
   loadGenders: () => adminApi.get('/gender/publicGenders'),
+}
+
+export interface NotificationEntry {
+  notification_id: number
+  user_id: number
+  title: string
+  message: string
+  type: string
+  is_read: boolean
+  created_at: string
+}
+
+export const adminNotificationsApi = {
+  getNotifications: () => adminApi.get<{ notifications: { data: NotificationEntry[] } | NotificationEntry[] }>('/notification'),
+  markAllRead: () => adminApi.put('/notification/read-all'),
+  approve: (id: number) => adminApi.post(`/notification/${id}/approve`),
+  reject: (id: number) => adminApi.post(`/notification/${id}/reject`),
 }
 
 export default adminApi

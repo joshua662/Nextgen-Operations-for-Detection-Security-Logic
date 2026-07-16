@@ -30,7 +30,7 @@ const ActivityLogsReport = () => {
         </AdminSelect>
       </div>
 
-      <ActivityLogTable logs={logs} loading={loading} />
+      <ActivityLogTable logs={logs} loading={loading} hideIpAddress={true} hideContext={true} />
     </div>
   )
 }

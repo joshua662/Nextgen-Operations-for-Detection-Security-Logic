@@ -48,6 +48,33 @@ class DashboardController extends Controller
         $entranceUrl = $system->entrance_camera_stream_url ?: $system->camera_stream_url ?: env('ESP32_CAM_ENTRANCE_STREAM_URL', env('ESP32_CAM_STREAM_URL', 'http://192.168.2.100:81/stream'));
         $exitUrl = $system->exit_camera_stream_url ?: env('ESP32_CAM_EXIT_STREAM_URL', 'http://192.168.2.105:81/stream');
 
+        // Car monitor calculations
+        $periods = [
+            'daily' => [Carbon::today(), Carbon::yesterday()],
+            'weekly' => [Carbon::now()->startOfWeek(), Carbon::now()->subWeek()->startOfWeek()],
+            'monthly' => [Carbon::now()->startOfMonth(), Carbon::now()->subMonth()->startOfMonth()],
+            'yearly' => [Carbon::now()->startOfYear(), Carbon::now()->subYear()->startOfYear()],
+        ];
+
+        $car_monitor = [];
+        foreach ($periods as $key => [$currentStart, $prevStart]) {
+            $currentEntries = GateLog::where('direction', 'IN')->where('logged_at', '>=', $currentStart)->count();
+            $currentExits = GateLog::where('direction', 'OUT')->where('logged_at', '>=', $currentStart)->count();
+            $currentTotal = $currentEntries + $currentExits;
+
+            $prevEntries = GateLog::where('direction', 'IN')->whereBetween('logged_at', [$prevStart, $currentStart])->count();
+            $prevExits = GateLog::where('direction', 'OUT')->whereBetween('logged_at', [$prevStart, $currentStart])->count();
+            $prevTotal = $prevEntries + $prevExits;
+
+            $car_monitor[$key] = [
+                'count' => $currentTotal,
+                'entries' => $currentEntries,
+                'exits' => $currentExits,
+                'trend' => $currentTotal >= $prevTotal ? 'up' : 'down',
+                'diff' => abs($currentTotal - $prevTotal),
+            ];
+        }
+
         return response()->json([
             'gate_status' => $system->gate_status,
             'camera_status' => $system->entrance_camera_status,
@@ -67,6 +94,7 @@ class DashboardController extends Controller
                 'pending_update_requests' => $pendingRequests,
                 'unread_notifications' => $unreadNotifications,
             ],
+            'car_monitor' => $car_monitor,
             'recent_logs' => $recentLogs,
         ]);
     }

@@ -1,7 +1,23 @@
 import { useEffect, useState } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import type { NotificationItem } from "../../interfaces/GateInterface";
-import Spinner from "../../components/Spinner/Spinner";
+
+const ClientNotificationsSkeleton = () => (
+  <div className="animate-pulse space-y-4">
+    {[1, 2, 3].map((i) => (
+      <div key={i} className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 space-y-2">
+            <div className="h-5 w-48 rounded bg-zinc-200 dark:bg-zinc-700" />
+            <div className="h-4 w-72 rounded bg-zinc-200 dark:bg-zinc-700" />
+            <div className="h-3.5 w-32 rounded bg-zinc-200 dark:bg-zinc-700" />
+          </div>
+          <div className="h-8 w-24 rounded bg-zinc-200 dark:bg-zinc-700" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 const NotificationsPage = () => {
     const [items, setItems] = useState<NotificationItem[]>([]);
@@ -41,7 +57,7 @@ const NotificationsPage = () => {
                 )}
             </div>
 
-            {loading ? <div className="flex justify-center p-8"><Spinner size="md" /></div> : (
+            {loading ? <ClientNotificationsSkeleton /> : (
                 <div className="space-y-4">
                     {items.length > 0 ? items.map((notification) => (
                         <div key={notification.notification_id} className={`rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 ${notification.is_read ? "bg-white dark:bg-zinc-800" : "bg-blue-50 dark:bg-blue-900/20"}`}>

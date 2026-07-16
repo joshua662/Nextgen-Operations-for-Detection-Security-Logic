@@ -23,8 +23,8 @@ class SystemStatus extends Model
 
     public static function current(): self
     {
-        $defaultEntrance = getenv('ESP32_CAM_ENTRANCE_STREAM_URL') ?: getenv('ESP32_CAM_STREAM_URL') ?: 'http://192.168.2.100:81/stream';
-        $defaultExit = getenv('ESP32_CAM_EXIT_STREAM_URL') ?: 'http://192.168.2.105:81/stream';
+        $defaultEntrance = env('ESP32_CAM_ENTRANCE_STREAM_URL') ?: env('ESP32_CAM_STREAM_URL') ?: 'http://192.168.2.100:81/stream';
+        $defaultExit = env('ESP32_CAM_EXIT_STREAM_URL') ?: 'http://192.168.2.105:81/stream';
 
         $status = static::query()->firstOrCreate([], [
             'gate_status' => 'closed',
@@ -51,8 +51,8 @@ class SystemStatus extends Model
 
     public function checkHealth(): void
     {
-        $entranceUrl = $this->entrance_camera_stream_url ?: $this->camera_stream_url ?: getenv('ESP32_CAM_ENTRANCE_STREAM_URL') ?: getenv('ESP32_CAM_STREAM_URL') ?: 'http://192.168.2.100:81/stream';
-        $exitUrl = $this->exit_camera_stream_url ?: getenv('ESP32_CAM_EXIT_STREAM_URL') ?: 'http://192.168.2.105:81/stream';
+        $entranceUrl = $this->entrance_camera_stream_url ?: $this->camera_stream_url ?: env('ESP32_CAM_ENTRANCE_STREAM_URL') ?: env('ESP32_CAM_STREAM_URL') ?: 'http://192.168.2.100:81/stream';
+        $exitUrl = $this->exit_camera_stream_url ?: env('ESP32_CAM_EXIT_STREAM_URL') ?: 'http://192.168.2.105:81/stream';
 
         $entranceStatus = $this->pingUrl($entranceUrl);
         $exitStatus = $this->pingUrl($exitUrl);

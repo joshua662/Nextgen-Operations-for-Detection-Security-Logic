@@ -79,7 +79,7 @@ const RfidSection = ({ user, onUpdate }: { user: GuardUser; onUpdate?: () => voi
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1f1f23] p-5">
+    <div className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
       <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Assign RFID UID</p>
       <p className="mt-1 text-sm text-zinc-400">
         Enter the RFID card UID for this resident. Once assigned, it <strong className="text-amber-400">cannot be changed</strong>.
@@ -122,9 +122,9 @@ const GuardDetailsModal = ({ user, onClose, onUpdate }: GuardDetailsProps) => {
   const isResident = user.role === 'resident'
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm sm:p-6" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md sm:p-6" onClick={onClose}>
       <div
-        className="flex h-[min(92vh,960px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#18181b] shadow-2xl"
+        className="flex h-[min(92vh,960px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#18181e]/80 backdrop-blur-xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 p-6 sm:px-8">
@@ -151,7 +151,7 @@ const GuardDetailsModal = ({ user, onClose, onUpdate }: GuardDetailsProps) => {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-[#1f1f23] p-5">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Member Card</p>
@@ -200,7 +200,7 @@ const GuardDetailsModal = ({ user, onClose, onUpdate }: GuardDetailsProps) => {
 }
 
 const Detail = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-lg border border-white/10 bg-[#1f1f23] p-4">
+  <div className="rounded-lg border border-white/5 bg-black/25 p-4">
     <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
     <p className="mt-1 text-sm font-medium text-zinc-100">{value}</p>
   </div>

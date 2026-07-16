@@ -141,8 +141,8 @@ const ConfirmationDialog = ({
     onCancel: () => void;
     onConfirm: () => void;
 }) => (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#15112f] p-7 text-white shadow-2xl">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 px-4 backdrop-blur-md">
+        <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#15112f]/80 p-7 text-white shadow-2xl backdrop-blur-xl">
             <h3 className="text-xl font-semibold">Confirm registration</h3>
             <p className="mt-3 text-sm leading-relaxed text-violet-100/80">
                 Create this account and send the generated username and password to <span className="font-semibold text-white">{email}</span>?
@@ -354,9 +354,10 @@ const RegistrationModal = ({
                     className="relative flex w-full max-w-7xl max-h-[95vh] overflow-hidden rounded-[28px]"
                     style={{
                         animation: modalAnim,
-                        background: "linear-gradient(135deg, rgba(20,16,48,0.88) 0%, rgba(14,12,36,0.92) 100%)",
+                        background: "linear-gradient(135deg, rgba(20,16,48,0.7) 0%, rgba(14,12,36,0.8) 100%)",
                         border: "1px solid rgba(255,255,255,0.10)",
                         boxShadow: "0 32px 64px rgba(0,0,0,0.55)",
+                        backdropFilter: "blur(20px)",
                     }}
                 >
                     {/* ══ LEFT PANEL — Branding ══ */}
@@ -409,7 +410,7 @@ const RegistrationModal = ({
                         className="relative flex-1 overflow-y-auto reg-dark-form"
                         style={{
                             scrollbarColor: "rgba(139,92,246,0.3) transparent",
-                            background: "linear-gradient(160deg, #14102c 0%, #0e0c24 100%)",
+                            background: "linear-gradient(160deg, rgba(20,16,44,0.6) 0%, rgba(14,12,36,0.7) 100%)",
                             borderLeft: "1px solid rgba(139, 92, 246, 0.2)",
                         }}
                     >
