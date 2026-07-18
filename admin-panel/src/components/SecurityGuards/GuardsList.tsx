@@ -142,13 +142,12 @@ const GuardsList = () => {
         </AdminDataTable>
       )}
 
-      {selectedStaff !== null && (
-        <GuardDetailsModal
-          user={selectedStaff}
-          onClose={() => setSelectedStaff(null)}
-          onUpdate={refresh}
-        />
-      )}
+      <GuardDetailsModal
+        isOpen={selectedStaff !== null}
+        user={selectedStaff}
+        onClose={() => setSelectedStaff(null)}
+        onUpdate={refresh}
+      />
     </div>
   )
 }

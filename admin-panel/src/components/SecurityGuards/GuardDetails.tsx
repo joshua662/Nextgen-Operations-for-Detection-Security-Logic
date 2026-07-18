@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { guardApi, type GuardUser } from '../../services/guardApi'
 import { formatDateShort } from '../../utils/formatDate'
+import { useModalAnimation } from '../../hooks/useModalAnimation'
 import GuardActivityLogs from './GuardActivityLogs'
 import { MemberCardModal } from './MemberCard'
 
 interface GuardDetailsProps {
-  user: GuardUser
+  isOpen: boolean
+  user: GuardUser | null
   onClose: () => void
   onUpdate?: () => void
 }
@@ -117,14 +119,19 @@ const RfidSection = ({ user, onUpdate }: { user: GuardUser; onUpdate?: () => voi
   )
 }
 
-const GuardDetailsModal = ({ user, onClose, onUpdate }: GuardDetailsProps) => {
+const GuardDetailsModal = ({ isOpen, user, onClose, onUpdate }: GuardDetailsProps) => {
+  const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen)
   const [cardOpen, setCardOpen] = useState(false)
+  
+  if (!shouldRender || !user) return null
+
   const isResident = user.role === 'resident'
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md sm:p-6" onClick={onClose}>
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 transition-opacity ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`} onClick={onClose}>
+      <div className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
       <div
-        className="flex h-[min(92vh,960px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#18181e]/80 backdrop-blur-xl shadow-2xl"
+        className={`relative flex h-[min(92vh,960px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#18181e]/80 backdrop-blur-xl shadow-2xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 p-6 sm:px-8">

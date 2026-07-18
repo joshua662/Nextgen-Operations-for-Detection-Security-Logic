@@ -6,8 +6,10 @@ import { useAuth } from "../../hooks/useAuth";
 import { adminAuthApi } from "../../services/adminApi";
 import RegistrationModal, { type RegistrationForm } from "./RegistrationModal";
 import ToastMessage from "../ToastMessage/ToastMessage";
+import RegistrationSuccessModal from "../RegistrationSuccessModal/RegistrationSuccessModal";
 import AuthPageLayout from "./AuthPageLayout";
 import { validateLoginForm } from "../../utils/validateForm";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 
 const logoSrc = "/assets/pdp-logo-invert.png";
 
@@ -25,6 +27,7 @@ const AdminLogin = () => {
     const [justLoggedIn, setJustLoggedIn] = useState(false);
 
     const [registrationOpen, setRegistrationOpen] = useState(false);
+    const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
     const [loginLoading, setLoginLoading] = useState(false);
     const [registerLoading, setRegisterLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
@@ -104,6 +107,7 @@ const AdminLogin = () => {
             });
             setForm(emptyForm());
             showToast((res as { data?: { message?: string } })?.data?.message ?? "Registration complete. Credentials were sent to the registered email.", false);
+            refreshCaptcha();
         } catch (error) {
             const err = error as {
                 response?: { data?: { message?: string; errors?: Record<string, string[]> } };
@@ -128,12 +132,21 @@ const AdminLogin = () => {
     return (
         <AuthPageLayout>
             <ToastMessage
-                isVisible={toast.visible}
+                isVisible={toast.visible && toast.failed}
                 message={toast.message}
                 isFailed={toast.failed}
                 onClose={closeToast}
                 overlay
                 size="large"
+            />
+            <RegistrationSuccessModal
+                isVisible={toast.visible && !toast.failed}
+                onClose={closeToast}
+            />
+
+            <ForgotPasswordModal 
+                isOpen={forgotPasswordOpen}
+                onClose={() => setForgotPasswordOpen(false)}
             />
 
             <div className="mb-8 flex flex-col items-center text-center">
@@ -177,6 +190,7 @@ const AdminLogin = () => {
                     </label>
                     <button
                         type="button"
+                        onClick={() => setForgotPasswordOpen(true)}
                         className="text-xs font-medium text-violet-200/95 underline-offset-4 hover:text-white hover:underline"
                     >
                         Forgot password?

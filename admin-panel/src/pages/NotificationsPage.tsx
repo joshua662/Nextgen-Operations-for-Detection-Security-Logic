@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { adminNotificationsApi, type NotificationEntry } from '../services/adminApi'
 import { formatDate } from '../utils/formatDate'
+import { useModalAnimation } from '../hooks/useModalAnimation'
+import ToastMessage from '../components/ToastMessage/ToastMessage'
 
 interface ConfirmationModalProps {
   isOpen: boolean
@@ -21,20 +24,22 @@ const ConfirmationModal = ({
   type,
   loading,
 }: ConfirmationModalProps) => {
-  if (!isOpen) return null
+  const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen)
+  if (!shouldRender) return null
 
   const isReject = type === 'reject'
   const actionBtnClass = isReject
     ? 'bg-red-600 hover:bg-red-500 text-white'
     : 'bg-emerald-600 hover:bg-emerald-500 text-white'
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md transition-opacity"
+      className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-opacity ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}
       onClick={onCancel}
     >
+      <div className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
       <div
-        className="w-full max-w-md rounded-xl bg-[#1e1e24]/80 p-6 shadow-2xl border border-white/10 backdrop-blur-xl"
+        className={`relative w-full max-w-md rounded-xl bg-[#1e1e24]/80 p-6 shadow-2xl border border-white/10 backdrop-blur-xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-4">
@@ -70,7 +75,8 @@ const ConfirmationModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -87,8 +93,8 @@ const NotificationsPage = () => {
     notificationId: number
   } | null>(null)
 
-  const fetchNotifications = () => {
-    setLoading(true)
+  const fetchNotifications = (silent = false) => {
+    if (!silent) setLoading(true)
     adminNotificationsApi.getNotifications()
       .then((res) => {
         const list = Array.isArray(res.data.notifications) 
@@ -97,11 +103,17 @@ const NotificationsPage = () => {
         setNotifications(list)
       })
       .catch(() => setNotifications([]))
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (!silent) setLoading(false)
+      })
   }
 
   useEffect(() => {
     fetchNotifications()
+    const intervalId = setInterval(() => {
+      fetchNotifications(true)
+    }, 5000)
+    return () => clearInterval(intervalId)
   }, [])
 
   const handleApproveClick = (id: number) => {
@@ -128,6 +140,7 @@ const NotificationsPage = () => {
     try {
       await adminNotificationsApi.markAllRead()
       fetchNotifications()
+      window.dispatchEvent(new Event('notifications_updated'))
     } catch (err) {}
   }
 
@@ -148,11 +161,16 @@ const NotificationsPage = () => {
         )}
       </div>
 
-      {message && (
-        <div className={`rounded-lg p-4 text-sm font-medium ${message.isError ? 'bg-red-950/40 text-red-300 border border-red-500/20' : 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/20'}`}>
-          {message.text}
-        </div>
-      )}
+      <ToastMessage
+        isVisible={!!message}
+        title={message?.isError ? "Action failed" : (message?.text?.includes('rejected') ? "Request rejected" : "Registration approved")}
+        message={message?.text || ""}
+        isFailed={message?.isError || message?.text?.includes('rejected')}
+        onClose={() => setMessage(null)}
+        autoCloseMs={3000}
+        size="default"
+        overlay={true}
+      />
 
       {loading ? (
         <div className="space-y-4 animate-pulse">
@@ -202,36 +220,47 @@ const NotificationsPage = () => {
                     <span className="block text-[11px] text-zinc-500">{formatDate(n.created_at)}</span>
                   </div>
 
-                  {n.type === 'registration_approval' && details && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleApproveClick(n.notification_id)}
-                        disabled={actionLoading !== null}
-                        className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition disabled:opacity-50 cursor-pointer"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleRejectClick(n.notification_id)}
-                        disabled={actionLoading !== null}
-                        className="rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50 cursor-pointer"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
+                  {/* Buttons moved inside Request Details */}
                 </div>
 
                 <div className="mt-4 text-sm text-zinc-300">
                   {n.type === 'registration_approval' && details ? (
-                    <div className="rounded-lg bg-zinc-900/50 p-4 border border-white/5 space-y-2">
-                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Request Details</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-zinc-300">
-                        <div><span className="text-zinc-500">Name:</span> {details.name}</div>
-                        <div><span className="text-zinc-500">Role:</span> <span className="capitalize">{details.role.replace('_', ' ')}</span></div>
-                        <div><span className="text-zinc-500">Email:</span> {details.email}</div>
-                        <div><span className="text-zinc-500">Username:</span> <code className="text-zinc-200 bg-zinc-800 px-1.5 py-0.5 rounded text-xs">{details.username}</code></div>
-                        <div className="col-span-1 md:col-span-2"><span className="text-zinc-500">Auto-generated Password:</span> <code className="text-zinc-200 bg-zinc-800 px-1.5 py-0.5 rounded text-xs">{details.plain_password}</code></div>
+                    <div className="rounded-lg bg-zinc-900/50 p-4 border border-white/5">
+                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">Request Details</p>
+                      
+                      <div className="flex flex-col gap-3 text-zinc-300 text-[13.5px]">
+                        <div className="flex items-center gap-3">
+                          <span className="text-zinc-500 w-12">Name:</span> 
+                          <span className="font-medium text-zinc-200">{details.name}</span>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <span className="text-zinc-500 w-12">Role:</span> 
+                            <span className="capitalize font-medium text-zinc-200">{details.role.replace('_', ' ')}</span>
+                          </div>
+                          <div className="flex gap-3 shrink-0">
+                            <button
+                              onClick={() => handleApproveClick(n.notification_id)}
+                              disabled={actionLoading !== null}
+                              className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 transition disabled:opacity-50 cursor-pointer shadow-sm"
+                            >
+                              Approve Request
+                            </button>
+                            <button
+                              onClick={() => handleRejectClick(n.notification_id)}
+                              disabled={actionLoading !== null}
+                              className="rounded-lg bg-red-600/90 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50 cursor-pointer shadow-sm"
+                            >
+                              Reject Request
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-zinc-500 w-12">Email:</span> 
+                          <span className="font-medium text-zinc-200">{details.email}</span>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -244,36 +273,36 @@ const NotificationsPage = () => {
         </div>
       )}
 
-      {confirmState && (
-        <ConfirmationModal
-          isOpen={confirmState.isOpen}
-          title={confirmState.title}
-          message={confirmState.message}
-          type={confirmState.type}
-          loading={actionLoading === confirmState.notificationId}
-          onCancel={() => setConfirmState(null)}
-          onConfirm={async () => {
-            const id = confirmState.notificationId
-            setActionLoading(id)
-            setMessage(null)
-            try {
-              if (confirmState.type === 'accept') {
-                const res = await adminNotificationsApi.approve(id)
-                setMessage({ text: res.data.message ?? 'Registration request approved successfully.' })
-              } else {
-                const res = await adminNotificationsApi.reject(id)
-                setMessage({ text: res.data.message ?? 'Registration request rejected and account deleted.' })
-              }
-              setConfirmState(null)
-              fetchNotifications()
-            } catch (err: any) {
-              setMessage({ text: err.response?.data?.message ?? 'Action failed.', isError: true })
-            } finally {
-              setActionLoading(null)
+      <ConfirmationModal
+        isOpen={confirmState?.isOpen ?? false}
+        title={confirmState?.title ?? ''}
+        message={confirmState?.message ?? ''}
+        type={confirmState?.type ?? 'accept'}
+        loading={confirmState ? actionLoading === confirmState.notificationId : false}
+        onCancel={() => setConfirmState(prev => prev ? { ...prev, isOpen: false } : null)}
+        onConfirm={async () => {
+          if (!confirmState) return
+          const id = confirmState.notificationId
+          setActionLoading(id)
+          setMessage(null)
+          try {
+            if (confirmState.type === 'accept') {
+              const res = await adminNotificationsApi.approve(id)
+              setMessage({ text: res.data.message ?? 'Registration request approved successfully.' })
+            } else {
+              const res = await adminNotificationsApi.reject(id)
+              setMessage({ text: res.data.message ?? 'Registration request rejected and account deleted.' })
             }
-          }}
-        />
-      )}
+            setConfirmState(prev => prev ? { ...prev, isOpen: false } : null)
+            fetchNotifications()
+            window.dispatchEvent(new Event('notifications_updated'))
+          } catch (err: any) {
+            setMessage({ text: err.response?.data?.message ?? 'Action failed.', isError: true })
+          } finally {
+            setActionLoading(null)
+          }
+        }}
+      />
     </div>
   )
 }

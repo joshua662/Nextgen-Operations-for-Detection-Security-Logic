@@ -38,6 +38,8 @@ export const adminAuthApi = {
 
   me: () => adminApi.get<{ user: AdminUser }>('/auth/me'),
 
+  forgotPassword: (email: string) => adminApi.post('/auth/forgot-password', { email }),
+
   register: (data: {
     first_name: string
     middle_name?: string

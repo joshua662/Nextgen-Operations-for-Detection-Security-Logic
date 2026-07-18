@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { guardApi, type GuardUser } from '../../services/guardApi'
+import { useModalAnimation } from '../../hooks/useModalAnimation'
 
 type MemberCardProps = {
   user: GuardUser
@@ -198,7 +199,8 @@ export const MemberCardModal = ({ isOpen, user, onClose }: MemberCardModalProps)
     }
   }, [isOpen, user.user_id])
 
-  if (!isOpen) return null
+  const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen)
+  if (!shouldRender) return null
 
   const handlePrint = () => {
     if (!qrDataUrl) return
@@ -216,8 +218,9 @@ export const MemberCardModal = ({ isOpen, user, onClose }: MemberCardModalProps)
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md" onClick={onClose}>
-      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#1e1e24]/80 backdrop-blur-xl shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className={`fixed inset-0 z-[120] flex items-center justify-center p-4 transition-opacity ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`} onClick={onClose}>
+      <div className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
+      <div className={`relative w-full max-w-xl rounded-2xl border border-white/10 bg-[#1e1e24]/80 backdrop-blur-xl shadow-2xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`} onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
           <div>
             <h3 className="text-xl font-bold text-white">Member Card</h3>

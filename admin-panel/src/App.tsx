@@ -79,7 +79,12 @@ const ProtectedLayout = () => {
 
     loadUnreadCount()
     const interval = setInterval(loadUnreadCount, 15000)
-    return () => clearInterval(interval)
+    window.addEventListener('notifications_updated', loadUnreadCount)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('notifications_updated', loadUnreadCount)
+    }
   }, [user])
 
   if (loading) {

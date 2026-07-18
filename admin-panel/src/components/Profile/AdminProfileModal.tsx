@@ -1,4 +1,5 @@
 import { type AdminUser } from "../../services/adminApi"
+import { useModalAnimation } from "../../hooks/useModalAnimation"
 
 interface AdminProfileModalProps {
   isOpen: boolean
@@ -8,14 +9,16 @@ interface AdminProfileModalProps {
 }
 
 const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModalProps) => {
-  if (!isOpen) return null
+  const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen)
+  if (!shouldRender) return null
 
   const userInitials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || 'A'
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md transition-opacity" onClick={onClose}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`} onClick={onClose}>
+      <div className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
       <div 
-        className="w-full max-w-[1100px] max-h-[95vh] overflow-y-auto rounded-xl bg-[#1e1e24]/75 backdrop-blur-xl border border-white/10 shadow-2xl scrollbar-thin scrollbar-thumb-zinc-700" 
+        className={`relative w-full max-w-[1100px] max-h-[95vh] overflow-y-auto rounded-xl bg-[#1e1e24]/75 backdrop-blur-xl border border-white/10 shadow-2xl scrollbar-thin scrollbar-thumb-zinc-700 ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`} 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 sm:p-6 lg:p-8 text-white">
