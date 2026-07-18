@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import GateAccessService from "../../services/GateAccessService";
 import type { DashboardOverview, VerifyPlateResponse } from "../../interfaces/GateInterface";
 import { useAuth } from "../../contexts/AuthContext";
+import { useModalAnimation } from "../../hooks/useModalAnimation";
 import ResidentsPage from "../Residents/ResidentsPage";
 import GateLogsPage from "../GateLogs/GateLogsPage";
 import UpdateRequestsPage from "../UpdateRequests/UpdateRequestsPage";
@@ -530,12 +531,11 @@ const DashboardPage = () => {
                 </div>
             </section>
 
-            {activeQuickAction && (
                 <QuickActionModal
-                    action={QUICK_ACTIONS.find((action) => action.key === activeQuickAction) ?? QUICK_ACTIONS[0]}
+                    isOpen={Boolean(activeQuickAction)}
+                    action={QUICK_ACTIONS.find(a => a.key === activeQuickAction) ?? QUICK_ACTIONS[0]}
                     onClose={() => setActiveQuickAction(null)}
                 />
-            )}
 
             <section className="rounded-xl border border-white/5 bg-[#18181b] p-4">
                 <h2 className="mb-4 font-semibold text-zinc-100">Live Camera Feeds</h2>
@@ -775,24 +775,23 @@ const CameraFeedPanel = ({
                 hasStreamUrl={Boolean(streamUrl)}
             />
 
-            {showConfigureModal && (
-                <CameraConfigureModal
-                    label={label}
-                    badge={badge}
-                    location={location}
-                    streamUrl={directStreamUrl}
-                    onClose={() => setShowConfigureModal(false)}
-                    onSave={(url) =>
-                        onSaveStreamUrl(url).then(() => {
-                            setShowConfigureModal(false);
-                            setStreamError(false);
-                            lastReportedStatus.current = null;
-                            setCacheBuster((prev) => prev + 1);
-                            reportStatus("online");
-                        })
-                    }
-                />
-            )}
+            <CameraConfigureModal
+                isOpen={showConfigureModal}
+                label={label}
+                badge={badge}
+                location={location}
+                streamUrl={directStreamUrl}
+                onClose={() => setShowConfigureModal(false)}
+                onSave={(url) =>
+                    onSaveStreamUrl(url).then(() => {
+                        setShowConfigureModal(false);
+                        setStreamError(false);
+                        lastReportedStatus.current = null;
+                        setCacheBuster((prev) => prev + 1);
+                        reportStatus("online");
+                    })
+                }
+            />
         </div>
     );
 };
@@ -833,6 +832,7 @@ const CameraHealthPanel = ({
 };
 
 const CameraConfigureModal = ({
+    isOpen,
     label,
     badge,
     location,
@@ -840,6 +840,7 @@ const CameraConfigureModal = ({
     onClose,
     onSave,
 }: {
+    isOpen: boolean;
     label: string;
     badge: "IN" | "OUT";
     location: CameraLocation;
@@ -847,6 +848,7 @@ const CameraConfigureModal = ({
     onClose: () => void;
     onSave: (url: string) => Promise<void>;
 }) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
     const defaultUrl = location === "exit" ? "http://192.168.2.105:81/stream" : "rtsp://admin:password@192.168.2.103:554/ch0_0.h264";
 
     // Determine the raw stream URL to show in input (empty by default, unless they saved one)
@@ -863,6 +865,15 @@ const CameraConfigureModal = ({
         window.addEventListener("keydown", handleEscape);
         return () => window.removeEventListener("keydown", handleEscape);
     }, [onClose]);
+
+    useEffect(() => {
+        if (connectionResult) {
+            const timer = setTimeout(() => {
+                setConnectionResult(null);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [connectionResult]);
 
     const handleSave = () => {
         const trimmed = streamUrlInput.trim();
@@ -917,34 +928,36 @@ const CameraConfigureModal = ({
             ? "bg-emerald-600 text-white"
             : "bg-orange-600 text-white";
 
-    return (
+    if (!shouldRender) return null;
+
+    return createPortal(
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="camera-configure-title"
-            onClick={onClose}
         >
+            <div className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} onClick={onClose} />
             <div
-                className="w-full max-w-lg rounded-xl border border-white/10 bg-[#1e1e24]/80 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 text-zinc-100"
+                className={`relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#1e1e24] shadow-2xl backdrop-blur-xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="flex items-start justify-between gap-4 border-b border-white/5 px-5 py-4">
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 id="camera-configure-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                            <h2 id="camera-configure-title" className="text-lg font-bold text-zinc-100">
                                 Configure {label}
                             </h2>
                             <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badgeClass}`}>{badge}</span>
                         </div>
-                        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                        <p className="mt-1 text-sm text-zinc-400">
                             Set the ESP32-CAM MJPEG stream URL for the {location} gate camera.
                         </p>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-white"
+                        className="rounded-lg p-2 text-zinc-300 transition hover:bg-white/5 hover:text-white"
                         aria-label="Close configure modal"
                     >
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -955,7 +968,7 @@ const CameraConfigureModal = ({
 
                 <div className="space-y-4 px-5 py-4">
                     <div>
-                        <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                        <label className="block text-xs font-semibold text-zinc-400">
                             ESP32-CAM MJPEG Stream URL
                         </label>
                         <input
@@ -966,13 +979,13 @@ const CameraConfigureModal = ({
                                 setError("");
                             }}
                             placeholder={defaultUrl}
-                            className="mt-1.5 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-white/20 dark:bg-black/30 dark:text-zinc-100"
+                            className="mt-1.5 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:border-blue-500 text-zinc-100"
                         />
                         {error && (
-                            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
+                            <p className="mt-2 text-xs text-red-400">{error}</p>
                         )}
                         {window.location.protocol === "https:" && streamUrlInput.startsWith("http://") && (
-                            <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                            <p className="mt-2 text-[11px] text-amber-400">
                                 Mixed content warning: browsers block insecure HTTP streams on HTTPS pages.
                             </p>
                         )}
@@ -983,7 +996,7 @@ const CameraConfigureModal = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/5 dark:border-white/10 dark:text-zinc-300 dark:hover:bg-white/5"
+                        className="rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/5"
                     >
                         Cancel
                     </button>
@@ -991,7 +1004,7 @@ const CameraConfigureModal = ({
                         type="button"
                         onClick={handleTestConnection}
                         disabled={testingConnection || saving}
-                        className="rounded-md border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950 disabled:opacity-60"
+                        className="rounded-md border border-blue-400 px-4 py-2 text-sm font-semibold text-blue-400 hover:bg-blue-950 disabled:opacity-60"
                     >
                         {testingConnection ? "Testing..." : "Test Connection"}
                     </button>
@@ -1008,42 +1021,33 @@ const CameraConfigureModal = ({
 
             {connectionResult && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setConnectionResult(null)}>
-                    <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-800" onClick={(e) => e.stopPropagation()}>
+                    <div className="w-full max-w-sm rounded-xl border border-zinc-700 bg-zinc-800 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col items-center text-center">
                             {connectionResult.success ? (
-                                <div className="mb-4 rounded-full bg-emerald-100 p-3 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                <div className="mb-4 rounded-full bg-emerald-900/30 p-3 text-emerald-400">
                                     <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                             ) : (
-                                <div className="mb-4 rounded-full bg-red-100 p-3 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                                <div className="mb-4 rounded-full bg-red-900/30 p-3 text-red-400">
                                     <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                     </svg>
                                 </div>
                             )}
-                            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                            <h3 className="text-lg font-bold text-zinc-100">
                                 {connectionResult.success ? "Connection Succeeded" : "Connection Failed"}
                             </h3>
-                            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                            <p className="mt-2 text-sm text-zinc-400">
                                 {connectionResult.message}
                             </p>
-                            <button
-                                type="button"
-                                onClick={() => setConnectionResult(null)}
-                                className={`mt-5 w-full rounded-md px-4 py-2 text-sm font-semibold text-white transition ${connectionResult.success
-                                        ? "bg-emerald-600 hover:bg-emerald-700"
-                                        : "bg-red-600 hover:bg-red-700"
-                                    }`}
-                            >
-                                OK
-                            </button>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -1347,24 +1351,30 @@ const TrafficDetailsModal = ({
     );
 };
 
-const QuickActionModal = ({ action, onClose }: { action: (typeof QUICK_ACTIONS)[number]; onClose: () => void }) => {
+const QuickActionModal = ({ isOpen, action, onClose }: { isOpen: boolean; action: (typeof QUICK_ACTIONS)[number]; onClose: () => void }) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+
     useEffect(() => {
+        if (!shouldRender) return;
         document.body.style.overflow = "hidden";
         return () => {
             document.body.style.overflow = "";
         };
-    }, []);
+    }, [shouldRender]);
+
+    if (!shouldRender) return null;
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] bg-black/70 p-4 backdrop-blur-md flex items-center justify-center"
+            className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-opacity ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="quick-action-title"
             onClick={onClose}
         >
+            <div className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
             <div
-                className="mx-auto flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24]/85 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/85 text-zinc-100"
+                className={`relative mx-auto flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24]/85 shadow-2xl backdrop-blur-xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="flex items-start justify-between gap-4 border-b border-white/5 px-5 py-4">

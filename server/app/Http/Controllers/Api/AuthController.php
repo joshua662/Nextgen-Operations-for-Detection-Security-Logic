@@ -297,6 +297,37 @@ class AuthController extends Controller
         ], 200);
     }
 
+    public function forgotPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $validated['email'])
+            ->where('is_deleted', false)
+            ->first();
+
+        if ($user) {
+            $newPassword = \Illuminate\Support\Str::random(10);
+            $user->password = Hash::make($newPassword);
+            $user->save();
+
+            $portalUrl = $user->role === 'admin' 
+                ? config('app.admin_url', 'http://localhost:5174')
+                : config('app.frontend_url', 'http://localhost:5173');
+
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(
+                new \App\Mail\ResidentForgotPasswordMail(
+                    $user,
+                    $newPassword,
+                    $portalUrl
+                )
+            );
+        }
+
+        return response()->json(['message' => 'If an account exists with that email, a new password has been sent.'], 200);
+    }
+
     private function createAdminApprovalNotification(User $user, string $plainPassword)
     {
         $admins = User::where('role', 'admin')

@@ -33,16 +33,19 @@ const NotificationsPage = () => {
         load();
     }, []);
 
-    const markAll = async () => {
+    const handleMarkAllRead = async () => {
         setLoading(true);
         await GateAccessService.markAllNotificationsRead();
         load();
+        window.dispatchEvent(new Event('notifications_updated'));
+        setLoading(false);
     };
 
     const markRead = async (id: number) => {
         setLoading(true);
         await GateAccessService.markNotificationRead(id);
         load();
+        window.dispatchEvent(new Event('notifications_updated'));
     };
 
     return (
@@ -53,7 +56,7 @@ const NotificationsPage = () => {
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">View system alerts and important notifications</p>
                 </div>
                 {items.some((item) => !item.is_read) && (
-                    <button type="button" onClick={markAll} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">Mark all as read</button>
+                    <button type="button" onClick={handleMarkAllRead} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">Mark all as read</button>
                 )}
             </div>
 

@@ -43,6 +43,10 @@ const AuthService = {
     const response = await AxiosInstance.get("/auth/me");
     return response;
   },
+  forgotPassword: async (email: string) => {
+    const response = await AxiosInstance.post("/auth/forgot-password", { email });
+    return response;
+  },
 };
 
 export default AuthService;

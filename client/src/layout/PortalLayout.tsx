@@ -125,14 +125,26 @@ const PortalLayoutContent = ({ navItems, homePath, portalLabel }: PortalLayoutPr
                                                 : "text-zinc-300 hover:bg-[#2a2a2a] hover:text-white"
                                         }`}
                                     >
-                                        <span className="shrink-0 h-5 w-5 flex items-center justify-center">
+                                        <span className="shrink-0 h-5 w-5 flex items-center justify-center relative">
                                             {item.icon}
+                                            {item.badgeCount != null && item.badgeCount > 0 && (
+                                                <span className={`absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-[#18181b] transition-all duration-300 ease-in-out ${
+                                                    isCollapsed ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'
+                                                }`}>
+                                                    {item.badgeCount}
+                                                </span>
+                                            )}
                                         </span>
-                                        <span className={`transition-all duration-300 ease-in-out origin-left truncate ${
+                                        <div className={`flex items-center justify-between w-full transition-all duration-300 ease-in-out origin-left truncate ${
                                             isCollapsed ? "w-0 opacity-0 scale-90 pointer-events-none" : "w-auto opacity-100 scale-100"
                                         }`}>
-                                            {item.label}
-                                        </span>
+                                            <span>{item.label}</span>
+                                            {item.badgeCount != null && item.badgeCount > 0 && (
+                                                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-none text-white shadow-sm ml-2">
+                                                    {item.badgeCount}
+                                                </span>
+                                            )}
+                                        </div>
                                     </Link>
                                 </SidebarHoverLabel>
                             </li>

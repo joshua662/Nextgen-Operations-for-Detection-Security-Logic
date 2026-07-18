@@ -5,6 +5,7 @@ import SubmitButton from "../../../components/Button/SubmitButton";
 import { useAuth } from "../../../contexts/AuthContext";
 import GenderService from "../../../services/GenderService";
 import RegistrationModal from "./RegistrationModal";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 import ToastMessage from "../../../components/ToastMessage/ToastMessage";
 import logoSrc from "../../../assets/img/pdp-logo-invert.png";
 import GateAccessService from "../../../services/GateAccessService";
@@ -42,6 +43,7 @@ const AuthForm = ({
     const [admissionForm, setAdmissionForm] = useState(emptyAdmissionForm);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
     const [registrationSuccess, setRegistrationSuccess] = useState(false);
+    const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
     // ── Toast state ──────────────────────────────────────────────────────────
     const [toast, setToast] = useState({ visible: false, message: "", failed: false });
@@ -178,17 +180,6 @@ const AuthForm = ({
         }
     };
 
-    const openRegistration = () => {
-        setRegistrationOpen(true);
-        setFieldErrors({});
-        setRegistrationSuccess(false);
-    };
-
-    const handleRegistrationClose = () => {
-        setRegistrationOpen(false);
-        setRegistrationSuccess(false);
-    };
-
     return (
         <div className="w-full">
             {!message && (
@@ -241,6 +232,7 @@ const AuthForm = ({
                     </label>
                     <button
                         type="button"
+                        onClick={() => setForgotPasswordOpen(true)}
                         className="text-xs font-medium text-violet-200/95 underline-offset-4 hover:text-white hover:underline"
                     >
                         Forgot password?
@@ -260,16 +252,16 @@ const AuthForm = ({
                 Don&apos;t have an account?{" "}
                 <button
                     type="button"
-                    className="font-semibold text-white underline underline-offset-[3px] transition hover:text-violet-100"
-                    onClick={openRegistration}
+                    onClick={() => setRegistrationOpen(true)}
+                    className="font-bold tracking-wide text-white underline-offset-4 transition hover:text-violet-200 hover:underline"
                 >
-                    Registration
+                    Register Now
                 </button>
             </p>
 
             <RegistrationModal
                 isOpen={registrationOpen}
-                onClose={handleRegistrationClose}
+                onClose={() => setRegistrationOpen(false)}
                 form={admissionForm}
                 setForm={setAdmissionForm}
                 genders={genders}
@@ -277,6 +269,11 @@ const AuthForm = ({
                 loading={registerLoading}
                 onRegister={handleRegister}
                 registrationSuccess={registrationSuccess}
+            />
+
+            <ForgotPasswordModal 
+                isOpen={forgotPasswordOpen}
+                onClose={() => setForgotPasswordOpen(false)}
             />
         </div>
     );

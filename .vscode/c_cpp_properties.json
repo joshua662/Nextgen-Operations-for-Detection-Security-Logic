@@ -4,29 +4,29 @@
       "name": "Arduino",
       "includePath": [
         "${workspaceFolder}/**",
-        "C:/Users/joshu/Documents/Arduino/libraries/**",
-        "C:/Users/joshu/Documents/Arduino/libraries/MFRC522/src",
-        "C:/Users/joshu/Documents/Arduino/libraries/Servo/src",
-        "C:/Users/joshu/Documents/Arduino/libraries/NewPing/src",
-        "C:/Users/joshu/AppData/Local/Arduino15/packages/arduino/hardware/avr/**",
-        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/**",
-        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/**",
-        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/cores/esp32",
-        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/variants/esp32cam",
-        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi/src",
-        "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/tools/**"
+        "C:/Users/joshs/Documents/Arduino/libraries",
+        "C:/Users/joshs/Documents/Arduino/libraries/MFRC522/src",
+        "C:/Users/joshs/Documents/Arduino/libraries/Servo/src",
+        "C:/Users/joshs/Documents/Arduino/libraries/NewPing/src",
+        "C:/Users/joshs/AppData/Local/Arduino15/packages/arduino/hardware/avr",
+        "C:/Users/joshs/AppData/Local/Arduino15/packages/arduino/hardware/esp32",
+        "C:/Users/joshs/AppData/Local/Arduino15/packages/arduino/hardware/esp32",
+        "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/cores/esp32",
+        "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/variants/esp32cam",
+        "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi/src",
+        "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/tools/xtensa-esp32-elf/gcc/bin"
       ],
       "browse": {
         "path": [
           "${workspaceFolder}/**",
-          "C:/Users/joshu/Documents/Arduino/libraries/**",
-          "C:/Users/joshu/AppData/Local/Arduino15/packages/arduino/hardware/avr/**",
-          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/**",
-          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/**",
-          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/cores/esp32",
-          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/variants/esp32cam",
-          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi/src",
-          "C:/Users/joshu/AppData/Local/Arduino15/packages/esp32/tools/**"
+          "C:/Users/joshs/Documents/Arduino/libraries",
+          "C:/Users/joshs/AppData/Local/Arduino15/packages/arduino/hardware/avr",
+          "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32",
+          "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32",
+          "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/cores/esp32",
+          "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/variants/esp32cam",
+          "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi/src",
+          "C:/Users/joshs/AppData/Local/Arduino15/packages/esp32/tools/xtensa-esp32-elf/gcc/bin "
         ],
         "limitSymbolsToIncludedHeaders": true
       },

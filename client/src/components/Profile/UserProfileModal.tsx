@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FC, type ReactNode } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import GateAccessService from "../../services/GateAccessService";
 import GenderService from "../../services/GenderService";
+import { useModalAnimation } from "../../hooks/useModalAnimation";
 
 export interface UserProfileModalProps {
   isOpen: boolean;
@@ -63,6 +64,7 @@ const buildFormFromUser = (user: UserProfileModalProps["user"]): ProfileForm => 
 });
 
 const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, onLogout }) => {
+  const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
   const { refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -110,7 +112,7 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
   const isResident = user.role === "resident";
   const roleDisplay = isResident ? "Resident" : "Security Guard";
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const handleCancelEdit = () => {
     setEditForm(buildFormFromUser(user));
@@ -172,9 +174,10 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
 
   return (
     <>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md transition-opacity" onClick={onClose}>
+      <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`} onClick={onClose}>
+        <div className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
         <div
-          className="w-full max-w-[1100px] max-h-[95vh] overflow-y-auto rounded-xl bg-[#1e1e24]/75 backdrop-blur-xl border border-white/10 shadow-2xl scrollbar-thin scrollbar-thumb-zinc-700"
+          className={`relative w-full max-w-[1100px] max-h-[95vh] overflow-y-auto rounded-xl bg-[#1e1e24]/75 backdrop-blur-xl border border-white/10 shadow-2xl scrollbar-thin scrollbar-thumb-zinc-700 ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-4 sm:p-6 lg:p-8 text-white">
@@ -493,7 +496,8 @@ const ProfileActionModal = ({
   onConfirm: () => void;
   onClose: () => void;
 }) => {
-  if (!isOpen) return null;
+  const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+  if (!shouldRender) return null;
 
   const toneClass = tone === "error"
     ? "border-red-500/30 bg-red-500/10 text-red-200"
@@ -507,9 +511,9 @@ const ProfileActionModal = ({
       : "bg-blue-600 hover:bg-blue-500";
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-      <button type="button" aria-label="Close modal" onClick={onClose} className="absolute inset-0" />
-      <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-[#1e1e24]/90 p-6 text-white shadow-2xl backdrop-blur-xl">
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+      <button type="button" aria-label="Close modal" onClick={onClose} className={`absolute inset-0 bg-black/80 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
+      <div className={`relative w-full max-w-md rounded-xl border border-white/10 bg-[#1e1e24]/90 p-6 text-white shadow-2xl backdrop-blur-xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}>
         <div className={`mb-4 rounded-lg border px-4 py-3 ${toneClass}`}>
           <h3 className="text-lg font-bold">{title}</h3>
           <p className="mt-1 text-sm opacity-90">{message}</p>

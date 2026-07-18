@@ -187,12 +187,12 @@ void setup() {
   config.pixel_format = PIXFORMAT_JPEG;
 
   if(psramFound()){
-    config.frame_size = FRAMESIZE_SVGA;
-    config.jpeg_quality = 12;
+    config.frame_size = FRAMESIZE_QVGA;
+    config.jpeg_quality = 15;
     config.fb_count = 2;
   } else {
-    config.frame_size = FRAMESIZE_VGA;
-    config.jpeg_quality = 12;
+    config.frame_size = FRAMESIZE_QVGA;
+    config.jpeg_quality = 15;
     config.fb_count = 1;
   }
 
@@ -203,7 +203,7 @@ void setup() {
   }
 
   sensor_t * s = esp_camera_sensor_get();
-  s->set_framesize(s, FRAMESIZE_VGA);
+  s->set_framesize(s, FRAMESIZE_QVGA);
 
   WiFi.mode(WIFI_STA);
 #if USE_STATIC_IP

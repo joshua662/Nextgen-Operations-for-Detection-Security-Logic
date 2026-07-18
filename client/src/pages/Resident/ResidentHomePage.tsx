@@ -3,6 +3,7 @@ import GateAccessService from "../../services/GateAccessService";
 import type { GateLog, NotificationItem, UpdateRequestItem } from "../../interfaces/GateInterface";
 import { useAuth } from "../../contexts/AuthContext";
 import Spinner from "../../components/Spinner/Spinner";
+import { useModalAnimation } from "../../hooks/useModalAnimation";
 
 type ResidentModal = "notifications" | "logs" | "guest" | null;
 
@@ -161,11 +162,13 @@ const ResidentHomePage = () => {
     const markAllRead = async () => {
         await GateAccessService.markAllNotificationsRead();
         await loadDashboardData();
+        window.dispatchEvent(new Event('notifications_updated'));
     };
 
     const markRead = async (id: number) => {
         await GateAccessService.markNotificationRead(id);
         await loadDashboardData();
+        window.dispatchEvent(new Event('notifications_updated'));
     };
 
     const submitGuestAccess = async (event: FormEvent) => {
@@ -393,21 +396,13 @@ const ResidentHomePage = () => {
                 </div>
             </DashboardModal>
 
-            {openRequest && (
-                <RequestDetailModal request={requests.find((request) => request.update_request_id === openRequest)} onClose={() => setOpenRequest(null)} />
-            )}
+            <RequestDetailModal 
+                isOpen={!!openRequest}
+                request={requests.find((request) => request.update_request_id === openRequest)} 
+                onClose={() => setOpenRequest(null)} 
+            />
 
-            {imagePreview && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-2xl rounded-xl bg-white p-4 shadow-2xl dark:bg-zinc-800">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Captured Plate Image</h3>
-                            <button type="button" onClick={() => setImagePreview(null)} className="text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">x</button>
-                        </div>
-                        <img src={imagePreview} alt="Captured plate" className="w-full rounded-lg" />
-                    </div>
-                </div>
-            )}
+            <ImagePreviewModal src={imagePreview} onClose={() => setImagePreview(null)} />
         </div>
     );
 };
@@ -425,13 +420,14 @@ const DashboardModal = ({
     children: ReactNode;
     maxWidth?: string;
 }) => {
-    if (!isOpen) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+    if (!shouldRender) return null;
 
     return (
         <div className="fixed inset-0 z-[100] overflow-y-auto">
             <div className="flex min-h-screen items-center justify-center px-4 py-8">
-                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
-                <div className={`relative w-full ${maxWidth} rounded-2xl border border-white/10 bg-[#1e1e24]/80 p-5 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 md:p-6 text-zinc-100`}>
+                <button type="button" aria-label="Close modal" onClick={onClose} className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
+                <div className={`relative w-full ${maxWidth} rounded-2xl border border-white/10 bg-[#1e1e24]/80 p-5 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 md:p-6 text-zinc-100 ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}>
                     <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/5 pb-4">
                         <h2 className="text-2xl font-bold text-white">{title}</h2>
                         <button type="button" onClick={onClose} className="text-2xl leading-none text-zinc-400 hover:text-white">x</button>
@@ -592,16 +588,18 @@ const RequestCard = ({ request, onOpen }: { request: UpdateRequestItem; onOpen: 
     );
 };
 
-const RequestDetailModal = ({ request, onClose }: { request?: UpdateRequestItem; onClose: () => void }) => {
-    if (!request) return null;
+const RequestDetailModal = ({ isOpen, request, onClose }: { isOpen: boolean; request?: UpdateRequestItem; onClose: () => void }) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+    
+    if (!shouldRender || !request) return null;
 
     const entries = Object.entries(request.requested_changes).filter(([key]) => key !== "request_type");
 
     return (
         <div className="fixed inset-0 z-[120] overflow-y-auto">
             <div className="flex min-h-screen items-center justify-center px-4 py-10">
-                <button type="button" aria-label="Close modal" onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
-                <div className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-[#1e1e24]/80 p-6 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 text-zinc-100">
+                <button type="button" aria-label="Close modal" onClick={onClose} className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
+                <div className={`relative w-full max-w-4xl rounded-2xl border border-white/10 bg-[#1e1e24]/80 p-6 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#1e1e24]/80 text-zinc-100 ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}>
                     <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/5 pb-4">
                         <div>
                             <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -688,6 +686,24 @@ const limitText = (value: string, limit: number) => value.length > limit ? `${va
 const Svg = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
     <svg className={`h-5 w-5 ${className}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">{children}</svg>
 );
+
+const ImagePreviewModal = ({ src, onClose }: { src: string | null; onClose: () => void }) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(!!src);
+    if (!shouldRender || !src) return null;
+
+    return (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+            <button type="button" aria-label="Close modal" onClick={onClose} className={`fixed inset-0 bg-black/80 backdrop-blur-sm ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
+            <div className={`relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl border border-white/10 shadow-2xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}>
+                <img src={src} alt="Preview" className="max-h-[90vh] max-w-[90vw] object-contain" />
+                <button type="button" onClick={onClose} className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition">
+                    <Svg><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></Svg>
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const BarIcon = ({ className }: { className?: string }) => <Svg className={className}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 19V9m8 10V5m8 14v-7" /></Svg>;
 const ExitIcon = ({ className }: { className?: string }) => <Svg className={className}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12H3m0 0 4-4m-4 4 4 4m5-9V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2" /></Svg>;
 const LockIcon = ({ className }: { className?: string }) => <Svg className={className}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 11V8a5 5 0 0 1 10 0v3m-9 0h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z" /></Svg>;

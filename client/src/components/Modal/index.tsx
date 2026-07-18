@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type FC, type ReactNode } from "react";
 import ModalCloseButton from "../Button/ModalCloseButton";
+import { useModalAnimation } from "../../hooks/useModalAnimation";
 
 interface ModalProps {
   isOpen: boolean;
@@ -11,7 +12,6 @@ interface ModalProps {
   backdropClassName?: string;
   bodyClassName?: string;
   /** Fade backdrop + scale-in dialog panel when opened */
-  animateEnter?: boolean;
 }
 
 const Modal: FC<ModalProps> = ({
@@ -23,8 +23,8 @@ const Modal: FC<ModalProps> = ({
   isFullScreen,
   backdropClassName,
   bodyClassName,
-  animateEnter,
 }) => {
+  const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 200);
   const modalRef = useRef<HTMLDivElement>(null);
 
   const handleEscape = useCallback(
@@ -60,24 +60,24 @@ const Modal: FC<ModalProps> = ({
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, [isOpen, shouldRender]);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   return (
     <>
       <div
-        className="modal fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-4"
+        className="modal fixed inset-0 z-[99999] flex items-center justify-center overflow-y-auto p-4"
         onClick={onClose}
       >
         {!isFullScreen && (
           <div
-            className={`${backdropClassName ?? "fixed inset-0 h-full w-full bg-neutral/30 backdrop-blur-md"} ${animateEnter ? "auth-modal-backdrop-in" : ""}`}
+            className={`${backdropClassName ?? "fixed inset-0 h-full w-full bg-neutral/30 backdrop-blur-md"} ${isAnimatingOut ? "animate-modal-backdrop-out" : "animate-modal-backdrop-in"}`}
           />
         )}
         <div
           ref={modalRef}
-          className={`${contentClasses} ${className} ${animateEnter ? "auth-modal-panel-in" : ""}`}
+          className={`${contentClasses} ${className} ${isAnimatingOut ? "animate-modal-panel-out" : "animate-modal-panel-in"}`}
           onClick={(e) => e.stopPropagation()}
         >
           {showCloseButton && <ModalCloseButton onClose={onClose} />}

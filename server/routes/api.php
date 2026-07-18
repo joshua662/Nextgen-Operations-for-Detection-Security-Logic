@@ -19,6 +19,7 @@ Route::controller(AuthController::class)->prefix('/auth')->group(function () {
     Route::post('/security-guard/register', 'securityGuardRegister');
     Route::post('/resident/login', 'residentLogin');
     Route::post('/resident/register', 'residentRegister');
+    Route::post('/forgot-password', 'forgotPassword');
     Route::post('/smtp-test', 'smtpTest');
 });
 

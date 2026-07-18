@@ -4,6 +4,7 @@ export type NavItem = {
     path: string;
     label: string;
     icon: ReactNode;
+    badgeCount?: number;
 };
 
 const iconClass = "h-5 w-5 shrink-0";

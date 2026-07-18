@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from "react";
 import { createPortal } from "react-dom";
-import ToastMessage from "../../../components/ToastMessage/ToastMessage";
+import RegistrationSuccessModal from "../../../components/RegistrationSuccessModal/RegistrationSuccessModal";
 import Spinner from "../../../components/Spinner/Spinner";
+import { useModalAnimation } from "../../../hooks/useModalAnimation";
 import type { AdmissionRegistrationForm } from "./authTypes";
 import puebloDePanayLogo from "../../../assets/img/pdp-logo-invert.png";
 import loginBackdrop from "../../../assets/img/subdivision-gate-background.png";
@@ -131,44 +132,69 @@ const SubmitAdmissionButton = ({ loading }: { loading: boolean }) => (
 );
 
 const ConfirmationDialog = ({
+    isOpen,
     email,
     loading,
     onCancel,
     onConfirm,
 }: {
+    isOpen: boolean;
     email: string;
     loading: boolean;
     onCancel: () => void;
     onConfirm: () => void;
-}) => (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 px-4 backdrop-blur-md">
-        <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#15112f]/80 p-7 text-white shadow-2xl backdrop-blur-xl">
-            <h3 className="text-xl font-semibold">Confirm registration</h3>
-            <p className="mt-3 text-sm leading-relaxed text-violet-100/80">
-                Create this account and send the generated username and password to <span className="font-semibold text-white">{email}</span>?
-            </p>
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    disabled={loading}
-                    className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-violet-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                    Review
-                </button>
-                <button
-                    type="button"
-                    onClick={onConfirm}
-                    disabled={loading}
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                    {loading && <Spinner size="xs" />}
-                    Confirm
-                </button>
+}) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+    if (!shouldRender) return null;
+
+    return (
+        <div className={`fixed inset-0 z-[10000] flex items-center justify-center p-4 transition-opacity ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}>
+            <div className={`fixed inset-0 bg-black/70 backdrop-blur-md ${isAnimatingOut ? 'opacity-0' : 'animate-modal-backdrop-in'}`} onClick={onCancel} />
+            <div className={`relative w-full max-w-md rounded-3xl border border-white/10 bg-[#1e1e24] p-10 text-center text-zinc-100 shadow-2xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}>
+                
+                {/* Envelope with Checkmark Icon */}
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center relative">
+                    <svg className="h-12 w-12 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 border-2 border-[#1e1e24]">
+                        <svg className="h-4 w-4 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                </div>
+
+                <h3 className="mb-4 text-2xl font-bold text-white">Confirm registration!</h3>
+                <p className="mb-8 text-[14.5px] leading-relaxed text-zinc-400">
+                    Create this account and send the generated username and password to <span className="font-semibold text-zinc-200">{email}</span>?
+                </p>
+                
+                <div className="flex flex-col items-center gap-4">
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        disabled={loading}
+                        className="flex w-full items-center justify-center gap-2 rounded-full bg-violet-600 py-3.5 text-[15px] font-bold text-white shadow-lg transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {loading && <Spinner size="xs" />}
+                        Confirm registration
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        disabled={loading}
+                        className="text-[14px] font-medium text-zinc-400 transition hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-1.5"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Review details
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const ANIM_DURATION = 300;
 
@@ -207,19 +233,20 @@ const RegistrationModal = ({
         };
     }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    useEffect(() => {
-        if (registrationSuccess) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setToastVisible(true);
-        }
-    }, [registrationSuccess]);
-
     const refreshCaptcha = useCallback(() => {
         setCaptchaA(Math.floor(Math.random() * 90) + 10);
         setCaptchaB(Math.floor(Math.random() * 9) + 1);
         setCaptchaAnswer("");
         setCaptchaError("");
     }, []);
+
+    useEffect(() => {
+        if (registrationSuccess) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setToastVisible(true);
+            refreshCaptcha();
+        }
+    }, [registrationSuccess, refreshCaptcha]);
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -257,24 +284,17 @@ const RegistrationModal = ({
 
     return createPortal(
         <>
-            <ToastMessage
-                title="Registration complete"
-                message="Credentials were sent to the registered email address."
-                isFailed={false}
+            <RegistrationSuccessModal
                 isVisible={toastVisible}
                 onClose={() => setToastVisible(false)}
-                autoCloseMs={3000}
-                size="large"
-                actionLabel="Ok"
             />
-            {confirmationOpen && (
-                <ConfirmationDialog
-                    email={form.email.trim() || "the registered email address"}
-                    loading={loading}
-                    onCancel={() => setConfirmationOpen(false)}
-                    onConfirm={handleConfirmRegistration}
-                />
-            )}
+            <ConfirmationDialog
+                isOpen={confirmationOpen}
+                email={form.email.trim() || "the registered email address"}
+                loading={loading}
+                onCancel={() => setConfirmationOpen(false)}
+                onConfirm={handleConfirmRegistration}
+            />
 
             <div
                 className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden"
