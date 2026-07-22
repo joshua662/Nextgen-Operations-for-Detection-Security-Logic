@@ -516,7 +516,6 @@ const DashboardPage = () => {
         </div>
     );
 };
-};
 
 const CameraFeedPanel = ({
     location,
