@@ -77,52 +77,24 @@ const QUICK_ACTIONS: {
 
 const ClientDashboardSkeleton = () => (
     <div className="space-y-6 animate-pulse">
-        {/* Header */}
         <div className="space-y-2">
-            <div className="h-8 w-64 rounded bg-zinc-800" />
+            <div className="h-8 w-64 rounded-lg bg-zinc-800" />
             <div className="h-4 w-96 rounded bg-zinc-800" />
         </div>
-
-        {/* Stat cards (5 items) */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-28 rounded-xl border border-white/5 bg-[#18181b] p-6 space-y-4">
-                    <div className="h-4 w-28 rounded bg-zinc-800" />
-                    <div className="h-8 w-16 rounded bg-zinc-800" />
-                </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-32 rounded-2xl bg-zinc-800/60" />
             ))}
         </div>
-
-        {/* Analytics Grid Skeleton */}
+        <div className="h-44 rounded-2xl bg-zinc-800/60" />
         <div className="grid gap-6 lg:grid-cols-2">
-            <div className="h-[320px] rounded-xl border border-white/5 bg-[#18181b] p-6" />
-            <div className="h-[320px] rounded-xl border border-white/5 bg-[#18181b] p-6" />
+            <div className="h-[320px] rounded-2xl bg-zinc-800/60" />
+            <div className="h-[320px] rounded-2xl bg-zinc-800/60" />
         </div>
-
-        {/* Quick Actions */}
-        <div className="rounded-xl border border-white/5 bg-[#18181b] p-6 space-y-4">
-            <div className="h-6 w-36 rounded bg-zinc-800" />
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-12 rounded-lg bg-zinc-850" />
-                ))}
-            </div>
-        </div>
-
-        {/* Live Camera Feeds */}
-        <div className="rounded-xl border border-white/5 bg-[#18181b] p-4 space-y-4">
-            <div className="h-6 w-44 rounded bg-zinc-800" />
-            <div className="grid gap-6 lg:grid-cols-2">
-                {[1, 2].map((i) => (
-                    <div key={i} className="rounded-xl border border-white/5 bg-zinc-900 p-4 space-y-4">
-                        <div className="flex justify-between items-center">
-                            <div className="h-5 w-36 rounded bg-zinc-800" />
-                            <div className="h-6 w-12 rounded bg-zinc-800" />
-                        </div>
-                        <div className="h-[280px] rounded-lg bg-zinc-850" />
-                    </div>
-                ))}
-            </div>
+        <div className="h-24 rounded-2xl bg-zinc-800/60" />
+        <div className="grid gap-6 lg:grid-cols-2">
+            <div className="h-[380px] rounded-2xl bg-zinc-800/60" />
+            <div className="h-[380px] rounded-2xl bg-zinc-800/60" />
         </div>
     </div>
 );
@@ -138,6 +110,7 @@ const DashboardPage = () => {
     const [currentTime, setCurrentTime] = useState<Date>(new Date());
     const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'year'>('today');
     const [trafficDetailsPeriod, setTrafficDetailsPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly' | null>(null);
+    const [vtmFilter, setVtmFilter] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -276,19 +249,25 @@ const DashboardPage = () => {
     if (loading) return <ClientDashboardSkeleton />;
     if (!data) return <p className="text-zinc-500">Unable to load dashboard.</p>;
 
-    const displayName = [user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ") || "Admin";
-
-    return (
+    const displayName = [user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ") || "Admin    return (
         <div className="flex h-full w-full flex-1 flex-col gap-6 rounded-xl text-zinc-100">
-            {/* Header Section */}
+
+            {/* ── Header ── */}
             <div className="flex flex-col gap-4 border-b border-white/5 pb-5">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-zinc-100">Resident Car Entry & Exit Monitor</h1>
-                        <p className="mt-1 text-zinc-400">Gate Security System - Security Guard Dashboard (Welcome, {displayName})</p>
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 shrink-0">
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l1 1h1m8-1h1l1-1V9l-3-3h-1m-3 0V4m3 12V9" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-zinc-100">Resident Car Entry &amp; Exit Monitor</h1>
+                            <p className="text-sm text-zinc-500">Gate Security System &mdash; Security Guard Dashboard &nbsp;<span className="text-zinc-400">Welcome, {displayName}</span></p>
+                        </div>
                     </div>
-                    {/* Date & Time display (auto-refreshing clock) */}
-                    <div className="flex items-center gap-2.5 rounded-lg bg-zinc-900/60 border border-white/5 px-4 py-2.5 text-zinc-200">
+                    <div className="flex items-center gap-2.5 self-start rounded-xl bg-zinc-900/60 border border-white/5 px-4 py-2.5 text-zinc-200 md:self-auto">
                         <svg className="w-4 h-4 text-[#C5A073]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -297,123 +276,92 @@ const DashboardPage = () => {
                         </span>
                     </div>
                 </div>
-
             </div>
 
-            {/* Key Metrics Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <MetricCard
-                    label="Daily Count"
-                    sub="Cars passed today"
-                    value={data.car_monitor?.daily?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits)}
-                    trend={data.car_monitor?.daily?.trend ?? "up"}
-                    diff={data.car_monitor?.daily?.diff ?? 0}
-                    isActive={timeFilter === "today"}
-                    onClick={() => {
-                        setTimeFilter("today");
-                        setTrafficDetailsPeriod("daily");
-                    }}
-                />
-                <MetricCard
-                    label="Weekly Count"
-                    sub="Cars passed this week"
-                    value={data.car_monitor?.weekly?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 6}
-                    trend={data.car_monitor?.weekly?.trend ?? "up"}
-                    diff={data.car_monitor?.weekly?.diff ?? 0}
-                    isActive={timeFilter === "week"}
-                    onClick={() => {
-                        setTimeFilter("week");
-                        setTrafficDetailsPeriod("weekly");
-                    }}
-                />
-                <MetricCard
-                    label="Monthly Count"
-                    sub="Cars passed this month"
-                    value={data.car_monitor?.monthly?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 24}
-                    trend={data.car_monitor?.monthly?.trend ?? "down"}
-                    diff={data.car_monitor?.monthly?.diff ?? 0}
-                    isActive={timeFilter === "month"}
-                    onClick={() => {
-                        setTimeFilter("month");
-                        setTrafficDetailsPeriod("monthly");
-                    }}
-                />
-                <MetricCard
-                    label="Yearly Count"
-                    sub="Cars passed this year"
-                    value={data.car_monitor?.yearly?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 280}
-                    trend={data.car_monitor?.yearly?.trend ?? "up"}
-                    diff={data.car_monitor?.yearly?.diff ?? 0}
-                    isActive={timeFilter === "year"}
-                    onClick={() => {
-                        setTimeFilter("year");
-                        setTrafficDetailsPeriod("yearly");
-                    }}
-                />
+            {/* ── Metric Cards ── */}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                    { label: "Daily Count",   sub: "Cars passed today",      value: data.car_monitor?.daily?.count   ?? (data.stats.authorized_entries + data.stats.authorized_exits),       trend: data.car_monitor?.daily?.trend   ?? "up", diff: data.car_monitor?.daily?.diff   ?? 0, period: "today"  as const, periodKey: "daily"   as const, gradient: "from-emerald-950/60", iconBg: "bg-emerald-500/10 text-emerald-400", numColor: "text-emerald-400" },
+                    { label: "Weekly Count",  sub: "Cars passed this week",  value: data.car_monitor?.weekly?.count  ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 6,    trend: data.car_monitor?.weekly?.trend  ?? "up", diff: data.car_monitor?.weekly?.diff  ?? 0, period: "week"   as const, periodKey: "weekly"  as const, gradient: "from-blue-950/60",    iconBg: "bg-blue-500/10 text-blue-400",    numColor: "text-blue-400"    },
+                    { label: "Monthly Count", sub: "Cars passed this month", value: data.car_monitor?.monthly?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 24,   trend: data.car_monitor?.monthly?.trend ?? "down", diff: data.car_monitor?.monthly?.diff ?? 0, period: "month"  as const, periodKey: "monthly" as const, gradient: "from-violet-950/60",  iconBg: "bg-violet-500/10 text-violet-400", numColor: "text-violet-400"  },
+                    { label: "Yearly Count",  sub: "Cars passed this year",  value: data.car_monitor?.yearly?.count  ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 280,  trend: data.car_monitor?.yearly?.trend  ?? "up", diff: data.car_monitor?.yearly?.diff  ?? 0, period: "year"   as const, periodKey: "yearly"  as const, gradient: "from-amber-950/60",   iconBg: "bg-amber-500/10 text-amber-400",   numColor: "text-amber-400"   },
+                ].map(({ label, sub, value, trend, diff, period, periodKey, gradient, iconBg, numColor }) => (
+                    <div
+                        key={label}
+                        onClick={() => { setTimeFilter(period); setTrafficDetailsPeriod(periodKey); }}
+                        className={`relative overflow-hidden rounded-2xl p-5 cursor-pointer transition-all duration-300 border bg-gradient-to-br ${gradient} to-zinc-900 ${
+                            timeFilter === period
+                                ? 'border-[#C5A073]/40 shadow-lg shadow-[#C5A073]/5 scale-[1.01]'
+                                : 'border-white/5 hover:border-white/10 hover:scale-[1.005]'
+                        }`}
+                    >
+                        <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/5 blur-2xl" />
+                        <div className="flex items-start justify-between">
+                            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{label}</p>
+                            <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                trend === 'up' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                            }`}>
+                                {trend === 'up' ? '↑' : '↓'} {diff}
+                            </span>
+                        </div>
+                        <p className={`mt-3 text-4xl font-bold ${numColor}`}>{value}</p>
+                        <p className="mt-1 text-[11px] text-zinc-500">{sub}</p>
+                    </div>
+                ))}
             </div>
 
-            {/* Styled Visual Analytics Section */}
+            {/* ── Vehicle Traffic Monitor ── */}
+            <VehicleTrafficMonitor
+                filter={vtmFilter}
+                onFilterChange={setVtmFilter}
+                carMonitor={data.car_monitor}
+            />
+
+            {/* ── Analytics Grid ── */}
             <div className="grid gap-6 lg:grid-cols-2">
-                {/* Total Gate Traffic Bar Chart */}
-                <div className="rounded-xl border border-white/5 bg-[#18181b] p-6 flex flex-col justify-between">
+                {/* Bar Chart */}
+                <div className="rounded-2xl border border-white/5 bg-[#18181b] p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-6">
                         <div>
                             <h3 className="text-base font-bold text-zinc-100">Total Gate Traffic</h3>
-                            <p className="text-xs text-zinc-500 mt-0.5">Monthly authorized and unauthorized log entries</p>
+                            <p className="text-xs text-zinc-500 mt-0.5">Monthly gate log entries</p>
                         </div>
                         <a
                             href="/gate-logs"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                setActiveQuickAction("gate-logs");
-                            }}
+                            onClick={(e) => { e.preventDefault(); setActiveQuickAction("gate-logs"); }}
                             className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 hover:bg-[#C5A073] text-zinc-400 hover:text-[#121212] transition-colors border border-white/5"
                             title="View full gate logs"
                         >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
                         </a>
                     </div>
-
-                    <div className="flex items-end gap-3 sm:gap-4 md:gap-6 h-52 relative px-2">
-                        {/* Gridlines background */}
+                    <div className="flex items-end gap-1.5 sm:gap-2 h-52 relative px-1">
                         <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8">
-                            {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="w-full border-t border-white/5" />
-                            ))}
-                            <div className="w-full border-b border-white/5" />
+                            {[1, 2, 3, 4].map((i) => <div key={i} className="w-full border-t border-white/[0.04]" />)}
+                            <div className="w-full border-b border-white/[0.04]" />
                         </div>
-
                         {chartData && chartData.labels.length > 0 ? (
                             chartData.labels.map((label, idx) => {
                                 const val = chartData.values[idx] ?? 0;
                                 const pct = (val / chartMax) * 85;
-                                const isCurrentMonth = idx === chartData.labels.length - 1;
+                                const isCurrent = idx === chartData.labels.length - 1;
                                 return (
-                                    <div key={idx} className="flex flex-col items-center gap-2 flex-1 z-10 group">
-                                        <div className="relative w-full flex flex-col justify-end items-center h-40 bg-zinc-900/40 rounded-full overflow-visible">
-                                            {/* Tooltip */}
-                                            <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20">
-                                                <span className="bg-zinc-800 text-zinc-100 text-[10px] font-medium rounded px-2 py-1 shadow-lg whitespace-nowrap">
-                                                    {val} entries
-                                                </span>
-                                                <span className="w-1.5 h-1.5 bg-zinc-800 rotate-45 -mt-1" />
+                                    <div key={idx} className="flex flex-col items-center gap-1.5 flex-1 z-10 group">
+                                        <div className="relative w-full flex flex-col justify-end items-center h-40">
+                                            <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
+                                                <span className="rounded-lg border border-white/10 bg-zinc-800 px-2.5 py-1 text-[10px] shadow-xl whitespace-nowrap text-zinc-200">{val} entries</span>
+                                                <span className="w-1.5 h-1.5 bg-zinc-800 rotate-45 -mt-0.5 border-r border-b border-white/10" />
                                             </div>
-                                            
-                                            {/* Bar Fill */}
                                             <div
                                                 style={{ height: `${pct}%` }}
-                                                className={`w-3.5 sm:w-6 md:w-8 rounded-full transition-all duration-500 cursor-pointer ${
-                                                    isCurrentMonth
-                                                        ? 'bg-[#C5A073]'
-                                                        : 'bg-zinc-800 hover:bg-zinc-700'
+                                                className={`w-3 sm:w-4 md:w-6 rounded-t-sm transition-all duration-500 ${
+                                                    isCurrent ? 'bg-[#C5A073] shadow-lg shadow-[#C5A073]/20' : 'bg-zinc-700 group-hover:bg-zinc-600'
                                                 }`}
                                             />
                                         </div>
-                                        <span className={`text-[11px] font-medium ${isCurrentMonth ? 'text-[#C5A073] font-bold' : 'text-zinc-500'}`}>
-                                            {label}
-                                        </span>
+                                        <span className={`text-[10px] font-medium ${isCurrent ? 'text-[#C5A073] font-bold' : 'text-zinc-600'}`}>{label}</span>
                                     </div>
                                 );
                             })
@@ -423,102 +371,76 @@ const DashboardPage = () => {
                     </div>
                 </div>
 
-                {/* Weekly Calendar & Community Growth Card */}
-                <div className="rounded-xl border border-white/5 bg-[#18181b] p-6 flex flex-col justify-between">
-                    {/* Week Calendar Header & Days */}
+                {/* Calendar + Growth */}
+                <div className="rounded-2xl border border-white/5 bg-[#18181b] p-6 flex flex-col justify-between">
                     <div>
                         <div className="flex items-center justify-between mb-4">
-                            <button
-                                type="button"
-                                onClick={() => setWeekOffset((prev) => prev - 1)}
-                                className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors border border-white/5"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                </svg>
+                            <button type="button" onClick={() => setWeekOffset((p) => p - 1)}
+                                className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors border border-white/5">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                             </button>
                             <h3 className="text-sm font-bold text-zinc-100">{monthYearLabel}</h3>
-                            <button
-                                type="button"
-                                onClick={() => setWeekOffset((prev) => prev + 1)}
-                                className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors border border-white/5"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                </svg>
+                            <button type="button" onClick={() => setWeekOffset((p) => p + 1)}
+                                className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors border border-white/5">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                             </button>
                         </div>
-
-                        {/* Horizontal Days Row */}
-                        <div className="grid grid-cols-7 gap-2 text-center pb-4 border-b border-white/5">
+                        <div className="grid grid-cols-7 gap-1 text-center pb-4 border-b border-white/5">
                             {weekDates.map((date, idx) => {
                                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                                 const isSelected = selectedDate.toDateString() === date.toDateString();
                                 const isToday = new Date().toDateString() === date.toDateString();
                                 return (
-                                    <button
-                                        key={idx}
-                                        type="button"
-                                        onClick={() => setSelectedDate(date)}
-                                        className={`flex flex-col items-center gap-1.5 py-2.5 rounded-full transition-all duration-200 ${
-                                            isSelected
-                                                ? 'bg-[#C5A073] text-[#121212] font-semibold'
-                                                : isToday
-                                                ? 'bg-zinc-900/60 text-zinc-100 border border-zinc-700/60'
-                                                : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
+                                    <button key={idx} type="button" onClick={() => setSelectedDate(date)}
+                                        className={`flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all duration-200 ${
+                                            isSelected ? 'bg-[#C5A073] text-[#121212] font-semibold shadow-lg shadow-[#C5A073]/20'
+                                            : isToday ? 'bg-zinc-800/80 text-zinc-100 border border-zinc-700/60 ring-1 ring-[#C5A073]/30'
+                                            : 'text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200'
                                         }`}
                                     >
-                                        <span className="text-[10px] uppercase tracking-wider">{dayName}</span>
+                                        <span className="text-[9px] uppercase tracking-wider">{dayName}</span>
                                         <span className="text-sm font-bold">{date.getDate()}</span>
                                     </button>
                                 );
                             })}
                         </div>
                     </div>
-
-                    {/* Growth Progress Area */}
-                    <div className="mt-4 flex items-center justify-between bg-zinc-900/40 rounded-2xl p-4 border border-white/5">
+                    <div className="mt-4 flex items-center justify-between bg-zinc-900/50 rounded-2xl p-4 border border-white/5">
                         <div>
-                          <h4 className="text-sm font-bold text-zinc-100">Community growth</h4>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className="text-emerald-450 text-xs font-semibold">↗ 0.9%</span>
-                            <span className="text-[11px] text-zinc-500">from last month</span>
-                          </div>
+                            <h4 className="text-sm font-bold text-zinc-100">Community Growth</h4>
+                            <div className="flex items-center gap-1.5 mt-1">
+                                <span className="text-emerald-400 text-xs font-semibold">↗ 0.9%</span>
+                                <span className="text-[11px] text-zinc-500">from last month</span>
+                            </div>
                         </div>
-                        
-                        {/* SVG Circular Progress Wheel */}
                         <div className="relative flex items-center justify-center w-16 h-16">
                             <svg className="w-full h-full transform -rotate-90">
-                                <circle
-                                    cx="32"
-                                    cy="32"
-                                    r="26"
-                                    stroke="#27272a"
-                                    strokeWidth="5"
-                                    fill="transparent"
-                                />
-                                <circle
-                                    cx="32"
-                                    cy="32"
-                                    r="26"
-                                    stroke="#C5A073"
-                                    strokeWidth="5"
-                                    fill="transparent"
+                                <circle cx="32" cy="32" r="26" stroke="#27272a" strokeWidth="5" fill="transparent" />
+                                <circle cx="32" cy="32" r="26" stroke="#C5A073" strokeWidth="5" fill="transparent"
                                     strokeDasharray={2 * Math.PI * 26}
                                     strokeDashoffset={2 * Math.PI * 26 * (1 - activeResidentsPercentage / 100)}
-                                    strokeLinecap="round"
-                                    className="transition-all duration-500"
-                                />
+                                    strokeLinecap="round" className="transition-all duration-700" />
                             </svg>
-                            <div className="absolute text-xs font-bold text-zinc-100">{activeResidentsPercentage}%</div>
+                            <div className="absolute text-xs font-bold text-[#C5A073]">{activeResidentsPercentage}%</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <section className="rounded-xl border border-white/5 bg-[#18181b] p-6">
-                <h2 className="mb-4 text-xl font-bold text-zinc-100">Quick Actions</h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* ── Quick Actions ── */}
+            <section className="rounded-2xl border border-white/5 bg-[#18181b] p-6">
+                <div className="flex items-center gap-2 mb-5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#C5A073]/10 text-[#C5A073]">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </span>
+                    <div>
+                        <h2 className="text-base font-bold text-zinc-100">Quick Actions</h2>
+                        <p className="text-xs text-zinc-500">Navigate to key management areas</p>
+                    </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     {QUICK_ACTIONS.map((action) => (
                         <QuickActionButton
                             key={action.key}
@@ -531,14 +453,28 @@ const DashboardPage = () => {
                 </div>
             </section>
 
-                <QuickActionModal
-                    isOpen={Boolean(activeQuickAction)}
-                    action={QUICK_ACTIONS.find(a => a.key === activeQuickAction) ?? QUICK_ACTIONS[0]}
-                    onClose={() => setActiveQuickAction(null)}
-                />
+            <QuickActionModal
+                isOpen={Boolean(activeQuickAction)}
+                action={QUICK_ACTIONS.find(a => a.key === activeQuickAction) ?? QUICK_ACTIONS[0]}
+                onClose={() => setActiveQuickAction(null)}
+            />
 
-            <section className="rounded-xl border border-white/5 bg-[#18181b] p-4">
-                <h2 className="mb-4 font-semibold text-zinc-100">Live Camera Feeds</h2>
+            {/* ── Live Camera Feeds ── */}
+            <section className="rounded-2xl border border-white/5 bg-[#18181b] p-5">
+                <div className="flex items-center gap-2 mb-5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-400">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                        </svg>
+                    </span>
+                    <div>
+                        <h2 className="text-base font-bold text-zinc-100">Live Camera Feeds</h2>
+                        <p className="text-xs text-zinc-500">Real-time entrance &amp; exit surveillance</p>
+                    </div>
+                    <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
+                        Live
+                    </span>
+                </div>
                 <div className="grid gap-6 lg:grid-cols-2">
                     <CameraFeedPanel
                         location="entrance"
@@ -577,6 +513,7 @@ const DashboardPage = () => {
 
         </div>
     );
+};  );
 };
 
 const CameraFeedPanel = ({
@@ -1449,4 +1386,213 @@ const HealthRow = ({
     );
 };
 
+// ─── Vehicle Traffic Monitor ─────────────────────────────────────────────────
+
+type VtmFilter = 'day' | 'week' | 'month' | 'year';
+
+const VTM_FILTERS: { key: VtmFilter; label: string }[] = [
+    { key: 'day',   label: 'DAY'   },
+    { key: 'week',  label: 'WEEK'  },
+    { key: 'month', label: 'MONTH' },
+    { key: 'year',  label: 'YEAR'  },
+];
+
+const VehicleTrafficMonitor = ({
+    filter,
+    onFilterChange,
+    carMonitor,
+}: {
+    filter: VtmFilter;
+    onFilterChange: (f: VtmFilter) => void;
+    carMonitor?: {
+        daily?:   { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+        weekly?:  { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+        monthly?: { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+        yearly?:  { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+    };
+}) => {
+    const periodKey: 'daily' | 'weekly' | 'monthly' | 'yearly' =
+        filter === 'day'   ? 'daily'
+        : filter === 'week'  ? 'weekly'
+        : filter === 'month' ? 'monthly'
+        : 'yearly';
+
+    const stats = carMonitor?.[periodKey];
+    const inside  = stats?.entries ?? 0;
+    const outside = stats?.exits   ?? 0;
+    const total   = stats?.count   ?? (inside + outside);
+    const diff    = stats?.diff    ?? 0;
+    const trend   = stats?.trend   ?? 'up';
+
+    const maxVal  = Math.max(total, 1);
+    const insidePct  = Math.round((inside  / maxVal) * 100);
+    const outsidePct = Math.round((outside / maxVal) * 100);
+
+    const periodLabel = filter === 'day' ? 'Today' : filter === 'week' ? 'This week' : filter === 'month' ? 'This month' : 'This year';
+
+    return (
+        <section className="rounded-xl border border-white/5 bg-[#18181b] p-5">
+            {/* Header row */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                <div className="flex items-center gap-3">
+                    {/* Truck icon */}
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#C5A073]/10 text-[#C5A073]">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l1 1h1m8-1h1l1-1V9l-3-3h-1m-3 0V4m3 12V9" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-base font-bold text-zinc-100">Vehicle Traffic Monitor</h2>
+                            <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400 border border-white/5">
+                                Subdivision Gate
+                            </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-0.5">Vehicles entering &amp; exiting the subdivision</p>
+                    </div>
+                </div>
+
+                {/* DAY / WEEK / MONTH / YEAR filter tabs */}
+                <div className="flex items-center gap-1 rounded-lg bg-zinc-900/60 border border-white/5 p-1 self-start sm:self-auto">
+                    {VTM_FILTERS.map(({ key, label }) => (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => onFilterChange(key)}
+                            className={`rounded-md px-3 py-1.5 text-[11px] font-bold tracking-wide transition-all duration-200 ${
+                                filter === key
+                                    ? 'bg-[#C5A073] text-[#121212] shadow-sm'
+                                    : 'text-zinc-400 hover:text-zinc-200'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Three stat cards */}
+            <div className="grid gap-4 sm:grid-cols-3">
+
+                {/* Vehicles Inside */}
+                <div className="rounded-xl border border-emerald-500/15 bg-zinc-900/50 p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                            {/* Download / arrow-down-circle icon */}
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                        </div>
+                        <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            {trend === 'up' ? `+${diff}` : `-${diff}`}
+                        </span>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-zinc-400 mb-1">Vehicles Inside</p>
+                        <p className="text-4xl font-bold text-emerald-400 leading-none">{inside}</p>
+                        <p className="text-[11px] text-zinc-500 mt-1">{periodLabel} · entries (IN)</p>
+                    </div>
+                    <div>
+                        <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1.5">
+                            <span>{insidePct}% of total movements</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-emerald-400 transition-all duration-700"
+                                style={{ width: `${insidePct}%` }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Vehicles Outside */}
+                <div className="rounded-xl border border-red-500/15 bg-zinc-900/50 p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/10 text-red-400">
+                            {/* Upload / arrow-up icon */}
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                        </div>
+                        <span className="text-[11px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
+                            OUT
+                        </span>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-zinc-400 mb-1">Vehicles Outside</p>
+                        <p className="text-4xl font-bold text-red-400 leading-none">{outside}</p>
+                        <p className="text-[11px] text-zinc-500 mt-1">{periodLabel} · exits (OUT)</p>
+                    </div>
+                    <div>
+                        <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1.5">
+                            <span>{outsidePct}% of total movements</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-red-400 transition-all duration-700"
+                                style={{ width: `${outsidePct}%` }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Total Movements */}
+                <div className="rounded-xl border border-yellow-500/15 bg-zinc-900/50 p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-400">
+                            {/* Bar chart icon */}
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <span className="text-[11px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full">
+                            TOTAL
+                        </span>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-zinc-400 mb-1">Total Movements</p>
+                        <p className="text-4xl font-bold text-yellow-400 leading-none">{total}</p>
+                        <p className="text-[11px] text-zinc-500 mt-1">{periodLabel} · all gate events</p>
+                    </div>
+                    {/* Inside / Outside breakdown bars */}
+                    <div className="space-y-2">
+                        <div>
+                            <div className="flex items-center justify-between text-[10px] mb-1">
+                                <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
+                                    Inside
+                                </span>
+                                <span className="text-zinc-400">{inside}</span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+                                <div
+                                    className="h-full rounded-full bg-emerald-400 transition-all duration-700"
+                                    style={{ width: `${insidePct}%` }}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="flex items-center justify-between text-[10px] mb-1">
+                                <span className="flex items-center gap-1.5 text-red-400 font-medium">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-red-400 inline-block" />
+                                    Outside
+                                </span>
+                                <span className="text-zinc-400">{outside}</span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+                                <div
+                                    className="h-full rounded-full bg-red-400 transition-all duration-700"
+                                    style={{ width: `${outsidePct}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+};
+
 export default DashboardPage;
+
