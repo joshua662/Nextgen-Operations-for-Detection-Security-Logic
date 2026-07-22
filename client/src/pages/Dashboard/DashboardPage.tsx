@@ -249,7 +249,9 @@ const DashboardPage = () => {
     if (loading) return <ClientDashboardSkeleton />;
     if (!data) return <p className="text-zinc-500">Unable to load dashboard.</p>;
 
-    const displayName = [user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ") || "Admin    return (
+    const displayName = [user?.user?.first_name, user?.user?.last_name].filter(Boolean).join(" ") || "Admin";
+
+    return (
         <div className="flex h-full w-full flex-1 flex-col gap-6 rounded-xl text-zinc-100">
 
             {/* ── Header ── */}
@@ -513,7 +515,7 @@ const DashboardPage = () => {
 
         </div>
     );
-};  );
+};
 };
 
 const CameraFeedPanel = ({
