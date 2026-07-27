@@ -130,7 +130,7 @@ class AuthController extends Controller
 
     private function authenticatePortalUser(
         Request $request,
-        string $username,
+        string $loginInput,
         string $password,
         string $expectedRole,
         string $portalLabel,
@@ -138,12 +138,15 @@ class AuthController extends Controller
         callable $onSuccess,
     ) {
         $user = User::with(['gender'])
-            ->where('username', $username)
+            ->where(function ($query) use ($loginInput) {
+                $query->where('username', $loginInput)
+                    ->orWhere('email', $loginInput);
+            })
             ->where('is_deleted', false)
             ->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
-            $onFailure($request, $username);
+            $onFailure($request, $loginInput);
 
             return response()->json([
                 'message' => 'The provided credentials are incorrect.',
@@ -173,18 +176,31 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        $loginInput = $request->input('username') ?? $request->input('email') ?? $request->input('login');
+
+        if (! $loginInput) {
+            return response()->json([
+                'message' => 'The email or username field is required.',
+                'errors' => [
+                    'username' => ['The email or username field is required.'],
+                ],
+            ], 422);
+        }
+
         $validated = $request->validate([
-            'username' => ['required', 'string', 'min:6', 'max:12'],
-            'password' => ['required', 'string', 'min:6', 'max:12'],
+            'password' => ['required', 'string'],
         ]);
 
         $user = User::with(['gender'])
-            ->where('username', $validated['username'])
+            ->where(function ($query) use ($loginInput) {
+                $query->where('username', $loginInput)
+                    ->orWhere('email', $loginInput);
+            })
             ->where('is_deleted', false)
             ->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
-            ActivityLogService::loginFailureAdminPortal($request, $validated['username']);
+            ActivityLogService::loginFailureAdminPortal($request, (string) $loginInput);
             return response()->json(['message' => 'The provided credentials are incorrect.'], 401);
         }
 
@@ -212,14 +228,24 @@ class AuthController extends Controller
 
     public function adminLogin(Request $request)
     {
+        $loginInput = $request->input('username') ?? $request->input('email') ?? $request->input('login');
+
+        if (! $loginInput) {
+            return response()->json([
+                'message' => 'The email or username field is required.',
+                'errors' => [
+                    'username' => ['The email or username field is required.'],
+                ],
+            ], 422);
+        }
+
         $validated = $request->validate([
-            'username' => ['required', 'string', 'min:6', 'max:12'],
-            'password' => ['required', 'string', 'min:6', 'max:12'],
+            'password' => ['required', 'string'],
         ]);
 
         return $this->authenticatePortalUser(
             $request,
-            $validated['username'],
+            (string) $loginInput,
             $validated['password'],
             'admin',
             'Admin monitoring portal',
@@ -230,22 +256,26 @@ class AuthController extends Controller
 
     public function residentLogin(Request $request)
     {
-        if ($request->filled('username')) {
+        $loginInput = $request->input('username') ?? $request->input('email') ?? $request->input('login');
+
+        if ($loginInput) {
             $validated = $request->validate([
-                'username' => ['required', 'string', 'min:6', 'max:12'],
-                'password' => ['required', 'string', 'min:6', 'max:12'],
+                'password' => ['required', 'string'],
             ]);
 
             $user = User::with(['gender'])
                 ->where('role', 'resident')
                 ->where('is_deleted', false)
-                ->where('username', $validated['username'])
+                ->where(function ($query) use ($loginInput) {
+                    $query->where('username', $loginInput)
+                        ->orWhere('email', $loginInput);
+                })
                 ->first();
 
             if (! $user || ! Hash::check($validated['password'], $user->password)) {
                 ActivityLogService::residentPortalFailure(
                     $request,
-                    $validated['username'],
+                    (string) $loginInput,
                     'invalid_username_password',
                 );
 
@@ -362,13 +392,21 @@ class AuthController extends Controller
             'last_name' => ['required', 'max:55'],
             'gender' => ['required', 'exists:tbl_genders,gender_id'],
             'birth_date' => ['required', 'date'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')],
-            'username' => ['sometimes', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')],
-            'password' => ['sometimes', 'min:6', 'max:12', 'confirmed'],
+            'email' => ['required', 'email', 'max:255'],
+            'username' => ['sometimes', 'min:6', 'max:50', Rule::unique('tbl_users', 'username')],
+            'password' => ['sometimes', 'min:6', 'max:50', 'confirmed'],
         ]);
 
         [$username, $plainPassword] = $this->resolveCredentials($validated);
         $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
+
+        $profilePicture = null;
+        if ($request->hasFile('profile_picture') || $request->hasFile('avatar')) {
+            $file = $request->file('profile_picture') ?? $request->file('avatar');
+            $filename = sha1(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '_' . time()) . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
+            $file->storeAs('img/user/profile_picture', $filename, 'public');
+            $profilePicture = 'img/user/profile_picture/' . $filename;
+        }
 
         $user = User::create([
             'role' => $role,
@@ -378,6 +416,7 @@ class AuthController extends Controller
             'gender_id' => (int) $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'age' => $age,
+            'profile_picture' => $profilePicture,
             'email' => $validated['email'],
             'username' => $username,
             'password' => $plainPassword,
@@ -424,9 +463,9 @@ class AuthController extends Controller
             'last_name' => ['required', 'max:55'],
             'gender' => ['required', 'exists:tbl_genders,gender_id'],
             'birth_date' => ['required', 'date'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')],
-            'username' => ['sometimes', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')],
-            'password' => ['sometimes', 'min:6', 'max:12', 'confirmed'],
+            'email' => ['required', 'email', 'max:255'],
+            'username' => ['sometimes', 'min:6', 'max:50', Rule::unique('tbl_users', 'username')],
+            'password' => ['sometimes', 'min:6', 'max:50', 'confirmed'],
             'contact_number' => ['required', 'max:20'],
             'address' => ['nullable', 'max:255'],
             'plate_number' => ['required', 'max:20', Rule::unique('tbl_users', 'plate_number')],
@@ -437,6 +476,14 @@ class AuthController extends Controller
         [$username, $plainPassword] = $this->resolveCredentials($validated);
         $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
 
+        $profilePicture = null;
+        if ($request->hasFile('profile_picture') || $request->hasFile('avatar')) {
+            $file = $request->file('profile_picture') ?? $request->file('avatar');
+            $filename = sha1(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '_' . time()) . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
+            $file->storeAs('img/user/profile_picture', $filename, 'public');
+            $profilePicture = 'img/user/profile_picture/' . $filename;
+        }
+
         $user = User::create([
             'role' => 'resident',
             'first_name' => $validated['first_name'],
@@ -445,6 +492,7 @@ class AuthController extends Controller
             'gender_id' => (int) $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'age' => $age,
+            'profile_picture' => $profilePicture,
             'email' => $validated['email'],
             'username' => $username,
             'password' => $plainPassword,
@@ -533,22 +581,26 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        if ($request->hasFile('profile_picture') || $request->hasFile('avatar')) {
+            $file = $request->file('profile_picture') ?? $request->file('avatar');
+            $filename = sha1(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '_' . time()) . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
+            $file->storeAs('img/user/profile_picture', $filename, 'public');
+            $user->profile_picture = 'img/user/profile_picture/' . $filename;
+            $user->save();
+        }
+
         if ($user->isSecurityGuard()) {
             $validated = $request->validate([
-                'first_name' => ['required', 'max:55'],
+                'first_name' => ['sometimes', 'required', 'max:55'],
                 'middle_name' => ['nullable', 'max:55'],
-                'last_name' => ['required', 'max:55'],
-                'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')->ignore($user->user_id, 'user_id')],
-                'contact_number' => ['required', 'max:20'],
+                'last_name' => ['sometimes', 'required', 'max:55'],
+                'email' => ['sometimes', 'required', 'email', 'max:255'],
+                'contact_number' => ['sometimes', 'required', 'max:20'],
             ]);
 
-            $user->update([
-                'first_name' => $validated['first_name'],
-                'middle_name' => $validated['middle_name'] ?? null,
-                'last_name' => $validated['last_name'],
-                'email' => $validated['email'],
-                'contact_number' => $validated['contact_number'],
-            ]);
+            if (! empty($validated)) {
+                $user->update($validated);
+            }
 
             return response()->json([
                 'message' => 'Profile updated successfully.',
@@ -557,41 +609,47 @@ class AuthController extends Controller
         }
 
         if (! $user->isResident()) {
+            if ($request->hasFile('profile_picture') || $request->hasFile('avatar')) {
+                return response()->json([
+                    'message' => 'Profile picture updated successfully.',
+                    'user' => $user->load('gender'),
+                ], 200);
+            }
+
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
         $validated = $request->validate([
-            'first_name' => ['required', 'max:55'],
+            'first_name' => ['sometimes', 'required', 'max:55'],
             'middle_name' => ['nullable', 'max:55'],
-            'last_name' => ['required', 'max:55'],
-            'gender' => ['required', 'exists:tbl_genders,gender_id'],
-            'birth_date' => ['required', 'date'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')->ignore($user->user_id, 'user_id')],
-            'username' => ['required', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')->ignore($user->user_id, 'user_id')],
-            'contact_number' => ['required', 'max:20'],
-            'address' => ['required', 'max:255'],
-            'plate_number' => ['required', 'max:20', Rule::unique('tbl_users', 'plate_number')->ignore($user->user_id, 'user_id')],
-            'car_model' => ['required', 'max:55'],
-            'car_color' => ['required', 'max:55'],
+            'last_name' => ['sometimes', 'required', 'max:55'],
+            'gender' => ['sometimes', 'required', 'exists:tbl_genders,gender_id'],
+            'birth_date' => ['sometimes', 'required', 'date'],
+            'email' => ['sometimes', 'required', 'email', 'max:255'],
+            'username' => ['sometimes', 'required', 'min:6', 'max:50', Rule::unique('tbl_users', 'username')->ignore($user->user_id, 'user_id')],
+            'contact_number' => ['sometimes', 'required', 'max:20'],
+            'address' => ['sometimes', 'required', 'max:255'],
+            'plate_number' => ['sometimes', 'required', 'max:20', Rule::unique('tbl_users', 'plate_number')->ignore($user->user_id, 'user_id')],
+            'car_model' => ['sometimes', 'required', 'max:55'],
+            'car_color' => ['sometimes', 'required', 'max:55'],
         ]);
 
-        $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
+        if (isset($validated['birth_date'])) {
+            $validated['age'] = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
+        }
 
-        $user->update([
-            'first_name' => $validated['first_name'],
-            'middle_name' => $validated['middle_name'] ?? null,
-            'last_name' => $validated['last_name'],
-            'gender_id' => $validated['gender'],
-            'birth_date' => $validated['birth_date'],
-            'age' => $age,
-            'email' => $validated['email'],
-            'username' => $validated['username'],
-            'contact_number' => $validated['contact_number'],
-            'address' => $validated['address'],
-            'plate_number' => strtoupper($validated['plate_number']),
-            'car_model' => $validated['car_model'],
-            'car_color' => $validated['car_color'],
-        ]);
+        if (isset($validated['gender'])) {
+            $validated['gender_id'] = $validated['gender'];
+            unset($validated['gender']);
+        }
+
+        if (isset($validated['plate_number'])) {
+            $validated['plate_number'] = strtoupper($validated['plate_number']);
+        }
+
+        if (! empty($validated)) {
+            $user->update($validated);
+        }
 
         return response()->json([
             'message' => 'Profile updated successfully.',

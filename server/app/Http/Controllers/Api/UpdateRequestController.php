@@ -34,16 +34,22 @@ class UpdateRequestController extends Controller
                 'request_type' => ['required', 'in:guest_access'],
                 'guest_name' => ['required', 'max:155'],
                 'guest_age' => ['nullable', 'integer', 'min:1', 'max:150'],
-                'guest_contact_number' => ['required', 'max:20'],
+                'guest_contact_number' => ['nullable', 'max:20'],
                 'guest_address' => ['nullable', 'max:255'],
-                'guest_plate_number' => ['required', 'max:20'],
-                'guest_car_model' => ['required', 'max:55'],
+                'guest_plate_number' => ['nullable', 'max:20'],
+                'guest_car_model' => ['nullable', 'max:55'],
                 'guest_car_color' => ['nullable', 'max:55'],
-                'access_date' => ['required', 'date'],
+                'access_date' => ['nullable', 'date'],
                 'access_reason' => ['required', 'max:500'],
             ]);
 
-            $validated['guest_plate_number'] = strtoupper($validated['guest_plate_number']);
+            if (empty($validated['access_date'])) {
+                $validated['access_date'] = now()->toDateString();
+            }
+
+            if (! empty($validated['guest_plate_number'])) {
+                $validated['guest_plate_number'] = strtoupper($validated['guest_plate_number']);
+            }
             $changes = array_filter($validated, fn ($v) => $v !== null && $v !== '');
         } else {
             $validated = $request->validate([
@@ -72,11 +78,20 @@ class UpdateRequestController extends Controller
             'status' => 'pending',
         ]);
 
-        GateService::notifyAdmins(
-            'Profile Update Request',
-            $request->user()->owner_name . ' submitted a profile update request.',
-            'update_request'
-        );
+        if ($requestType === 'guest_access') {
+            $guestPlate = ! empty($changes['guest_plate_number']) ? ' (' . $changes['guest_plate_number'] . ')' : '';
+            GateService::notifySecurityGuards(
+                'Guest Access Pass Requested',
+                $request->user()->owner_name . ' requested a guest access pass for ' . ($changes['guest_name'] ?? 'Visitor') . $guestPlate . '. [REQUEST_ID:' . $updateRequest->update_request_id . ']',
+                'guest_access'
+            );
+        } else {
+            GateService::notifyAdmins(
+                'Profile Update Request',
+                $request->user()->owner_name . ' submitted a profile update request. [REQUEST_ID:' . $updateRequest->update_request_id . ']',
+                'update_request'
+            );
+        }
 
         return response()->json([
             'message' => $requestType === 'guest_access'

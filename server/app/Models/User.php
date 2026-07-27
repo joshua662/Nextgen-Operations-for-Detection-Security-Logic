@@ -100,6 +100,28 @@ class User extends Authenticatable
         return $name ?: 'Unknown';
     }
 
+    public function getProfilePictureAttribute($value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        $path = ltrim($value, '/');
+        if (str_starts_with($path, 'storage/')) {
+            return url($path);
+        }
+
+        if (str_starts_with($path, 'public/')) {
+            $path = preg_replace('/^public\//', '', $path);
+        }
+
+        return url('storage/' . $path);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

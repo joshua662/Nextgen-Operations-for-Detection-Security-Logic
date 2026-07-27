@@ -45,6 +45,7 @@ const GateAccessService = {
     loadNotifications: (page: number) => AxiosInstance.get(`/notification?page=${page}`),
     markNotificationRead: (id: number) => AxiosInstance.put(`/notification/${id}/read`),
     markAllNotificationsRead: () => AxiosInstance.put("/notification/read-all"),
+    deleteNotification: (id: number) => AxiosInstance.delete(`/notification/${id}`),
 
     loadUpdateRequests: (page: number, status?: string) => {
         const q = status ? `&status=${status}` : "";

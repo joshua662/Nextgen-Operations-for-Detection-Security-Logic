@@ -10,7 +10,7 @@ const IncidentReports = () => {
     <div className="space-y-5">
       <AdminSectionTitle
         title="Incident Reports"
-        description="Resident update requests and guest access incidents pending review."
+        description=" update requests and guest access incidents pending review."
       />
 
       {loading ? (

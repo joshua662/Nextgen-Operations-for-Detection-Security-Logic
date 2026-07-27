@@ -37,6 +37,17 @@ class NotificationController extends Controller
         return response()->json(['message' => 'All notifications marked as read.'], 200);
     }
 
+    public function destroy(Request $request, Notification $notification)
+    {
+        if ($notification->user_id !== $request->user()->user_id) {
+            return response()->json(['message' => 'Not found.'], 404);
+        }
+
+        $notification->delete();
+
+        return response()->json(['message' => 'Notification deleted.'], 200);
+    }
+
     public function approve(Request $request, Notification $notification)
     {
         if ($notification->user_id !== $request->user()->user_id) {

@@ -62,4 +62,14 @@ export const guardApi = {
       `/activity-log/loadActivityLogs?${params}`,
     )
   },
+
+  updateUser: (userId: number, data: Record<string, any>, isResident: boolean) =>
+    isResident
+      ? adminApi.put<{ message: string; resident: GuardUser }>(`/resident/updateResident/${userId}`, data)
+      : adminApi.put<{ message: string; user: GuardUser }>(`/user/updateUser/${userId}`, data),
+
+  deleteUser: (userId: number, isResident: boolean) =>
+    isResident
+      ? adminApi.delete<{ message: string }>(`/resident/destroyResident/${userId}`)
+      : adminApi.delete<{ message: string }>(`/user/destroyUser/${userId}`),
 }

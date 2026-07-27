@@ -10,6 +10,7 @@ class ApiConstants {
   static const String login = '/auth/login';
   static const String logout = '/auth/logout';
   static const String user = '/user/auth/me';
+  static const String updateProfile = '/auth/profile';
 
   // User Endpoints
   static const String users = '/users';

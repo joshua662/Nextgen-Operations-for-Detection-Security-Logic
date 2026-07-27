@@ -184,11 +184,11 @@ class ResidentController extends Controller
             'last_name' => ['required', 'max:55'],
             'gender' => ['required', 'exists:tbl_genders,gender_id'],
             'birth_date' => ['required', 'date'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('tbl_users', 'email')->ignore($ignoreUserId, 'user_id')],
-            'username' => ['required', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')->ignore($ignoreUserId, 'user_id')],
+            'email' => ['required', 'email', 'max:255'],
+            'username' => ['required', 'min:6', 'max:50', Rule::unique('tbl_users', 'username')->ignore($ignoreUserId, 'user_id')],
             'password' => $ignoreUserId === null
-                ? ['required', 'string', 'min:6', 'max:12', 'confirmed']
-                : ['sometimes', 'nullable', 'string', 'min:6', 'max:12', 'confirmed'],
+                ? ['required', 'string', 'min:6', 'max:50', 'confirmed']
+                : ['sometimes', 'nullable', 'string', 'min:6', 'max:50', 'confirmed'],
             'contact_number' => ['required', 'max:20'],
             'address' => ['required', 'max:255'],
             'plate_number' => ['required', 'max:20', Rule::unique('tbl_users', 'plate_number')->ignore($ignoreUserId, 'user_id')],

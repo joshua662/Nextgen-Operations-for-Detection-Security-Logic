@@ -308,10 +308,19 @@ class GateService
 
     public static function notifyAdmins(string $title, string $message, string $type): void
     {
-        $admins = User::whereIn('role', ['admin', 'security_guard'])->where('is_deleted', false)->get();
+        $admins = User::where('role', 'admin')->where('is_deleted', false)->get();
 
         foreach ($admins as $admin) {
             self::notifyUser($admin, $title, $message, $type);
+        }
+    }
+
+    public static function notifySecurityGuards(string $title, string $message, string $type): void
+    {
+        $guards = User::where('role', 'security_guard')->where('is_deleted', false)->get();
+
+        foreach ($guards as $guard) {
+            self::notifyUser($guard, $title, $message, $type);
         }
     }
 }

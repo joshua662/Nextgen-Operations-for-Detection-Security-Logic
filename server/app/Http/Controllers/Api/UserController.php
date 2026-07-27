@@ -65,11 +65,11 @@ class UserController extends Controller
 
         if ($request->hasFile('add_user_profile_picture')) {
             $filenameWithExtension = $request->file('add_user_profile_picture');
-            $filename = pathinfo($filenameWithExtension, PATHINFO_FILENAME);
+            $filename = pathinfo($filenameWithExtension->getClientOriginalName(), PATHINFO_FILENAME);
             $extension = $filenameWithExtension->getClientOriginalExtension();
-            $filenameToStore = sha1($filename . '_' . time() . '.' . $extension);
-            $filenameWithExtension->storeAs('public/img/user/profile_picture', $filenameToStore);
-            $validated['add_user_profile_picture'] = $filenameToStore;
+            $filenameToStore = sha1($filename . '_' . time()) . '.' . ($extension ?: 'jpg');
+            $filenameWithExtension->storeAs('img/user/profile_picture', $filenameToStore, 'public');
+            $validated['add_user_profile_picture'] = 'img/user/profile_picture/' . $filenameToStore;
         }
 
         $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
@@ -102,7 +102,9 @@ class UserController extends Controller
             'suffix_name' => ['nullable', 'max:55'],
             'gender' => ['required'],
             'birth_date' => ['required', 'date'],
-            'username' => ['required', 'min:6', 'max:12', Rule::unique('tbl_users', 'username')->ignore($user)]
+            'email' => ['nullable', 'email', 'max:255'],
+            'contact_number' => ['nullable', 'max:20'],
+            'username' => ['required', 'min:6', 'max:50', Rule::unique('tbl_users', 'username')->ignore($user->user_id, 'user_id')]
         ]);
 
         if ($request->has('remove_profile_picture') && $request->remove_profile_picture == '1') {
@@ -111,16 +113,12 @@ class UserController extends Controller
                 $user->profile_picture = null;
             }
         } else if ($request->hasFile('edit_user_profile_picture')) {
-            if ($user->profile_picture && Storage::exists('public/img/user/profile_picture/' . $user->profile_picture)) {
-                Storage::delete('public/img/user/profile_picture/' . $user->profile_picture);
-            }
-
             $filenameWithExtension = $request->file('edit_user_profile_picture');
-            $filename = pathinfo($filenameWithExtension, PATHINFO_FILENAME);
+            $filename = pathinfo($filenameWithExtension->getClientOriginalName(), PATHINFO_FILENAME);
             $extension = $filenameWithExtension->getClientOriginalExtension();
-            $filenameToStore = sha1($filename . '_' . time() . '.' . $extension);
-            $filenameWithExtension->storeAs('public/img/user/profile_picture', $filenameToStore);
-            $validated['edit_user_profile_picture'] = $filenameToStore;
+            $filenameToStore = sha1($filename . '_' . time()) . '.' . ($extension ?: 'jpg');
+            $filenameWithExtension->storeAs('img/user/profile_picture', $filenameToStore, 'public');
+            $validated['edit_user_profile_picture'] = 'img/user/profile_picture/' . $filenameToStore;
         }
 
         $age = date_diff(date_create($validated['birth_date']), date_create('now'))->y;
@@ -134,6 +132,8 @@ class UserController extends Controller
             'gender_id' => $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'age' => $age,
+            'email' => $validated['email'] ?? $user->email,
+            'contact_number' => $validated['contact_number'] ?? $user->contact_number,
             'username' => $validated['username']
         ]);
 
