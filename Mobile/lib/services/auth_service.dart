@@ -194,4 +194,12 @@ class AuthService {
     }
     throw Exception('Unexpected response format for /auth/profile');
   }
+
+  /// Request password reset link.
+  Future<void> forgotPassword(String email) async {
+    await _dio.post(
+      ApiConstants.forgotPassword,
+      data: {'email': email},
+    );
+  }
 }

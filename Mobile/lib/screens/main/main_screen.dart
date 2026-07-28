@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'profile_screen.dart';
-
 import 'resident_home_screen.dart';
-import 'resident_logs_screen.dart';
 import 'resident_notifications_screen.dart';
-import 'resident_updates_screen.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -28,8 +25,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     final tabs = [
       ResidentHomeScreen(onNavigateTab: _onNavigateTab),
-      const ResidentLogsScreen(),
-      const ResidentUpdatesScreen(),
       const ResidentNotificationsScreen(),
       const ProfileScreen(),
     ];
@@ -58,18 +53,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF1E90FF)),
               label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.history_outlined),
-              selectedIcon:
-                  Icon(Icons.history_rounded, color: Color(0xFF1E90FF)),
-              label: 'Logs',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.note_add_outlined),
-              selectedIcon:
-                  Icon(Icons.note_add_rounded, color: Color(0xFF1E90FF)),
-              label: 'Passes',
             ),
             NavigationDestination(
               icon: Icon(Icons.notifications_outlined),

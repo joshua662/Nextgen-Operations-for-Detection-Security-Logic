@@ -13,6 +13,16 @@ class User {
   final String? createdAt;
   final String? updatedAt;
 
+  // Extended profile fields from server
+  final String? firstName;
+  final String? lastName;
+  final String? username;
+  final String? address;
+  final String? age;
+  final String? rfidUid;
+  final String? carModel;
+  final String? carColor;
+
   const User({
     required this.id,
     required this.name,
@@ -25,6 +35,14 @@ class User {
     this.deletedAt,
     this.createdAt,
     this.updatedAt,
+    this.firstName,
+    this.lastName,
+    this.username,
+    this.address,
+    this.age,
+    this.rfidUid,
+    this.carModel,
+    this.carColor,
   });
 
   bool get isDeleted => deletedAt != null;
@@ -63,11 +81,17 @@ class User {
   }
 
   factory User.fromJson(Map<String, dynamic> json) {
-    final firstName = json['first_name'] as String? ?? '';
-    final lastName = json['last_name'] as String? ?? '';
-    final combinedName = (firstName.isNotEmpty || lastName.isNotEmpty)
-        ? '$firstName $lastName'.trim()
+    final fName = json['first_name'] as String? ?? '';
+    final lName = json['last_name'] as String? ?? '';
+    final combinedName = (fName.isNotEmpty || lName.isNotEmpty)
+        ? '$fName $lName'.trim()
         : (json['name'] as String? ?? '');
+
+    // Parse age: can be int or string from server
+    String? ageStr;
+    if (json['age'] != null) {
+      ageStr = json['age'].toString();
+    }
 
     return User(
       id: json['user_id'] as int? ?? json['id'] as int? ?? 0,
@@ -81,6 +105,14 @@ class User {
       deletedAt: json['deleted_at'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
+      firstName: fName.isNotEmpty ? fName : null,
+      lastName: lName.isNotEmpty ? lName : null,
+      username: json['username'] as String?,
+      address: json['address'] as String?,
+      age: ageStr,
+      rfidUid: json['rfid_uid'] as String?,
+      carModel: json['car_model'] as String?,
+      carColor: json['car_color'] as String?,
     );
   }
 
@@ -109,6 +141,14 @@ class User {
     String? deletedAt,
     String? createdAt,
     String? updatedAt,
+    String? firstName,
+    String? lastName,
+    String? username,
+    String? address,
+    String? age,
+    String? rfidUid,
+    String? carModel,
+    String? carColor,
   }) {
     return User(
       id: id ?? this.id,
@@ -122,6 +162,14 @@ class User {
       deletedAt: deletedAt ?? this.deletedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      username: username ?? this.username,
+      address: address ?? this.address,
+      age: age ?? this.age,
+      rfidUid: rfidUid ?? this.rfidUid,
+      carModel: carModel ?? this.carModel,
+      carColor: carColor ?? this.carColor,
     );
   }
 

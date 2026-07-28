@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/main/main_screen.dart';
@@ -15,6 +16,7 @@ class AppRouter {
   static const String splash = '/';
   static const String login = '/login';
   static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
   static const String main = '/main';
   static const String createUser = '/users/create';
   static const String viewUser = '/users/view';
@@ -33,6 +35,10 @@ class AppRouter {
       case register:
       case '/auth/register':
         return _buildRoute(const RegisterScreen(), settings);
+
+      case forgotPassword:
+      case '/auth/forgot-password':
+        return _buildRoute(const ForgotPasswordScreen(), settings);
 
       case main:
       case '/home':

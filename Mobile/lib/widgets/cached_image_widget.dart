@@ -105,13 +105,10 @@ class UserAvatarWidget extends StatelessWidget {
   }
 
   Widget _initialsWidget() {
-    return Text(
-      initials,
-      style: TextStyle(
-        fontSize: radius * 0.6,
-        fontWeight: FontWeight.bold,
-        color: AppColors.primary,
-      ),
+    return Icon(
+      Icons.person_rounded,
+      size: radius * 1.1,
+      color: AppColors.primary,
     );
   }
 }

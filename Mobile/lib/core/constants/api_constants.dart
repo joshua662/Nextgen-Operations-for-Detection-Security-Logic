@@ -2,10 +2,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class ApiConstants {
   ApiConstants._(); // prevent instantiation
 
-  static final String domain =
-      dotenv.get('API_URL', fallback: 'http://127.0.0.1:8000');
-  static final String baseUrl = '$domain/api';
-  static final String storageUrl = '$domain/storage';
+  static String get domain {
+    final raw = dotenv.maybeGet('API_URL');
+    if (raw == null || raw.isEmpty || raw.contains('youripadress')) {
+      return 'http://127.0.0.1:8000';
+    }
+    return raw;
+  }
+  static String get baseUrl => '$domain/api';
+  static String get storageUrl => '$domain/storage';
 
   // Authenticaton
   static const String login = '/auth/login';
@@ -15,6 +20,7 @@ class ApiConstants {
   static const String updateProfile = '/auth/profile';
   static const String residentRegister = '/auth/resident/register';
   static const String securityGuardRegister = '/auth/security-guard/register';
+  static const String forgotPassword = '/auth/forgot-password';
 
   // Resident Endpoints
   static const String gateStatus = '/gate/status';

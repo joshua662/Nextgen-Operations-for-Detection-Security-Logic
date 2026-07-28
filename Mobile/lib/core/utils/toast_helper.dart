@@ -1,80 +1,117 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../../widgets/modals/toast_message.dart';
 
+/// App-wide toast helper that displays premium dark-glass overlay toasts
+/// matching Client's ToastMessage design via Flutter's [OverlayState].
+///
+/// Using [OverlayEntry] ensures toasts float over screen content and modals
+/// without creating competing [Navigator] routes or breaking modal pop logic.
 class ToastHelper {
   ToastHelper._();
 
-  static void _show(
+  static OverlayEntry? _currentEntry;
+  static Timer? _timer;
+
+  static void _showOverlay(
     BuildContext context, {
+    required String title,
     required String message,
-    required Color backgroundColor,
-    required IconData icon,
+    required bool isFailed,
     Duration duration = const Duration(seconds: 3),
   }) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    _timer?.cancel();
+    if (_currentEntry != null) {
+      try {
+        _currentEntry?.remove();
+      } catch (_) {}
+      _currentEntry = null;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+    final overlayState = Overlay.maybeOf(context);
+    if (overlayState == null) return;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (ctx) {
+        return Material(
+          color: Colors.transparent,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    _timer?.cancel();
+                    try {
+                      entry.remove();
+                    } catch (_) {}
+                    if (_currentEntry == entry) _currentEntry = null;
+                  },
+                  child: Container(
+                    color: Colors.black.withAlpha(80),
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-        backgroundColor: backgroundColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        duration: duration,
-        dismissDirection: DismissDirection.horizontal,
-      ),
+              Center(
+                child: ToastMessage(
+                  title: title,
+                  message: message,
+                  isFailed: isFailed,
+                  autoDismissDuration: duration,
+                  onClose: () {
+                    _timer?.cancel();
+                    try {
+                      entry.remove();
+                    } catch (_) {}
+                    if (_currentEntry == entry) _currentEntry = null;
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
+
+    _currentEntry = entry;
+    overlayState.insert(entry);
   }
 
   static void showSuccess(BuildContext context, String message) {
-    _show(
+    _showOverlay(
       context,
+      title: 'Success',
       message: message,
-      backgroundColor: AppColors.success,
-      icon: Icons.check_circle_outline,
+      isFailed: false,
     );
   }
 
   static void showError(BuildContext context, String message) {
-    _show(
+    _showOverlay(
       context,
+      title: 'Action failed',
       message: message,
-      backgroundColor: AppColors.error,
-      icon: Icons.error_outline,
+      isFailed: true,
     );
   }
 
   static void showInfo(BuildContext context, String message) {
-    _show(
+    _showOverlay(
       context,
+      title: 'Info',
       message: message,
-      backgroundColor: AppColors.info,
-      icon: Icons.info_outline,
+      isFailed: false,
     );
   }
 
   static void showWarning(BuildContext context, String message) {
-    _show(
+    _showOverlay(
       context,
+      title: 'Warning',
       message: message,
-      backgroundColor: AppColors.warning,
-      icon: Icons.warning_amber_outlined,
+      isFailed: true,
+      duration: const Duration(seconds: 4),
     );
   }
 }

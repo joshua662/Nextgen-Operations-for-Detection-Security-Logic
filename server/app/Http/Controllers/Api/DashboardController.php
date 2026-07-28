@@ -105,7 +105,7 @@ class DashboardController extends Controller
 
         $start = match ($period) {
             'weekly' => Carbon::now()->subWeeks(8)->startOfWeek(),
-            'monthly' => Carbon::now()->subMonths(6)->startOfMonth(),
+            'monthly' => Carbon::now()->subMonths(12)->startOfMonth(),
             default => Carbon::now()->subDays(13)->startOfDay(),
         };
 
@@ -124,10 +124,10 @@ class DashboardController extends Controller
                 $unauthorized[] = $logs->whereBetween('logged_at', [$weekStart, $weekEnd])->where('status', 'unauthorized')->count();
             }
         } elseif ($period === 'monthly') {
-            for ($i = 0; $i < 6; $i++) {
-                $monthStart = Carbon::now()->subMonths(5 - $i)->startOfMonth();
+            for ($i = 0; $i < 12; $i++) {
+                $monthStart = Carbon::now()->subMonths(11 - $i)->startOfMonth();
                 $monthEnd = $monthStart->copy()->endOfMonth();
-                $labels[] = $monthStart->format('M Y');
+                $labels[] = $monthStart->format('M');
                 $authorized[] = $logs->whereBetween('logged_at', [$monthStart, $monthEnd])->where('status', 'authorized')->count();
                 $unauthorized[] = $logs->whereBetween('logged_at', [$monthStart, $monthEnd])->where('status', 'unauthorized')->count();
             }

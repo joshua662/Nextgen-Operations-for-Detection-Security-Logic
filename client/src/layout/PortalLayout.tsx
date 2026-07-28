@@ -6,6 +6,7 @@ import UserProfileMenu from "./UserProfileMenu";
 import type { NavItem } from "./navConfig";
 import { useAuth } from "../contexts/AuthContext";
 import UserProfileModal from "../components/Profile/UserProfileModal";
+import SignOutConfirmModal from "../components/Auth/SignOutConfirmModal";
 import SidebarHoverLabel from "../components/Sidebar/SidebarHoverLabel";
 import { usePersistedSidebarCollapsed } from "../hooks/usePersistedSidebarCollapsed";
 
@@ -22,6 +23,7 @@ const PortalLayoutContent = ({ navItems, homePath, portalLabel }: PortalLayoutPr
     const location = useLocation();
     const navigate = useNavigate();
     const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
     const { isCollapsed, toggleCollapsed } = usePersistedSidebarCollapsed(SIDEBAR_COLLAPSED_STORAGE_KEY);
     const { user, logout } = useAuth();
 
@@ -32,10 +34,15 @@ const PortalLayoutContent = ({ navItems, homePath, portalLabel }: PortalLayoutPr
     const isActive = (path: string) =>
         location.pathname === path || location.pathname.startsWith(`${path}/`);
 
-    const handleLogout = async () => {
+    const handleLogoutRequest = () => {
         setProfileModalOpen(false);
+        setSignOutConfirmOpen(true);
+    };
+
+    const handleLogoutConfirm = async () => {
         try {
             await logout();
+            setSignOutConfirmOpen(false);
             navigate("/");
         } catch (error) {
             console.error("Unexpected server error during logout:", error);
@@ -174,9 +181,15 @@ const PortalLayoutContent = ({ navItems, homePath, portalLabel }: PortalLayoutPr
                     isOpen={profileModalOpen}
                     onClose={() => setProfileModalOpen(false)}
                     user={user.user}
-                    onLogout={handleLogout}
+                    onLogout={handleLogoutRequest}
                 />
             )}
+
+            <SignOutConfirmModal
+                isOpen={signOutConfirmOpen}
+                onClose={() => setSignOutConfirmOpen(false)}
+                onConfirm={handleLogoutConfirm}
+            />
         </div>
     );
 };

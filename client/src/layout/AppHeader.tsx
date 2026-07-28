@@ -4,6 +4,7 @@ import { useSidebar } from "../contexts/SidebarContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, type FormEvent } from "react";
 import Modal from "../components/Modal";
+import SignOutConfirmModal from "../components/Auth/SignOutConfirmModal";
 
 const DEFAULT_AVATAR =
   "https://flowbite.com/docs/images/people/profile-picture-5.jpg";
@@ -14,13 +15,19 @@ const AppHeader = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
 
-  const handleLogout = async (e: FormEvent) => {
+  const handleLogoutRequest = (e: FormEvent) => {
+    e.preventDefault();
+    toggleUserMenu();
+    setSignOutConfirmOpen(true);
+  };
+
+  const handleLogoutConfirm = async () => {
     try {
-      e.preventDefault();
       setIsLoading(true);
       await logout();
-      toggleUserMenu();
+      setSignOutConfirmOpen(false);
       navigate("/");
     } catch (error) {
       console.error(
@@ -108,7 +115,7 @@ const AppHeader = () => {
           )}
 
           <div className="mx-auto mt-8 max-w-[220px] border-t border-border pt-6">
-            <form onSubmit={handleLogout}>
+            <form onSubmit={handleLogoutRequest}>
               <button
                 type="submit"
                 disabled={isLoading}
@@ -192,6 +199,13 @@ const AppHeader = () => {
           </div>
         </div>
       </nav>
+    </>
+
+    <SignOutConfirmModal
+      isOpen={signOutConfirmOpen}
+      onClose={() => setSignOutConfirmOpen(false)}
+      onConfirm={handleLogoutConfirm}
+    />
     </>
   );
 };

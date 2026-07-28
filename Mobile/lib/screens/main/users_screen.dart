@@ -8,6 +8,7 @@ import '../../core/router/app_router.dart';
 import '../../core/utils/toast_helper.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/app_loading.dart';
+import '../../widgets/modals/action_confirm_dialog.dart';
 import '../../widgets/user_card.dart';
 
 class UsersScreen extends ConsumerStatefulWidget {
@@ -236,26 +237,14 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   }
 
   Future<void> _confirmDelete(int id, String name) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete "$name"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirm = await ActionConfirmDialog.show(
+      context,
+      title: 'Delete User',
+      message: 'Are you sure you want to delete "$name"? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      confirmColor: const Color(0xFFEF4444),
+      icon: Icons.delete_outline_rounded,
     );
     if (confirm == true && mounted) {
       try {

@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../models/user_model.dart';
-import '../../widgets/cached_image_widget.dart';
 
 class ViewUserScreen extends StatelessWidget {
   const ViewUserScreen({super.key});
@@ -18,12 +17,35 @@ class ViewUserScreen extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
         child: Column(
           children: [
-            // Avatar
-            UserAvatarWidget(
-              imageUrl: user.avatarUrl.isEmpty ? null : user.avatarUrl,
-              initials: user.initials,
-              radius: 52.r,
-            ),
+            // Registered Date and Time Chip (Replaces avatar icon)
+            if (user.createdAt != null)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.primary.withAlpha(60)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.access_time_rounded,
+                      color: AppColors.primary,
+                      size: 16,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      _formatDate(user.createdAt!),
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             SizedBox(height: 16.h),
 
@@ -82,8 +104,12 @@ class ViewUserScreen extends StatelessWidget {
             SizedBox(height: 16.h),
 
             _DetailRow(icon: Icons.badge_outlined, label: 'ID', value: '#${user.id}'),
-            if (user.slug != null)
-              _DetailRow(icon: Icons.link, label: 'Slug', value: user.slug!),
+            if (user.createdAt != null)
+              _DetailRow(
+                icon: Icons.access_time_rounded,
+                label: 'Registered Date & Time',
+                value: _formatDate(user.createdAt!),
+              ),
             if (user.role != null)
               _DetailRow(
                 icon: Icons.shield_outlined,

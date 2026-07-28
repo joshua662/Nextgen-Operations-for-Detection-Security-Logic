@@ -1,17 +1,18 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:image_picker/image_picker.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/router/app_router.dart';
 import '../../core/utils/toast_helper.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/auth/auth_page_layout.dart';
+import '../../widgets/auth/underline_input_field.dart';
+import '../../widgets/modals/confirmation_dialog.dart';
+import '../../widgets/modals/success_modal.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -21,118 +22,182 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   final _firstNameCtrl = TextEditingController();
+  final _middleNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _usernameCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
+  final _birthDateCtrl = TextEditingController();
   final _contactCtrl = TextEditingController();
   final _plateCtrl = TextEditingController();
+  final _captchaCtrl = TextEditingController();
 
-  int _selectedGenderId = 1; // Default 1 (Male)
-  String? _imagePath;
+  int _selectedGenderId = 1; // 1: Male, 2: Female, 3: Prefer Not to Say
+  String _selectedRole = 'Resident'; // Security Guard or Resident
   bool _isLoading = false;
 
-  late AnimationController _bgController;
-  late AnimationController _contentController;
-  late Animation<double> _fadeIn;
-  late Animation<Offset> _slideUp;
+  int _captchaA = 12;
+  int _captchaB = 3;
+  String? _captchaError;
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      imageQuality: 80,
-    );
-    if (picked != null) setState(() => _imagePath = picked.path);
-  }
+  final Map<String, String> _fieldErrors = {};
+
+  late AnimationController _animController;
+  late Animation<double> _barAnim;
 
   @override
   void initState() {
     super.initState();
-    _bgController = AnimationController(
+    _refreshCaptcha();
+    _animController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat(reverse: true);
-
-    _contentController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
     );
-    _fadeIn = CurvedAnimation(
-      parent: _contentController,
-      curve: Curves.easeOut,
+    _barAnim = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.fastOutSlowIn,
     );
-    _slideUp = Tween<Offset>(
-      begin: const Offset(0, 0.12),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _contentController, curve: Curves.easeOutCubic),
-    );
-    _contentController.forward();
+    _animController.forward();
   }
 
   @override
   void dispose() {
-    _bgController.dispose();
-    _contentController.dispose();
+    _animController.dispose();
     _firstNameCtrl.dispose();
+    _middleNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _emailCtrl.dispose();
-    _usernameCtrl.dispose();
-    _passwordCtrl.dispose();
+    _birthDateCtrl.dispose();
     _contactCtrl.dispose();
     _plateCtrl.dispose();
+    _captchaCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  void _refreshCaptcha() {
+    final rand = math.Random();
+    setState(() {
+      _captchaA = rand.nextInt(90) + 10;
+      _captchaB = rand.nextInt(9) + 1;
+      _captchaCtrl.clear();
+      _captchaError = null;
+    });
+  }
+
+  Future<void> _selectBirthDate() async {
+    final initialDate = DateTime.tryParse(_birthDateCtrl.text) ?? DateTime(2000, 1, 1);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF7C3AED),
+              onPrimary: Colors.white,
+              surface: Color(0xFF1E1B4B),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final formatted =
+          "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      setState(() {
+        _birthDateCtrl.text = formatted;
+      });
+    }
+  }
+
+  Future<void> _onFormSubmitPressed() async {
+    setState(() {
+      _fieldErrors.clear();
+      _captchaError = null;
+    });
+
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    // Validate CAPTCHA
+    final userAns = int.tryParse(_captchaCtrl.text.trim());
+    final expected = _captchaA + _captchaB;
+    if (userAns == null || userAns != expected) {
+      setState(() {
+        _captchaError = 'Please solve the verification correctly.';
+      });
+      return;
+    }
+
+    final email = _emailCtrl.text.trim();
+
+    // Show Confirmation Dialog Modal matching Client works!
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      email: email,
+    );
+
+    if (confirmed == true && mounted) {
+      await _executeRegistration();
+    }
+  }
+
+  Future<void> _executeRegistration() async {
     setState(() => _isLoading = true);
 
     try {
       final authService = ref.read(authServiceProvider);
-      final password = _passwordCtrl.text;
+      final email = _emailCtrl.text.trim();
+
       final payload = {
         'first_name': _firstNameCtrl.text.trim(),
+        if (_middleNameCtrl.text.trim().isNotEmpty)
+          'middle_name': _middleNameCtrl.text.trim(),
         'last_name': _lastNameCtrl.text.trim(),
         'gender': _selectedGenderId,
-        'birth_date': '2000-01-01',
-        'email': _emailCtrl.text.trim(),
-        'username': _usernameCtrl.text.trim(),
-        'password': password,
-        'password_confirmation': password,
-        'contact_number': _contactCtrl.text.trim(),
-        'plate_number': _plateCtrl.text.trim(),
+        'birth_date': _birthDateCtrl.text,
+        'email': email,
+        'role': _selectedRole == 'Security Guard' ? 'security_guard' : 'resident',
       };
 
-      final response = await authService.registerResident(
-        payload,
-        imagePath: _imagePath,
-      );
+      if (_selectedRole == 'Security Guard') {
+        await authService.registerSecurityGuard(payload);
+      } else {
+        payload['contact_number'] = _contactCtrl.text.trim();
+        payload['plate_number'] = _plateCtrl.text.trim().toUpperCase();
+
+        await authService.registerResident(payload);
+      }
 
       if (mounted) {
-        ToastHelper.showSuccess(
+        // Show Success Modal matching Client works!
+        await SuccessModal.show(
           context,
-          response['message'] as String? ?? 'Registration successful!',
+          title: 'Registration complete!',
+          message: 'Please wait for a moment while the admin accepts your registration to receive your credentials.',
+          autoDismissDuration: const Duration(seconds: 3),
         );
-        Navigator.of(context).pushReplacementNamed(AppRouter.login);
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed(AppRouter.login);
+        }
       }
     } on DioException catch (e) {
-      final errorMsg = _parseDioError(e);
-      if (mounted) ToastHelper.showError(context, errorMsg);
+      _parseDioError(e);
+      _refreshCaptcha();
     } catch (e) {
       if (mounted) ToastHelper.showError(context, e.toString());
+      _refreshCaptcha();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  String _parseDioError(DioException e) {
+  void _parseDioError(DioException e) {
     dynamic data = e.response?.data;
     if (data is String && data.isNotEmpty) {
       try {
@@ -142,608 +207,514 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     if (data is Map) {
       if (data['errors'] != null && data['errors'] is Map) {
         final errors = data['errors'] as Map;
-        final messages = <String>[];
+        String? firstMsg;
         errors.forEach((key, val) {
           if (val is List && val.isNotEmpty) {
-            messages.add(val.first.toString());
+            _fieldErrors[key.toString()] = val.first.toString();
+            firstMsg ??= val.first.toString();
           } else if (val != null) {
-            messages.add(val.toString());
+            _fieldErrors[key.toString()] = val.toString();
+            firstMsg ??= val.toString();
           }
         });
-        if (messages.isNotEmpty) {
-          return messages.join('\n');
+        if (mounted && firstMsg != null) {
+          ToastHelper.showError(context, firstMsg!);
         }
-      }
-      if (data['message'] != null && data['message'].toString().isNotEmpty) {
-        return data['message'].toString();
+        return;
+      } else if (data['message'] != null) {
+        if (mounted) ToastHelper.showError(context, data['message'].toString());
+        return;
       }
     }
-    return e.message ?? 'Registration failed. Please check your details.';
+    if (mounted) ToastHelper.showError(context, 'Registration failed. Please check your inputs.');
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // ── Animated gradient background ───────────────────────────────
-          AnimatedBuilder(
-            animation: _bgController,
-            builder: (_, _) {
-              return Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: const [
-                      Color(0xFF0A0E27),
-                      Color(0xFF0D1B4B),
-                      Color(0xFF1A1040),
-                    ],
-                    stops: [
-                      0.0,
-                      0.5 + 0.2 * math.sin(_bgController.value * math.pi),
-                      1.0,
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-
-          // ── Decorative background circles ──────────────────────────────
-          Positioned(
-            top: -60.r,
-            left: -40.r,
-            child: AnimatedBuilder(
-              animation: _bgController,
-              builder: (_, _) => Opacity(
-                opacity: 0.15 + 0.08 * math.sin(_bgController.value * math.pi),
-                child: Container(
-                  width: 200.r,
-                  height: 200.r,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primary,
-                  ),
-                ),
+    return AuthPageLayout(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Subdivision Logo ─────────────────────────────────────────────
+            Center(
+              child: Image.asset(
+                'assets/images/pdp-logo-invert.png',
+                height: 54.h,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
-          ),
+            SizedBox(height: 16.h),
 
-          // ── Content ────────────────────────────────────────────────────
-          SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 540),
-                child: SingleChildScrollView(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
-                  child: FadeTransition(
-                    opacity: _fadeIn,
-                    child: SlideTransition(
-                      position: _slideUp,
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Back Button
-                            IconButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              icon: const Icon(
-                                Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-
-                            SizedBox(height: 8.h),
-
-                            // Header Text
-                            Text(
-                              'Resident Registration',
-                              style: TextStyle(
-                                fontSize: 28.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            SizedBox(height: 4.h),
-                            Text(
-                              'Fill out your details to register as a resident',
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                color: Colors.white60,
-                              ),
-                            ),
-
-                            SizedBox(height: 20.h),
-
-                            // ── Form Container ──────────────────────────────
-                            Container(
-                              padding: EdgeInsets.all(20.r),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(13),
-                                borderRadius: BorderRadius.circular(24.r),
-                                border: Border.all(
-                                  color: Colors.white.withAlpha(30),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Profile Picture Picker
-                                  Center(
-                                    child: GestureDetector(
-                                      onTap: _pickImage,
-                                      child: Stack(
-                                        alignment: Alignment.bottomRight,
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 44.r,
-                                            backgroundColor:
-                                                Colors.white.withAlpha(25),
-                                            backgroundImage: _imagePath != null
-                                                ? FileImage(File(_imagePath!))
-                                                : null,
-                                            child: _imagePath == null
-                                                ? Icon(
-                                                    Icons.person_rounded,
-                                                    size: 44.r,
-                                                    color: Colors.white70,
-                                                  )
-                                                : null,
-                                          ),
-                                          Container(
-                                            padding: EdgeInsets.all(6.r),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primary,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color: Colors.white,
-                                                  width: 2),
-                                            ),
-                                            child: Icon(
-                                              Icons.camera_alt_rounded,
-                                              size: 14.r,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 18.h),
-
-                                  // First Name & Last Name Row
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _DarkRegisterInput(
-                                          label: 'First Name',
-                                          hint: 'First Name',
-                                          controller: _firstNameCtrl,
-                                          prefixIcon: Icons.person_outline,
-                                          validator: (v) =>
-                                              (v == null || v.trim().isEmpty)
-                                                  ? 'Required'
-                                                  : null,
-                                        ),
-                                      ),
-                                      SizedBox(width: 12.w),
-                                      Expanded(
-                                        child: _DarkRegisterInput(
-                                          label: 'Last Name',
-                                          hint: 'Last Name',
-                                          controller: _lastNameCtrl,
-                                          prefixIcon: Icons.person_outline,
-                                          validator: (v) =>
-                                              (v == null || v.trim().isEmpty)
-                                                  ? 'Required'
-                                                  : null,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 14.h),
-
-                                  // Email Address & Gender Row
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 3,
-                                        child: _DarkRegisterInput(
-                                          label: 'Email Address',
-                                          hint: 'you@example.com',
-                                          controller: _emailCtrl,
-                                          keyboardType:
-                                              TextInputType.emailAddress,
-                                          prefixIcon: Icons.email_outlined,
-                                          validator: (v) {
-                                            if (v == null || v.trim().isEmpty) {
-                                              return 'Email is required';
-                                            }
-                                            if (!v.contains('@')) {
-                                              return 'Enter a valid email';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                      ),
-                                      SizedBox(width: 12.w),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Gender',
-                                              style: TextStyle(
-                                                fontSize: 11.sp,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white70,
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                            SizedBox(height: 4.h),
-                                            Container(
-                                              padding: EdgeInsets.symmetric(
-                                                  horizontal: 10.w),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withAlpha(18),
-                                                borderRadius:
-                                                    BorderRadius.circular(10.r),
-                                                border: Border.all(
-                                                  color: Colors.white
-                                                      .withAlpha(30),
-                                                ),
-                                              ),
-                                              child: DropdownButtonHideUnderline(
-                                                child: DropdownButton<int>(
-                                                  value: _selectedGenderId,
-                                                  isExpanded: true,
-                                                  dropdownColor:
-                                                      const Color(0xFF0D1B4B),
-                                                  style: TextStyle(
-                                                      fontSize: 13.sp,
-                                                      color: Colors.white),
-                                                  items: const [
-                                                    DropdownMenuItem(
-                                                      value: 1,
-                                                      child: Text('Male'),
-                                                    ),
-                                                    DropdownMenuItem(
-                                                      value: 2,
-                                                      child: Text('Female'),
-                                                    ),
-                                                    DropdownMenuItem(
-                                                      value: 3,
-                                                      child: Text('Other'),
-                                                    ),
-                                                  ],
-                                                  onChanged: (val) {
-                                                    if (val != null) {
-                                                      setState(() =>
-                                                          _selectedGenderId =
-                                                              val);
-                                                    }
-                                                  },
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 14.h),
-
-                                  // Username & Password Row
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _DarkRegisterInput(
-                                          label: 'Username',
-                                          hint: '6-12 chars',
-                                          controller: _usernameCtrl,
-                                          prefixIcon: Icons.badge_outlined,
-                                          validator: (v) {
-                                            if (v == null || v.trim().isEmpty) {
-                                              return 'Required';
-                                            }
-                                            if (v.trim().length < 6 ||
-                                                v.trim().length > 12) {
-                                              return '6-12 chars';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                      ),
-                                      SizedBox(width: 12.w),
-                                      Expanded(
-                                        child: _DarkRegisterInput(
-                                          label: 'Password',
-                                          hint: '6-12 chars',
-                                          controller: _passwordCtrl,
-                                          obscureText: true,
-                                          prefixIcon: Icons.lock_outlined,
-                                          validator: (v) {
-                                            if (v == null || v.isEmpty) {
-                                              return 'Required';
-                                            }
-                                            if (v.length < 6 || v.length > 12) {
-                                              return '6-12 chars';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 14.h),
-
-                                  // Contact Number & Plate Number
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _DarkRegisterInput(
-                                          label: 'Contact Number',
-                                          hint: '09123456789',
-                                          controller: _contactCtrl,
-                                          keyboardType: TextInputType.phone,
-                                          prefixIcon: Icons.phone_outlined,
-                                          validator: (v) =>
-                                              (v == null || v.trim().isEmpty)
-                                                  ? 'Required'
-                                                  : null,
-                                        ),
-                                      ),
-                                      SizedBox(width: 12.w),
-                                      Expanded(
-                                        child: _DarkRegisterInput(
-                                          label: 'Plate Number',
-                                          hint: 'ABC 1234',
-                                          controller: _plateCtrl,
-                                          prefixIcon:
-                                              Icons.directions_car_outlined,
-                                          validator: (v) =>
-                                              (v == null || v.trim().isEmpty)
-                                                  ? 'Required'
-                                                  : null,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            SizedBox(height: 24.h),
-
-                            // Submit Button
-                            _RegisterButton(
-                              label: 'Register Resident',
-                              isLoading: _isLoading,
-                              onPressed: _submit,
-                            ),
-
-                            SizedBox(height: 20.h),
-
-                            // Sign In Link
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Already have an account? ',
-                                  style: TextStyle(
-                                    fontSize: 13.sp,
-                                    color: Colors.white60,
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () => Navigator.of(context)
-                                      .pushReplacementNamed(AppRouter.login),
-                                  child: Text(
-                                    'Sign In',
-                                    style: TextStyle(
-                                      fontSize: 13.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            SizedBox(height: 16.h),
-                          ],
+            // ── Top Header Title & Animated Accent Bar ────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Admission Registration',
+                        style: TextStyle(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
                         ),
+                      ),
+                      SizedBox(height: 8.h),
+                      AnimatedBuilder(
+                        animation: _barAnim,
+                        builder: (context, child) {
+                          return Container(
+                            height: 3.h,
+                            width: 140.w * _barAnim.value,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFA78BFA), Color(0xFF7C3AED)],
+                              ),
+                              borderRadius: BorderRadius.circular(2.r),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pushReplacementNamed(AppRouter.login),
+                  child: Container(
+                    padding: EdgeInsets.all(6.r),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withAlpha(20),
+                      border: Border.all(color: Colors.white.withAlpha(30)),
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.white70,
+                      size: 16.r,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 24.h),
+
+            // ── Form Inputs ───────────────────────────────────────────────
+            UnderlineInputField(
+              label: 'First Name',
+              hint: 'e.g. Juan',
+              controller: _firstNameCtrl,
+              required: true,
+              trailingIcon: Icons.person_outline,
+              errorText: _fieldErrors['first_name'],
+              validator: (v) => v == null || v.trim().isEmpty ? 'First name is required' : null,
+            ),
+
+            UnderlineInputField(
+              label: 'Last Name',
+              hint: 'e.g. Santos',
+              controller: _lastNameCtrl,
+              required: true,
+              trailingIcon: Icons.person_outline,
+              errorText: _fieldErrors['last_name'],
+              validator: (v) => v == null || v.trim().isEmpty ? 'Last name is required' : null,
+            ),
+
+            UnderlineInputField(
+              label: 'Middle Name',
+              hint: 'Optional',
+              controller: _middleNameCtrl,
+              trailingIcon: Icons.person_outline,
+              errorText: _fieldErrors['middle_name'],
+            ),
+
+            UnderlineInputField(
+              label: 'Date of Birth (DD/MM/YYYY)',
+              hint: 'mm/dd/yyyy',
+              controller: _birthDateCtrl,
+              readOnly: true,
+              required: true,
+              onTap: _selectBirthDate,
+              trailingIcon: Icons.calendar_today_outlined,
+              errorText: _fieldErrors['birth_date'],
+              validator: (v) => v == null || v.trim().isEmpty ? 'Date of birth is required' : null,
+            ),
+
+            UnderlineInputField(
+              label: 'Email',
+              hint: 'you@gmail.com',
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              required: true,
+              trailingIcon: Icons.email_outlined,
+              errorText: _fieldErrors['email'],
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Email is required';
+                if (!v.contains('@')) return 'Enter a valid email';
+                return null;
+              },
+            ),
+
+            // ── Gender Selection ──────────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.only(bottom: 20.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      text: 'Gender',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xCCDDD6FE),
+                        fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                      ),
+                      children: const [
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(
+                            color: Color(0xFFF87171),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Row(
+                    children: [
+                      _buildRadioOption('Male', 1, _selectedGenderId, (val) {
+                        setState(() => _selectedGenderId = val);
+                      }),
+                      SizedBox(width: 16.w),
+                      _buildRadioOption('Female', 2, _selectedGenderId, (val) {
+                        setState(() => _selectedGenderId = val);
+                      }),
+                      SizedBox(width: 16.w),
+                      _buildRadioOption('Prefer Not to Say', 3, _selectedGenderId, (val) {
+                        setState(() => _selectedGenderId = val);
+                      }),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Role Selection ────────────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.only(bottom: 20.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      text: 'Role',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xCCDDD6FE),
+                        fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                      ),
+                      children: const [
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(
+                            color: Color(0xFFF87171),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Row(
+                    children: [
+                      _buildRoleRadioOption('Security Guard', (val) {
+                        setState(() => _selectedRole = val);
+                      }),
+                      SizedBox(width: 20.w),
+                      _buildRoleRadioOption('Resident', (val) {
+                        setState(() => _selectedRole = val);
+                      }),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Resident Specific Fields ──────────────────────────────────
+            if (_selectedRole == 'Resident') ...[
+              UnderlineInputField(
+                label: 'Contact Number',
+                hint: 'e.g. 09171234567',
+                controller: _contactCtrl,
+                keyboardType: TextInputType.phone,
+                required: true,
+                trailingIcon: Icons.phone_outlined,
+                errorText: _fieldErrors['contact_number'],
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Contact number is required for residents' : null,
+              ),
+              UnderlineInputField(
+                label: 'Plate Number',
+                hint: 'e.g. ABC1234',
+                controller: _plateCtrl,
+                required: true,
+                trailingIcon: Icons.directions_car_outlined,
+                errorText: _fieldErrors['plate_number'],
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Plate number is required for residents' : null,
+              ),
+            ],
+
+            // ── Auto Credentials Helper Text ──────────────────────────────
+            Text(
+              'Your username and password will be generated automatically and sent to the email address above.',
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: const Color(0xA6DDD6FE),
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 20.h),
+
+            // ── CAPTCHA Section ───────────────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildCaptchaBox('$_captchaA'),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w),
+                  child: Text('+', style: TextStyle(fontSize: 18.sp, color: const Color(0x99C4B5FD))),
+                ),
+                _buildCaptchaBox('$_captchaB'),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w),
+                  child: Text('=', style: TextStyle(fontSize: 18.sp, color: const Color(0x99C4B5FD))),
+                ),
+                SizedBox(
+                  width: 54.w,
+                  child: TextFormField(
+                    controller: _captchaCtrl,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'monospace',
+                    ),
+                    decoration: InputDecoration(
+                      hintText: '?',
+                      hintStyle: TextStyle(
+                        color: Colors.white30,
+                        fontSize: 18.sp,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withAlpha(25),
+                      contentPadding: EdgeInsets.symmetric(vertical: 10.h),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6.r),
+                        borderSide: BorderSide(color: Colors.white.withAlpha(50)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6.r),
+                        borderSide: BorderSide(color: Colors.white.withAlpha(50)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6.r),
+                        borderSide: const BorderSide(color: Color(0xFFA78BFA), width: 1.5),
                       ),
                     ),
                   ),
                 ),
+                SizedBox(width: 10.w),
+                GestureDetector(
+                  onTap: _refreshCaptcha,
+                  child: Container(
+                    width: 38.r,
+                    height: 38.r,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withAlpha(20),
+                      border: Border.all(color: Colors.white.withAlpha(40)),
+                    ),
+                    child: Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white70,
+                      size: 18.r,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_captchaError != null) ...[
+              SizedBox(height: 8.h),
+              Center(
+                child: Text(
+                  _captchaError!,
+                  style: TextStyle(
+                    color: const Color(0xFFF87171),
+                    fontSize: 12.sp,
+                  ),
+                ),
               ),
+            ],
+            SizedBox(height: 24.h),
+
+            // ── Submit Button (Purple Pill with Arrow) ───────────────────
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _onFormSubmitPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7C3AED), // bg-violet-600
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.white30,
+                  elevation: 8,
+                  shadowColor: const Color(0x664C1D95),
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.r),
+                  ),
+                ),
+                child: _isLoading
+                    ? SizedBox(
+                        height: 20.r,
+                        width: 20.r,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'SUBMIT',
+                            style: TextStyle(
+                              fontSize: 13.5.sp,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Icon(
+                            Icons.north_east_rounded,
+                            size: 16.r,
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            SizedBox(height: 20.h),
+
+            // ── Sign In Footer Link ───────────────────────────────────────
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Already have an account? ',
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: const Color(0xE6DDD6FE),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pushReplacementNamed(AppRouter.login);
+                    },
+                    child: Text(
+                      'Sign In',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioOption<T>(
+    String label,
+    T value,
+    T groupValue,
+    ValueChanged<T> onChanged,
+  ) {
+    final isSelected = value == groupValue;
+    return GestureDetector(
+      onTap: () => onChanged(value),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 16.r,
+            height: 16.r,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? const Color(0xFFA78BFA) : Colors.white54,
+                width: isSelected ? 5.r : 1.5.r,
+              ),
+              color: isSelected ? Colors.white : Colors.transparent,
+            ),
+          ),
+          SizedBox(width: 6.w),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: Colors.white.withAlpha(230),
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _DarkRegisterInput extends StatefulWidget {
-  final String label;
-  final String? hint;
-  final TextEditingController? controller;
-  final bool obscureText;
-  final TextInputType keyboardType;
-  final String? Function(String?)? validator;
-  final IconData prefixIcon;
-
-  const _DarkRegisterInput({
-    required this.label,
-    this.hint,
-    this.controller,
-    this.obscureText = false,
-    this.keyboardType = TextInputType.text,
-    this.validator,
-    required this.prefixIcon,
-  });
-
-  @override
-  State<_DarkRegisterInput> createState() => _DarkRegisterInputState();
-}
-
-class _DarkRegisterInputState extends State<_DarkRegisterInput> {
-  late bool _obscure;
-
-  @override
-  void initState() {
-    super.initState();
-    _obscure = widget.obscureText;
+  Widget _buildRoleRadioOption(
+    String roleName,
+    ValueChanged<String> onChanged,
+  ) {
+    return _buildRadioOption(roleName, roleName, _selectedRole, onChanged);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.label,
-          style: TextStyle(
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white70,
-            letterSpacing: 0.3,
-          ),
-        ),
-        SizedBox(height: 4.h),
-        TextFormField(
-          controller: widget.controller,
-          obscureText: _obscure,
-          keyboardType: widget.keyboardType,
-          validator: widget.validator,
-          style: TextStyle(fontSize: 13.sp, color: Colors.white),
-          decoration: InputDecoration(
-            hintText: widget.hint,
-            hintStyle: TextStyle(color: Colors.white30, fontSize: 12.sp),
-            prefixIcon:
-                Icon(widget.prefixIcon, color: Colors.white38, size: 16),
-            suffixIcon: widget.obscureText
-                ? IconButton(
-                    icon: Icon(
-                      _obscure ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.white38,
-                      size: 16,
-                    ),
-                    onPressed: () => setState(() => _obscure = !_obscure),
-                  )
-                : null,
-            filled: true,
-            fillColor: Colors.white.withAlpha(18),
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.r),
-              borderSide: BorderSide(color: Colors.white.withAlpha(30)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.r),
-              borderSide: BorderSide(color: Colors.white.withAlpha(30)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.r),
-              borderSide:
-                  const BorderSide(color: AppColors.primary, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.r),
-              borderSide: const BorderSide(color: AppColors.error),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.r),
-              borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-            ),
-            errorStyle: TextStyle(color: AppColors.error, fontSize: 10.sp),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RegisterButton extends StatelessWidget {
-  final String label;
-  final bool isLoading;
-  final VoidCallback? onPressed;
-
-  const _RegisterButton({
-    required this.label,
-    required this.isLoading,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isLoading ? null : onPressed,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: double.infinity,
-        height: 50.h,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isLoading
-                ? [Colors.grey.shade700, Colors.grey.shade600]
-                : const [Color(0xFF1E90FF), Color(0xFF7C3AED)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(14.r),
-          boxShadow: isLoading
-              ? []
-              : [
-                  BoxShadow(
-                    color: AppColors.primary.withAlpha(80),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-        ),
-        child: Center(
-          child: isLoading
-              ? SizedBox(
-                  width: 22.r,
-                  height: 22.r,
-                  child: const CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2.5,
-                  ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.person_add_rounded,
-                        color: Colors.white, size: 18.r),
-                    SizedBox(width: 8.w),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
-                ),
+  Widget _buildCaptchaBox(String text) {
+    return Container(
+      constraints: BoxConstraints(minWidth: 44.w),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(25),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: Colors.white.withAlpha(50)),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 18.sp,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          fontFamily: 'monospace',
         ),
       ),
     );

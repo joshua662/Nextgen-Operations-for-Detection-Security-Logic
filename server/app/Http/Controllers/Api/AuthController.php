@@ -364,6 +364,13 @@ class AuthController extends Controller
             ->where('is_deleted', false)
             ->get();
 
+        if ($admins->isEmpty()) {
+            $fallbackAdmin = User::where('role', 'admin')->first() ?? User::first();
+            if ($fallbackAdmin) {
+                $admins = collect([$fallbackAdmin]);
+            }
+        }
+
         $payload = json_encode([
             'target_user_id' => $user->user_id,
             'username' => $user->username,

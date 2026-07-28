@@ -7,6 +7,7 @@ import NotificationsPage from './pages/NotificationsPage'
 import ReportsPage from './pages/ReportsPage'
 import { useEffect, useState } from 'react'
 import AdminProfileModal from './components/Profile/AdminProfileModal'
+import SignOutConfirmModal from './components/Auth/SignOutConfirmModal'
 import SidebarHoverLabel from './components/Sidebar/SidebarHoverLabel'
 import { usePersistedSidebarCollapsed } from './hooks/usePersistedSidebarCollapsed'
 import { adminNotificationsApi } from './services/adminApi'
@@ -57,6 +58,7 @@ const ProtectedLayout = () => {
   const { user, loading, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false)
   const { isCollapsed, toggleCollapsed } = usePersistedSidebarCollapsed(SIDEBAR_COLLAPSED_STORAGE_KEY)
   const navigate = useNavigate()
   const location = useLocation()
@@ -99,11 +101,15 @@ const ProtectedLayout = () => {
     if (sidebarOpen && window.innerWidth < 1024) setSidebarOpen(false)
   }
 
-  const handleLogout = async () => {
-    if (window.confirm("Are you sure you want to log out?")) {
-      await logout()
-      navigate('/login', { replace: true })
-    }
+  const handleLogoutRequest = () => {
+    setProfileOpen(false)
+    setSignOutConfirmOpen(true)
+  }
+
+  const handleLogoutConfirm = async () => {
+    await logout()
+    setSignOutConfirmOpen(false)
+    navigate('/login', { replace: true })
   }
 
   const userInitials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || 'A'
@@ -285,7 +291,13 @@ const ProtectedLayout = () => {
         isOpen={profileOpen} 
         onClose={() => setProfileOpen(false)} 
         user={user} 
-        onLogout={handleLogout} 
+        onLogout={handleLogoutRequest} 
+      />
+
+      <SignOutConfirmModal
+        isOpen={signOutConfirmOpen}
+        onClose={() => setSignOutConfirmOpen(false)}
+        onConfirm={handleLogoutConfirm}
       />
     </div>
   )
