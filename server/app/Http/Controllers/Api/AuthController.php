@@ -596,13 +596,15 @@ class AuthController extends Controller
             $user->save();
         }
 
-        if ($user->isSecurityGuard()) {
+        if ($user->isAdmin() || $user->isSecurityGuard()) {
             $validated = $request->validate([
                 'first_name' => ['sometimes', 'required', 'max:55'],
                 'middle_name' => ['nullable', 'max:55'],
                 'last_name' => ['sometimes', 'required', 'max:55'],
                 'email' => ['sometimes', 'required', 'email', 'max:255'],
-                'contact_number' => ['sometimes', 'required', 'max:20'],
+                'username' => ['sometimes', 'required', 'min:6', 'max:50', Rule::unique('tbl_users', 'username')->ignore($user->user_id, 'user_id')],
+                'contact_number' => ['nullable', 'max:20'],
+                'address' => ['nullable', 'max:255'],
             ]);
 
             if (! empty($validated)) {
@@ -611,7 +613,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => 'Profile updated successfully.',
-                'user' => $user->load('gender'),
+                'user' => $user->fresh()->load('gender'),
             ], 200);
         }
 

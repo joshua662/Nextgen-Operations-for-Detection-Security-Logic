@@ -77,9 +77,7 @@ class UserCard extends StatelessWidget {
                     SizedBox(height: 2.h),
                     Text(
                       user.email,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: theme.textTheme.bodySmall,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

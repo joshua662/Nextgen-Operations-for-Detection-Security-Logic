@@ -39,14 +39,16 @@ const GuardActivityLogs = ({
 
   return (
     <div className="space-y-5">
-      {compact ? (
-        <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
-      ) : (
-        <AdminSectionTitle
-          title={title}
-          description="Security guard login and logout events from the client portal."
-        />
-      )}
+      {title ? (
+        compact ? (
+          <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+        ) : (
+          <AdminSectionTitle
+            title={title}
+            description="Security guard login and logout events from the client portal."
+          />
+        )
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         <AdminInput

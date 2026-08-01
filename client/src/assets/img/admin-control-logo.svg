@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="blueGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0077B6" />
+      <stop offset="100%" stop-color="#03045E" />
+    </linearGradient>
+    <linearGradient id="blueGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00A8E8" />
+      <stop offset="100%" stop-color="#0077B6" />
+    </linearGradient>
+    <linearGradient id="pointerGradLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00B4D8" />
+      <stop offset="100%" stop-color="#0077B6" />
+    </linearGradient>
+    <linearGradient id="pointerGradRight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#03045E" />
+      <stop offset="100%" stop-color="#023E8A" />
+    </linearGradient>
+  </defs>
+
+  <!-- Wi-Fi / Sensor Arcs (Top-Left) -->
+  <path d="M 52 70 A 42 42 0 0 1 92 30" stroke="url(#blueGrad2)" stroke-width="8" stroke-linecap="round" />
+  <path d="M 64 80 A 28 28 0 0 1 92 52" stroke="url(#blueGrad2)" stroke-width="7" stroke-linecap="round" />
+  <path d="M 76 90 A 14 14 0 0 1 92 74" stroke="url(#blueGrad2)" stroke-width="6" stroke-linecap="round" />
+
+  <!-- Outer Gear Teeth & Shield Body -->
+  <!-- Outer Shield Ring -->
+  <path d="M 98 42 H 112 V 24 H 132 V 42 C 158 46 176 68 176 96 C 176 112 170 126 160 138 L 172 148 L 158 162 L 144 150 C 130 162 114 168 98 168 C 80 168 64 160 52 148 L 98 98 Z" fill="url(#blueGrad1)" opacity="0.15" />
+
+  <!-- Main Outer Gear Body -->
+  <path d="M 110 32 H 134 V 48 C 146 52 156 59 164 68 L 178 58 L 190 74 L 178 86 C 182 96 182 108 178 118 L 190 130 L 178 146 L 164 136 C 154 146 142 154 128 158 C 112 168 94 168 78 162 L 94 142 C 104 146 116 146 126 140 C 144 132 154 114 150 96 C 146 78 132 64 114 62 V 32 Z" fill="url(#blueGrad1)" />
+
+  <!-- Shield Base (Bottom) -->
+  <path d="M 88 128 C 96 156 122 164 140 144 C 116 174 80 164 68 148 Z" fill="url(#blueGrad1)" />
+
+  <!-- Inner Gear Hub -->
+  <path d="M 98 64 C 118 64 134 80 134 100 C 134 120 118 136 98 136 C 78 136 62 120 62 100 C 62 80 78 64 98 64 Z" fill="url(#blueGrad2)" />
+  
+  <!-- Inner Gear Teeth -->
+  <rect x="92" y="56" width="12" height="10" rx="2" fill="url(#blueGrad2)" />
+  <rect x="92" y="134" width="12" height="10" rx="2" fill="url(#blueGrad2)" />
+  <rect x="54" y="94" width="10" height="12" rx="2" fill="url(#blueGrad2)" />
+  <rect x="132" y="94" width="10" height="12" rx="2" fill="url(#blueGrad2)" />
+
+  <!-- Center Keyhole -->
+  <circle cx="98" cy="94" r="9" fill="#FFFFFF" />
+  <path d="M 93 94 L 91 114 H 105 L 103 94 Z" fill="#FFFFFF" />
+  <circle cx="98" cy="94" r="5" fill="#03045E" />
+  <path d="M 95 94 L 94 110 H 102 L 101 94 Z" fill="#03045E" />
+
+  <!-- Compass Needle (Pointing Up-Right into Keyhole) -->
+  <!-- Left Shaded Half -->
+  <path d="M 96 90 L 52 162 L 72 138 Z" fill="url(#pointerGradLeft)" />
+  <!-- Right Shaded Half -->
+  <path d="M 96 90 L 72 138 L 98 146 Z" fill="url(#pointerGradRight)" />
+  <!-- Compass Pivot Dot -->
+  <circle cx="74" cy="136" r="4.5" fill="#FFFFFF" />
+</svg>

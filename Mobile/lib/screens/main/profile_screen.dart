@@ -881,7 +881,7 @@ class _InfoTile extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: isHighlighted
                   ? hColor.withAlpha(200)
-                  : const Color(0xFF6B7280),
+                  : const Color(0xFF9CA3AF),
               letterSpacing: 0.5,
             ),
           ),

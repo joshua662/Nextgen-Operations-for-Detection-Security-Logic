@@ -12,6 +12,7 @@ import SidebarHoverLabel from './components/Sidebar/SidebarHoverLabel'
 import { usePersistedSidebarCollapsed } from './hooks/usePersistedSidebarCollapsed'
 import { adminNotificationsApi } from './services/adminApi'
 import PortalSkeleton from './components/Skeleton/PortalSkeleton'
+import adminLogo from './assets/sys-admin-logo.svg'
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'gate-admin-sidebar-collapsed'
 
@@ -113,7 +114,9 @@ const ProtectedLayout = () => {
   }
 
   const userInitials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || 'A'
-  const userName = `${user.last_name}, ${user.first_name}`
+  const userFullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Admin User'
+  const userName = userFullName
+  const roleTitle = (user.role || 'ADMIN').toUpperCase() === 'ADMIN' ? 'SYSTEM ADMINISTRATOR' : (user.role || '').toUpperCase()
 
   return (
     <div className="min-h-screen bg-[#121212]">
@@ -148,22 +151,27 @@ const ProtectedLayout = () => {
         } lg:translate-x-0 ${isCollapsed ? 'w-[76px] overflow-visible' : 'w-[260px]'}`}
       >
         <div className="hidden border-b border-white/5 p-4 lg:flex items-center h-[76px] shrink-0">
-          <SidebarHoverLabel label="Gate Security" isCollapsed={isCollapsed} variant="dark" className="w-full">
+          <SidebarHoverLabel label={`${roleTitle} • ${userFullName}`} isCollapsed={isCollapsed} variant="dark" className="w-full">
             <button
               onClick={toggleCollapsed}
               className={`flex items-center focus:outline-none cursor-pointer transition-all duration-300 ease-in-out ${
-                isCollapsed ? 'justify-center w-full gap-0' : 'gap-3.5'
+                isCollapsed ? 'justify-center w-full gap-0' : 'gap-3'
               }`}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-white text-lg font-extrabold text-black shadow-md">
-                G
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-md border border-white/20 overflow-hidden">
+                <img src={adminLogo} alt="Admin Systems & Control" className="h-full w-full object-contain" />
               </div>
-              <span className={`truncate font-bold text-white text-lg tracking-wide text-start transition-all duration-300 ease-in-out origin-left ${
+              <div className={`flex flex-col text-left transition-all duration-300 ease-in-out origin-left truncate ${
                 isCollapsed ? 'w-0 opacity-0 scale-90 pointer-events-none ml-0' : 'w-auto opacity-100 scale-100 ml-2.5'
               }`}>
-                Gate Security
-              </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  {roleTitle}
+                </span>
+                <span className="truncate font-bold text-white text-sm leading-tight">
+                  {userFullName}
+                </span>
+              </div>
             </button>
           </SidebarHoverLabel>
         </div>
@@ -259,11 +267,21 @@ const ProtectedLayout = () => {
               }`}
               aria-label={isCollapsed ? userName : 'Click to view profile'}
             >
-              <div className={`flex shrink-0 items-center justify-center text-sm font-bold text-white rounded-xl bg-zinc-800 transition-all duration-300 ease-in-out ${
-                isCollapsed ? 'h-10 w-10 tracking-normal' : 'h-11 w-11 tracking-wider'
-              }`}>
-                {userInitials}
-              </div>
+              {user.profile_picture && user.profile_picture.length > 0 ? (
+                <img
+                  src={user.profile_picture}
+                  alt={userName}
+                  className={`shrink-0 rounded-xl object-cover shadow-sm transition-all duration-300 ${
+                    isCollapsed ? 'h-10 w-10' : 'h-11 w-11'
+                  }`}
+                />
+              ) : (
+                <div className={`flex shrink-0 items-center justify-center text-sm font-bold text-white rounded-xl bg-zinc-800 transition-all duration-300 ease-in-out ${
+                  isCollapsed ? 'h-10 w-10 tracking-normal' : 'h-11 w-11 tracking-wider'
+                }`}>
+                  {userInitials}
+                </div>
+              )}
               <div className={`flex flex-1 items-center justify-between min-w-0 transition-all duration-300 ease-in-out origin-left truncate ${
                 isCollapsed ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
               }`}>

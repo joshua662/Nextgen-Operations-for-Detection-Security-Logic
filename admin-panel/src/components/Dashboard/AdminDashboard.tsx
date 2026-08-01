@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { adminAuthApi } from '../../services/adminApi'
 import GuardActivityLogs from '../SecurityGuards/GuardActivityLogs'
 import { AdminPanelCard } from '../UI/AdminPanelShell'
@@ -301,15 +302,15 @@ const AdminDashboard = () => {
               <h3 className="text-base font-bold text-zinc-100">Bar Chart</h3>
               <p className="text-xs text-zinc-500 mt-0.5">Total Gate Traffic</p>
             </div>
-            <a
-              href="/reports"
+            <Link
+              to="/reports"
               className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-800 hover:bg-[#C5A073] text-zinc-400 hover:text-[#121212] transition-colors border border-white/5"
               title="View full reports"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
-            </a>
+            </Link>
           </div>
 
           <div className="flex-1 w-full min-h-[280px]">
@@ -321,8 +322,8 @@ const AdminDashboard = () => {
               barGap={0.2}
             >
               <Grid horizontal />
-              <Bar dataKey="authorized" label="Authorized" lineCap="round" fill="var(--chart-1)" fadedOpacity={0.3} groupGap={4} />
-              <Bar dataKey="unauthorized" label="Not Authorized" lineCap="round" fill="var(--chart-2)" fadedOpacity={0.3} groupGap={4} />
+              <Bar dataKey="authorized" label="Authorized" lineCap="round" fill="#34d399" fadedOpacity={0.3} groupGap={4} />
+              <Bar dataKey="unauthorized" label="Not Authorized" lineCap="round" fill="#f87171" fadedOpacity={0.3} groupGap={4} />
               <BarXAxis />
               <ChartTooltip showCrosshair={false} />
             </BarChart>

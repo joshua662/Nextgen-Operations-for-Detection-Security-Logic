@@ -15,6 +15,7 @@ interface AuthContextValue {
   loading: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  updateUser: (updated: Partial<AdminUser>) => void
   register: (data: {
     first_name: string
     middle_name?: string
@@ -70,6 +71,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
+  const updateUser = useCallback((updated: Partial<AdminUser>) => {
+    setUser((prev) => (prev ? { ...prev, ...updated } : null))
+  }, [])
+
   const register = useCallback(
     async (data: {
       first_name: string
@@ -85,8 +90,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   )
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, register }),
-    [user, loading, login, logout, register],
+    () => ({ user, loading, login, logout, updateUser, register }),
+    [user, loading, login, logout, updateUser, register],
   )
 
   return createElement(AuthContext.Provider, { value }, children)
