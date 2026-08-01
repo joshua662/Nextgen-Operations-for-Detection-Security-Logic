@@ -22,7 +22,11 @@ export interface AdminUser {
   last_name: string
   middle_name?: string | null
   email?: string | null
+  contact_number?: string | null
+  address?: string | null
+  age?: number | null
   role: string
+  profile_picture?: string | null
 }
 
 export interface LoginResponse {
@@ -39,6 +43,11 @@ export const adminAuthApi = {
   me: () => adminApi.get<{ user: AdminUser }>('/auth/me'),
 
   forgotPassword: (email: string) => adminApi.post('/auth/forgot-password', { email }),
+
+  updateProfile: (formData: FormData) =>
+    adminApi.post<{ message: string; user: AdminUser }>('/auth/profile', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
   register: (data: {
     first_name: string

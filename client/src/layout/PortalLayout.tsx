@@ -9,6 +9,7 @@ import UserProfileModal from "../components/Profile/UserProfileModal";
 import SignOutConfirmModal from "../components/Auth/SignOutConfirmModal";
 import SidebarHoverLabel from "../components/Sidebar/SidebarHoverLabel";
 import { usePersistedSidebarCollapsed } from "../hooks/usePersistedSidebarCollapsed";
+import guardLogo from "../assets/img/guard-gate-logo.svg";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "gate-client-sidebar-collapsed";
 
@@ -26,6 +27,19 @@ const PortalLayoutContent = ({ navItems, homePath, portalLabel }: PortalLayoutPr
     const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
     const { isCollapsed, toggleCollapsed } = usePersistedSidebarCollapsed(SIDEBAR_COLLAPSED_STORAGE_KEY);
     const { user, logout } = useAuth();
+
+    const userRole = user?.user?.role;
+    const roleTitle = userRole === 'guard' || userRole === 'security_guard'
+        ? 'SECURITY GUARD'
+        : userRole === 'resident'
+        ? 'RESIDENT'
+        : userRole === 'admin'
+        ? 'SYSTEM ADMINISTRATOR'
+        : (userRole || 'USER').toUpperCase();
+
+    const userFullName = `${user?.user?.first_name || ''} ${user?.user?.last_name || ''}`.trim() || 'User';
+    const initials = `${user?.user?.first_name?.[0] || ''}${user?.user?.last_name?.[0] || ''}`.toUpperCase() || 'U';
+    const avatarSrc = user?.user?.profile_picture;
 
     const closeSidebar = () => {
         if (isOpen && window.innerWidth < 1024) toggleSidebar();
@@ -86,22 +100,27 @@ const PortalLayoutContent = ({ navItems, homePath, portalLabel }: PortalLayoutPr
                 aria-label="Sidebar"
             >
                 <div className="hidden border-b border-white/5 p-4 lg:flex items-center h-[76px] shrink-0">
-                    <SidebarHoverLabel label="Gate Security" isCollapsed={isCollapsed} className="w-full">
+                    <SidebarHoverLabel label={`${roleTitle} • ${userFullName}`} isCollapsed={isCollapsed} className="w-full">
                         <button
                             onClick={toggleCollapsed}
                             className={`flex items-center focus:outline-none cursor-pointer transition-all duration-300 ease-in-out ${
-                                isCollapsed ? "justify-center w-full gap-0" : "gap-2"
+                                isCollapsed ? "justify-center w-full gap-0" : "gap-3"
                             }`}
                             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                         >
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-sm font-bold text-black shadow-md">
-                                G
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-md border border-white/20 overflow-hidden">
+                                <img src={guardLogo} alt="Security Guard Gate Access" className="h-full w-full object-contain" />
                             </div>
-                            <span className={`truncate font-bold leading-tight text-white text-start transition-all duration-300 ease-in-out origin-left ${
-                                isCollapsed ? "w-0 opacity-0 scale-90 pointer-events-none ml-0" : "w-auto opacity-100 scale-100 ml-2"
+                            <div className={`flex flex-col text-left transition-all duration-300 ease-in-out origin-left truncate ${
+                                isCollapsed ? "w-0 opacity-0 scale-90 pointer-events-none ml-0" : "w-auto opacity-100 scale-100 ml-2.5"
                             }`}>
-                                Gate Security
-                            </span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                                    {roleTitle}
+                                </span>
+                                <span className="truncate font-bold text-white text-sm leading-tight">
+                                    {userFullName}
+                                </span>
+                            </div>
                         </button>
                     </SidebarHoverLabel>
                 </div>

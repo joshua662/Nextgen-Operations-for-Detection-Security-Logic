@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none">
+  <!-- Outer Monitor & Base Outline -->
+  <g stroke="#1A1D20" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Monitor Base & Stand -->
+    <path d="M 120 480 H 380" fill="none" />
+    <polygon points="180,420 320,420 340,480 160,480" fill="#FF1E56" />
+
+    <!-- Monitor Outer Body -->
+    <rect x="15" y="15" width="470" height="405" rx="35" fill="#E2EEFF" />
+
+    <!-- Red Top Header Bar -->
+    <path d="M 15 50 C 15 30 30 15 50 15 H 315 V 120 H 15 Z" fill="#FF1E56" />
+    <!-- Extension of Red bar across top border -->
+    <path d="M 315 15 H 450 C 470 15 485 30 485 50 V 120 H 315 Z" fill="#1A1D20" opacity="0.05" />
+
+    <!-- Left User Window/Card -->
+    <rect x="20" y="120" width="280" height="155" fill="#E2EEFF" />
+    <path d="M 20 120 H 300 V 275 H 20 Z" fill="#E2EEFF" />
+
+    <!-- Person Avatar -->
+    <!-- Hair -->
+    <path d="M 105 160 C 105 70 215 70 215 160 C 215 165 205 175 195 175 C 190 150 175 130 160 130 C 145 130 130 150 125 175 C 115 175 105 165 105 160 Z" fill="#3A4750" />
+    <!-- Head / Face -->
+    <ellipse cx="160" cy="140" rx="65" ry="70" fill="#FFD1C1" />
+    <!-- Ears -->
+    <circle cx="92" cy="140" r="14" fill="#FFB0A0" />
+    <circle cx="228" cy="140" r="14" fill="#FFB0A0" />
+
+    <!-- Body / Shirt -->
+    <path d="M 70 270 C 70 200 250 200 250 270 Z" fill="#FFB830" />
+    <!-- Shirt Stripe -->
+    <path d="M 70 250 H 250 V 270 H 70 Z" fill="#FF8811" />
+    <!-- Shirt Collar -->
+    <polygon points="120,200 160,240 145,245 110,205" fill="#E2EEFF" />
+    <polygon points="200,200 160,240 175,245 210,205" fill="#E2EEFF" />
+    <path d="M 140 200 L 160 220 L 180 200" fill="#FFB0A0" />
+
+    <!-- Horizontal Divider Line below User Card -->
+    <line x1="15" y1="275" x2="310" y2="275" />
+
+    <!-- Bottom Screen Text/Lines -->
+    <rect x="60" y="310" font-weight="bold" width="70" height="12" rx="6" fill="#1A1D20" stroke="none" />
+    <rect x="150" y="310" font-weight="bold" width="60" height="12" rx="6" fill="#1A1D20" stroke="none" />
+    <rect x="230" y="310" font-weight="bold" width="35" height="12" rx="6" fill="#1A1D20" stroke="none" />
+
+    <rect x="60" y="345" font-weight="bold" width="75" height="12" rx="6" fill="#1A1D20" stroke="none" />
+    <rect x="155" y="345" font-weight="bold" width="75" height="12" rx="6" fill="#1A1D20" stroke="none" />
+    <rect x="250" y="345" font-weight="bold" width="35" height="12" rx="6" fill="#1A1D20" stroke="none" />
+
+    <!-- Bottom Blue Bar -->
+    <path d="M 15 390 H 485 C 485 405 470 420 450 420 H 50 C 30 420 15 405 15 390 Z" fill="#00A8FF" />
+
+    <!-- Right Side Monitor Dots/Lines -->
+    <circle cx="340" cy="110" r="4" fill="#1A1D20" stroke="none" />
+    <circle cx="370" cy="110" r="4" fill="#1A1D20" stroke="none" />
+    <circle cx="400" cy="110" r="4" fill="#1A1D20" stroke="none" />
+    <circle cx="430" cy="110" r="4" fill="#1A1D20" stroke="none" />
+    <circle cx="460" cy="110" r="4" fill="#1A1D20" stroke="none" />
+
+    <!-- Green Gear (Overlapping Right Side) -->
+    <!-- Gear Path with Teeth -->
+    <g fill="#40D15D">
+      <path d="
+        M 380 160 
+        L 395 160 L 400 185 L 420 193 L 440 178 L 452 188 L 440 210 L 450 228 L 472 225 L 476 240 L 455 252 L 455 272 L 476 284 L 472 299 L 450 296 L 440 314 L 452 336 L 440 346 L 420 331 L 400 339 L 395 364 L 380 364 L 375 339 L 355 331 L 335 346 L 323 336 L 335 314 L 325 296 L 303 299 L 299 284 L 320 272 L 320 252 L 299 240 L 303 225 L 325 228 L 335 210 L 323 188 L 335 178 L 355 193 L 375 185 Z" />
+      <!-- Center Hole of Gear -->
+      <circle cx="387" cy="262" r="45" fill="#E2EEFF" />
+    </g>
+
+  </g>
+</svg>

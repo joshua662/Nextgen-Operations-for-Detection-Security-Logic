@@ -33,7 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(AuthController::class)->prefix('/auth')->group(function () {
         Route::get('/me', 'me');
         Route::post('/logout', 'logout');
-        Route::put('/profile', 'updateProfile')->middleware('role:resident,security_guard');
+        Route::match(['put', 'post'], '/profile', 'updateProfile')->middleware('role:admin,resident,security_guard');
     });
 
     Route::controller(GenderController::class)->prefix('/gender')->group(function () {

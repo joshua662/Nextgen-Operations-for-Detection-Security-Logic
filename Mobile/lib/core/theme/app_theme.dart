@@ -167,6 +167,9 @@ class AppTheme {
       secondary: AppColors.secondary,
       error: AppColors.error,
       surface: _darkSurface,
+      onSurface: Colors.white,
+      onSurfaceVariant: const Color(0xFFCBD5E1),
+      onPrimary: Colors.white,
     ),
     scaffoldBackgroundColor: _darkBackground,
 
@@ -190,17 +193,63 @@ class AppTheme {
         fontWeight: FontWeight.bold,
         color: Colors.white,
       ),
+      headlineSmall: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
       titleLarge: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: Colors.white,
       ),
+      titleMedium: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+      ),
+      titleSmall: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFFE2E8F0),
+      ),
       bodyLarge: TextStyle(fontSize: 16, color: Colors.white),
-      bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
+      bodyMedium: TextStyle(fontSize: 14, color: Color(0xFFCBD5E1)),
+      bodySmall: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
       labelLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: Colors.white,
+      ),
+      labelMedium: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Color(0xFFCBD5E1),
+      ),
+      labelSmall: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF94A3B8),
+      ),
+    ),
+
+    // ── ListTile ──
+    listTileTheme: const ListTileThemeData(
+      iconColor: Colors.white70,
+      textColor: Colors.white,
+    ),
+
+    // ── Dialog ──
+    dialogTheme: const DialogThemeData(
+      backgroundColor: _darkSurface,
+      titleTextStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 14,
+        color: Color(0xFFCBD5E1),
       ),
     ),
 
