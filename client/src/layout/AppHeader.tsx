@@ -199,7 +199,6 @@ const AppHeader = () => {
           </div>
         </div>
       </nav>
-    </>
 
     <SignOutConfirmModal
       isOpen={signOutConfirmOpen}

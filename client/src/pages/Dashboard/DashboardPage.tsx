@@ -105,7 +105,7 @@ const DashboardPage = () => {
     const [data, setData] = useState<DashboardOverview | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeQuickAction, setActiveQuickAction] = useState<QuickActionKey | null>(null);
-    const [chartData, setChartData] = useState<{ labels: string[]; values: number[] } | null>(null);
+    const [_chartData, setChartData] = useState<{ labels: string[]; values: number[] } | null>(null);
     const [weekOffset, setWeekOffset] = useState(0);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -195,10 +195,6 @@ const DashboardPage = () => {
         if (weekDates.length === 0) return "";
         return weekDates[3].toLocaleDateString("en-US", { month: "long", year: "numeric" });
     }, [weekDates]);
-
-    const chartMax = useMemo(() => {
-        return Math.max(...(chartData?.values ?? []), 10);
-    }, [chartData]);
 
     const activeResidentsPercentage = useMemo(() => {
         if (!data || data.stats.total_residents === 0) return 65;
@@ -324,7 +320,7 @@ const DashboardPage = () => {
                     { label: "Weekly Count",  sub: "Cars passed this week",  value: data.car_monitor?.weekly?.count  ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 6,    trend: data.car_monitor?.weekly?.trend  ?? "up", diff: data.car_monitor?.weekly?.diff  ?? 0, period: "week"   as const, periodKey: "weekly"  as const, gradient: "from-blue-950/60",    iconBg: "bg-blue-500/10 text-blue-400",    numColor: "text-blue-400"    },
                     { label: "Monthly Count", sub: "Cars passed this month", value: data.car_monitor?.monthly?.count ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 24,   trend: data.car_monitor?.monthly?.trend ?? "down", diff: data.car_monitor?.monthly?.diff ?? 0, period: "month"  as const, periodKey: "monthly" as const, gradient: "from-violet-950/60",  iconBg: "bg-violet-500/10 text-violet-400", numColor: "text-violet-400"  },
                     { label: "Yearly Count",  sub: "Cars passed this year",  value: data.car_monitor?.yearly?.count  ?? (data.stats.authorized_entries + data.stats.authorized_exits) * 280,  trend: data.car_monitor?.yearly?.trend  ?? "up", diff: data.car_monitor?.yearly?.diff  ?? 0, period: "year"   as const, periodKey: "yearly"  as const, gradient: "from-amber-950/60",   iconBg: "bg-amber-500/10 text-amber-400",   numColor: "text-amber-400"   },
-                ].map(({ label, sub, value, trend, diff, period, periodKey, gradient, iconBg, numColor }) => (
+                ].map(({ label, sub, value, trend, diff, period, periodKey, gradient, numColor }) => (
                     <div
                         key={label}
                         onClick={() => { setTimeFilter(period); setTrafficDetailsPeriod(periodKey); }}
@@ -1029,46 +1025,7 @@ const StatusBadge = ({ status }: { status: CameraHealthStatus }) => {
 };
 
 
-const MetricCard = ({
-    label,
-    sub,
-    value,
-    trend,
-    diff,
-    isActive,
-    onClick,
-}: {
-    label: string;
-    sub: string;
-    value: number;
-    trend: "up" | "down";
-    diff: number;
-    isActive: boolean;
-    onClick?: () => void;
-}) => {
-    const isUp = trend === "up";
-    return (
-        <div
-            onClick={onClick}
-            className={`rounded-xl border p-6 transition-all duration-300 cursor-pointer ${
-                isActive
-                    ? "border-[#C5A073]/50 bg-[#C5A073]/5 shadow-md shadow-[#C5A073]/5 scale-[1.01]"
-                    : "border-white/5 bg-[#18181b] hover:border-white/10 hover:scale-[1.005]"
-            }`}
-        >
-            <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-400">{label}</span>
-                <span className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                    isUp ? "bg-emerald-500/10 text-emerald-450" : "bg-red-500/10 text-red-455"
-                }`}>
-                    {isUp ? "↑" : "↓"} {diff}
-                </span>
-            </div>
-            <p className="mt-2 text-3xl font-bold text-zinc-100">{value}</p>
-            <span className="mt-1 block text-xs text-zinc-500">{sub}</span>
-        </div>
-    );
-};
+
 
 interface TrafficLog {
     gate_log_id: number;

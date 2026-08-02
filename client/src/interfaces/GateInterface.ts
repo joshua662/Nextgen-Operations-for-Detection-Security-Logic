@@ -101,6 +101,7 @@ export interface TrafficChart {
 
 export interface NotificationItem {
     notification_id: number;
+    user_id?: number;
     title: string;
     message: string;
     type: string;
