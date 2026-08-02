@@ -184,12 +184,6 @@ const AdminDashboard = () => {
     })
   }, [chartData])
 
-  const chartMax = useMemo(() => {
-    if (!chartData) return 10
-    const totals = chartData.authorized.map((a, i) => a + (chartData.unauthorized[i] ?? 0))
-    return Math.max(...totals, 10)
-  }, [chartData])
-
   const authRate = useMemo(() => {
     if (!stats) return 0
     const total = stats.authorized_entries + stats.unauthorized_attempts
