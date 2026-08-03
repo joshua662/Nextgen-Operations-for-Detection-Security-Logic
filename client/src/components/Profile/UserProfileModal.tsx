@@ -3,6 +3,19 @@ import { useAuth } from "../../contexts/AuthContext";
 import GateAccessService from "../../services/GateAccessService";
 import GenderService from "../../services/GenderService";
 import { useModalAnimation } from "../../hooks/useModalAnimation";
+import loginBackdrop from "../../assets/img/subdivision-gate-background.png";
+
+const resolveProfilePictureUrl = (path?: string | null): string | null => {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("blob:")) {
+    return path;
+  }
+  const cleanPath = path.replace(/^\/+/, "").replace(/^public\//, "");
+  if (cleanPath.startsWith("storage/")) {
+    return `http://127.0.0.1:8000/${cleanPath}`;
+  }
+  return `http://127.0.0.1:8000/storage/${cleanPath}`;
+};
 
 export interface UserProfileModalProps {
   isOpen: boolean;
@@ -70,11 +83,25 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
-  const [statusModal, setStatusModal] = useState<{ type: "success" | "error"; title: string; message: string } | null>(null);
+  const [statusModal, setStatusModal] = useState<{ type: "success" | "error"; title: string; message: string; hideConfirmButton?: boolean } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [editForm, setEditForm] = useState<ProfileForm>(() => buildFormFromUser(user));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
+
+  const displayAvatarUrl = useMemo(() => {
+    if (previewAvatar) return previewAvatar;
+    return resolveProfilePictureUrl(user.profile_picture);
+  }, [previewAvatar, user.profile_picture]);
+
+  useEffect(() => {
+    if (!statusModal?.hideConfirmButton) return;
+    const timer = setTimeout(() => {
+      setStatusModal(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [statusModal]);
 
   const handleAvatarClick = () => {
     if (uploading) return;
@@ -93,6 +120,8 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
     try {
       setUploading(true);
       setSaveError("");
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewAvatar(objectUrl);
 
       const formData = new FormData();
       formData.append("profile_picture", file);
@@ -104,6 +133,7 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
           type: "success",
           title: "Profile Picture Updated",
           message: "Your profile picture has been updated successfully.",
+          hideConfirmButton: true,
         });
       }
     } catch (err: any) {
@@ -231,95 +261,141 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
               className="hidden"
             />
 
-            <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight text-white">My Profile</h2>
-                <p className="mt-1 text-sm text-gray-400">View and manage your personal and account information</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={onClose} className="rounded-lg p-2 text-gray-400 transition hover:bg-[#2a2a2a] hover:text-white">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+            {/* ── Profile Header with Expanded Cover Banner ── */}
+            <div className="mb-6 sm:mb-8 overflow-hidden rounded-2xl border border-white/10 bg-[#16161c]/90 shadow-2xl">
+              {/* Expanded Top Cover Banner (Login Form Background Image containing "My Profile" text & close button) */}
+              <div className="relative h-48 sm:h-56 w-full overflow-hidden">
+                <img
+                  src={loginBackdrop}
+                  alt="Cover Banner"
+                  className="absolute inset-0 h-full w-full object-cover scale-105"
+                />
+                {/* Gradient overlays for crisp readability and login backdrop aesthetic */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-indigo-950/45 to-purple-950/70" />
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-25"
+                  style={{
+                    backgroundImage: `
+                      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.75), transparent),
+                      radial-gradient(1px 1px at 70% 18%, rgba(255,255,255,0.55), transparent),
+                      radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.5), transparent)
+                    `,
+                  }}
+                />
 
-            {saveError && (
-              <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                {saveError}
+                {/* Integrated "My Profile" Title, Subtitle & Close Button inside Banner */}
+                <div className="relative z-10 flex items-start justify-between p-5 sm:p-6">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-md">My Profile</h2>
+                    <p className="mt-1 text-xs sm:text-sm text-zinc-200/90 font-medium drop-shadow">View and manage your personal and account information</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={onClose} 
+                    className="rounded-full bg-black/40 p-2 text-zinc-300 backdrop-blur-md transition hover:bg-black/70 hover:text-white shadow-lg border border-white/10"
+                    aria-label="Close profile modal"
+                  >
+                    <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            )}
 
-            <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl bg-gradient-to-r from-[#173e8e] to-[#0d536c] p-5 sm:p-6 shadow-md">
-              <div className="flex items-center gap-4 sm:gap-5">
-                <div 
-                  onClick={handleAvatarClick}
-                  className="group relative flex h-16 w-16 sm:h-[76px] sm:w-[76px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-white/40 bg-white/10 text-xl sm:text-2xl font-bold tracking-wide text-white shadow-lg transition hover:border-white hover:scale-105"
-                  title="Click to upload profile picture"
-                >
-                  {user.profile_picture && user.profile_picture.length > 0 ? (
-                    <img src={user.profile_picture} alt={fullName} className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="text-xl sm:text-2xl font-bold tracking-wide text-white">{userInitials}</span>
-                  )}
-                  <div className={`absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white transition-opacity duration-200 ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                    {uploading ? (
-                      <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
+              {/* Lower Section with Overlapping Avatar & Info */}
+              <div className="relative px-5 sm:px-6 pb-6 pt-0">
+                {/* Avatar + Right Action Buttons Row */}
+                <div className="flex items-end justify-between gap-4">
+                  {/* Overlapping Avatar - Bigger Size */}
+                  <div 
+                    onClick={handleAvatarClick}
+                    className="group relative -mt-14 sm:-mt-18 flex h-28 w-28 sm:h-36 sm:w-36 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-[5px] sm:border-[6px] border-[#1e1e24] bg-[#2a2a36] text-3xl sm:text-4xl font-bold text-white shadow-2xl transition hover:scale-105"
+                    title="Click to upload profile picture"
+                  >
+                    {displayAvatarUrl ? (
+                      <img src={displayAvatarUrl} alt={fullName} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-3xl sm:text-4xl font-bold tracking-wide text-white">{userInitials}</span>
+                    )}
+                    <div className={`absolute inset-0 flex flex-col items-center justify-center bg-black/65 text-white transition-opacity duration-200 ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      {uploading ? (
+                        <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <>
+                          <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons on the Right */}
+                  <div className="flex items-center gap-2 sm:gap-3 pt-3">
+                    {!isEditing ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(true)}
+                        className="rounded-xl border border-white/15 bg-white/10 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/20 active:scale-95"
+                      >
+                        Edit Profile
+                      </button>
                     ) : (
                       <>
-                        <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          className="rounded-xl border border-white/15 bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 active:scale-95"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmSaveOpen(true)}
+                          disabled={saving}
+                          className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-500 disabled:opacity-60 active:scale-95"
+                        >
+                          {saving ? "Saving..." : "Save Changes"}
+                        </button>
                       </>
                     )}
+                    <button 
+                      type="button"
+                      onClick={onLogout} 
+                      className="rounded-xl border border-red-500/30 bg-red-500/15 px-5 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/25 active:scale-95"
+                    >
+                      Sign Out
+                    </button>
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-white">{fullName}</h3>
-                  <p className="text-xs sm:text-sm font-medium text-blue-100 capitalize">{roleDisplay} Member</p>
-                  <div className="mt-1.5 flex items-center gap-2 text-[11px] sm:text-[12px] font-bold uppercase tracking-wider text-green-300">
-                    <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span>
-                    Active Account
+
+                {/* Name, Verified Badge, Email & Role Details below avatar */}
+                <div className="mt-3.5">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">{fullName}</h3>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm" title="Verified Member">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                  </div>
+
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400">
+                    <span>{user.email || user.username || "Member Account"}</span>
+                    <span className="text-zinc-600">&bull;</span>
+                    <span className="capitalize text-blue-300 font-medium">{roleDisplay} Member</span>
+                    <span className="text-zinc-600">&bull;</span>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-400">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                      Active Account
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                {!isEditing ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="w-full rounded-lg border border-blue-100/60 bg-white/15 px-6 py-2.5 text-sm font-bold tracking-wide text-white shadow transition hover:bg-white/25 sm:w-auto"
-                  >
-                    Edit
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="w-full rounded-lg border border-white/30 bg-white/10 px-6 py-2.5 text-sm font-bold tracking-wide text-white shadow transition hover:bg-white/20 sm:w-auto"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmSaveOpen(true)}
-                      disabled={saving}
-                      className="w-full rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-bold tracking-wide text-white shadow transition hover:bg-blue-400 disabled:opacity-60 sm:w-auto"
-                    >
-                      {saving ? "Saving..." : "Save Changes"}
-                    </button>
-                  </>
-                )}
-                <button onClick={onLogout} className="w-full rounded-lg border border-red-400/50 bg-red-500/20 px-6 py-2.5 text-sm font-bold tracking-wide text-red-100 shadow transition hover:bg-red-500/30 sm:w-auto">
-                  Sign Out
-                </button>
               </div>
             </div>
 
@@ -494,6 +570,7 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
         title={statusModal?.title ?? ""}
         message={statusModal?.message ?? ""}
         confirmLabel="OK"
+        hideConfirmButton={statusModal?.hideConfirmButton}
         onConfirm={() => setStatusModal(null)}
         onClose={() => setStatusModal(null)}
       />
@@ -543,6 +620,7 @@ const ProfileActionModal = ({
   message,
   confirmLabel,
   disabled,
+  hideConfirmButton,
   onConfirm,
   onClose,
 }: {
@@ -552,6 +630,7 @@ const ProfileActionModal = ({
   message: string;
   confirmLabel: string;
   disabled?: boolean;
+  hideConfirmButton?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }) => {
@@ -573,30 +652,32 @@ const ProfileActionModal = ({
     <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
       <button type="button" aria-label="Close modal" onClick={onClose} className={`absolute inset-0 bg-black/80 backdrop-blur-md ${isAnimatingOut ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} />
       <div className={`relative w-full max-w-md rounded-xl border border-white/10 bg-[#1e1e24]/90 p-6 text-white shadow-2xl backdrop-blur-xl ${isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'}`}>
-        <div className={`mb-4 rounded-lg border px-4 py-3 ${toneClass}`}>
+        <div className={`rounded-lg border px-4 py-3 ${toneClass} ${hideConfirmButton ? 'mb-0' : 'mb-4'}`}>
           <h3 className="text-lg font-bold">{title}</h3>
           <p className="mt-1 text-sm opacity-90">{message}</p>
         </div>
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          {tone === "confirm" && (
+        {!hideConfirmButton && (
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            {tone === "confirm" && (
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={disabled}
+                className="rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/5 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
-              onClick={onClose}
+              onClick={onConfirm}
               disabled={disabled}
-              className="rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/5 disabled:opacity-60"
+              className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-60 ${buttonClass}`}
             >
-              Cancel
+              {confirmLabel}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={disabled}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-60 ${buttonClass}`}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

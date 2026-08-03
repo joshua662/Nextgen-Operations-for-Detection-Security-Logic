@@ -324,23 +324,23 @@ const DashboardPage = () => {
                     <div
                         key={label}
                         onClick={() => { setTimeFilter(period); setTrafficDetailsPeriod(periodKey); }}
-                        className={`relative overflow-hidden rounded-2xl p-5 cursor-pointer transition-all duration-300 border bg-gradient-to-br ${gradient} to-zinc-900 ${
+                        className={`group relative overflow-hidden rounded-2xl p-5 cursor-pointer transition-all duration-300 border bg-gradient-to-br ${gradient} to-zinc-900 active:scale-95 ${
                             timeFilter === period
-                                ? 'border-[#C5A073]/40 shadow-lg shadow-[#C5A073]/5 scale-[1.01]'
-                                : 'border-white/5 hover:border-white/10 hover:scale-[1.005]'
+                                ? 'border-[#C5A073]/60 shadow-[0_0_25px_rgba(197,160,115,0.25)] scale-[1.02]'
+                                : 'border-white/5 hover:border-white/20 hover:scale-[1.015] hover:shadow-lg'
                         }`}
                     >
-                        <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/5 blur-2xl" />
+                        <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/5 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
                         <div className="flex items-start justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{label}</p>
-                            <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">{label}</p>
+                            <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full transition-transform duration-300 group-hover:scale-110 ${
                                 trend === 'up' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
                             }`}>
                                 {trend === 'up' ? '↑' : '↓'} {diff}
                             </span>
                         </div>
-                        <p className={`mt-3 text-4xl font-bold ${numColor}`}>{value}</p>
-                        <p className="mt-1 text-[11px] text-zinc-500">{sub}</p>
+                        <p className={`mt-3 text-4xl font-bold transition-all duration-300 group-hover:scale-[1.03] ${numColor}`}>{value}</p>
+                        <p className="mt-1 text-[11px] text-zinc-500 group-hover:text-zinc-400 transition-colors">{sub}</p>
                     </div>
                 ))}
             </div>
@@ -521,13 +521,17 @@ const DashboardPage = () => {
                 </div>
             </section>
 
-            {trafficDetailsPeriod && (
-                <TrafficDetailsModal
-                    period={trafficDetailsPeriod}
-                    onClose={() => setTrafficDetailsPeriod(null)}
-                    monitorStats={data.car_monitor?.[trafficDetailsPeriod]}
-                />
-            )}
+            <TrafficDetailsModal
+                isOpen={trafficDetailsPeriod !== null}
+                period={trafficDetailsPeriod ?? 'daily'}
+                onClose={() => setTrafficDetailsPeriod(null)}
+                onPeriodChange={(p) => {
+                    const timeMap = { daily: 'today' as const, weekly: 'week' as const, monthly: 'month' as const, yearly: 'year' as const };
+                    setTimeFilter(timeMap[p]);
+                    setTrafficDetailsPeriod(p);
+                }}
+                carMonitor={data.car_monitor}
+            />
 
         </div>
     );
@@ -1040,19 +1044,25 @@ interface TrafficLog {
 }
 
 const TrafficDetailsModal = ({
+    isOpen,
     period,
     onClose,
-    monitorStats,
+    onPeriodChange,
+    carMonitor,
 }: {
+    isOpen: boolean;
     period: 'daily' | 'weekly' | 'monthly' | 'yearly';
     onClose: () => void;
-    monitorStats?: { count: number; entries: number; exits: number; trend: 'up' | 'down'; diff: number };
+    onPeriodChange: (p: 'daily' | 'weekly' | 'monthly' | 'yearly') => void;
+    carMonitor?: DashboardOverview['car_monitor'];
 }) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 250);
     const [logs, setLogs] = useState<TrafficLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
+    const monitorStats = carMonitor?.[period];
     const apiPeriod = period === 'daily' ? 'today' : period === 'weekly' ? 'week' : period === 'monthly' ? 'month' : 'year';
     const periodLabel = period === 'daily' ? 'Daily' : period === 'weekly' ? 'Weekly' : period === 'monthly' ? 'Monthly' : 'Yearly';
 
@@ -1066,6 +1076,7 @@ const TrafficDetailsModal = ({
     const totalPct = (totalVal / maxVal) * 100;
 
     useEffect(() => {
+        if (!isOpen) return;
         setLoading(true);
         setLogs([]);
         setPage(1);
@@ -1079,7 +1090,7 @@ const TrafficDetailsModal = ({
             })
             .catch((err) => console.error(err))
             .finally(() => setLoading(false));
-    }, [apiPeriod]);
+    }, [apiPeriod, isOpen]);
 
     const loadMore = () => {
         if (!hasMore || loading) return;
@@ -1097,54 +1108,92 @@ const TrafficDetailsModal = ({
 
     // Body scroll lock
     useEffect(() => {
-        document.body.style.overflow = "hidden";
+        if (isOpen) {
+            document.body.style.overflow = "hidden";
+        }
         return () => {
             document.body.style.overflow = "";
         };
-    }, []);
+    }, [isOpen]);
+
+    if (!shouldRender) return null;
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] bg-black/75 p-4 backdrop-blur-md flex items-center justify-center"
+            className={`fixed inset-0 z-[9999] bg-black/75 p-4 backdrop-blur-md flex items-center justify-center transition-opacity duration-200 ${
+                isAnimatingOut ? 'opacity-0 animate-modal-backdrop-out' : 'opacity-100 animate-modal-backdrop-in'
+            }`}
             role="dialog"
             aria-modal="true"
             onClick={onClose}
         >
             <div
-                className="mx-auto flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24] shadow-2xl backdrop-blur-xl text-zinc-100"
+                className={`mx-auto flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24] shadow-2xl backdrop-blur-xl text-zinc-100 transition-all duration-300 ${
+                    isAnimatingOut ? 'animate-modal-panel-out' : 'animate-modal-panel-in'
+                }`}
                 onClick={(event) => event.stopPropagation()}
             >
-                {/* Header */}
-                <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-4">
+                {/* Header with Smooth Tab Switches */}
+                <div className="flex flex-col gap-3 border-b border-white/5 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-xl font-bold text-white">{periodLabel} Traffic Details</h2>
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            <span>{periodLabel} Traffic Details</span>
+                            <span className="rounded-full bg-[#C5A073]/10 px-2.5 py-0.5 text-xs font-semibold text-[#C5A073] border border-[#C5A073]/20">
+                                {periodLabel}
+                            </span>
+                        </h2>
                         <p className="text-xs text-zinc-400 mt-1">Detailed list of car entries and exits for this period</p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
-                        aria-label="Close popup"
-                    >
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+
+                    <div className="flex items-center gap-3">
+                        {/* Period Selector Tabs */}
+                        <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-zinc-900/80 p-1">
+                            {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => {
+                                const isTabActive = period === p;
+                                const tabLabel = p === 'daily' ? 'Daily' : p === 'weekly' ? 'Weekly' : p === 'monthly' ? 'Monthly' : 'Yearly';
+                                return (
+                                    <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => onPeriodChange(p)}
+                                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-300 ${
+                                            isTabActive
+                                                ? 'bg-gradient-to-r from-[#C5A073] to-[#d4b589] text-[#121212] shadow-md scale-[1.03]'
+                                                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                    >
+                                        {tabLabel}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                            aria-label="Close popup"
+                        >
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary banner */}
                 <div className="grid grid-cols-3 divide-x divide-white/5 border-b border-white/5 bg-zinc-950/40 py-4 px-6 text-center">
                     <div>
                         <span className="block text-xs text-zinc-400 font-medium uppercase tracking-wider">Entries</span>
-                        <span className="block text-2xl font-bold text-zinc-100 mt-1">{monitorStats?.entries ?? 0}</span>
+                        <span className="block text-2xl font-bold text-zinc-100 mt-1 transition-all duration-300">{monitorStats?.entries ?? 0}</span>
                     </div>
                     <div>
                         <span className="block text-xs text-zinc-400 font-medium uppercase tracking-wider">Exits</span>
-                        <span className="block text-2xl font-bold text-red-450 mt-1">{monitorStats?.exits ?? 0}</span>
+                        <span className="block text-2xl font-bold text-red-450 mt-1 transition-all duration-300">{monitorStats?.exits ?? 0}</span>
                     </div>
                     <div>
                         <span className="block text-xs text-zinc-400 font-medium uppercase tracking-wider">Total Passes</span>
-                        <span className="block text-2xl font-bold text-[#C5A073] mt-1">{monitorStats?.count ?? 0}</span>
+                        <span className="block text-2xl font-bold text-[#C5A073] mt-1 transition-all duration-300">{monitorStats?.count ?? 0}</span>
                     </div>
                 </div>
 
