@@ -20,11 +20,13 @@ interface AuthFormProps {
 }
 
 const SparkleGlyph = () => (
-    <img
-        src={logoSrc}
-        alt="Pueblo de Panay"
-        className="max-h-28 w-auto object-contain drop-shadow-md"
-    />
+    <div className="relative group cursor-pointer">
+        <img
+            src={logoSrc}
+            alt="Pueblo de Panay"
+            className="max-h-28 w-auto object-contain drop-shadow-md transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-108 group-hover:rotate-1 group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.4)] animate-logo-pulse"
+        />
+    </div>
 );
 
 const AuthForm = ({

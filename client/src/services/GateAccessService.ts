@@ -73,7 +73,10 @@ const GateAccessService = {
     residentLogin: (payload: Record<string, string>) =>
         AxiosInstance.post("/auth/resident/login", payload),
     residentRegister: (data: Record<string, unknown>) => AxiosInstance.post("/auth/resident/register", data),
-    updateProfile: (data: Record<string, unknown>) => AxiosInstance.put("/auth/profile", data),
+    updateProfile: (data: Record<string, unknown> | FormData) =>
+        data instanceof FormData
+            ? AxiosInstance.post("/auth/profile", data, { headers: { "Content-Type": "multipart/form-data" } })
+            : AxiosInstance.put("/auth/profile", data),
     testConnection: (url: string) => AxiosInstance.post("/gate/test-connection", { url }),
 };
 

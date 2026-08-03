@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FC, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FC, type ReactNode } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import GateAccessService from "../../services/GateAccessService";
 import GenderService from "../../services/GenderService";
@@ -73,7 +73,49 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
   const [statusModal, setStatusModal] = useState<{ type: "success" | "error"; title: string; message: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [editForm, setEditForm] = useState<ProfileForm>(() => buildFormFromUser(user));
-  const [genders, setGenders] = useState<{ gender_id: number; gender: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleAvatarClick = () => {
+    if (uploading) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setSaveError("Please select a valid image file (JPG, PNG, WebP).");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setSaveError("");
+
+      const formData = new FormData();
+      formData.append("profile_picture", file);
+
+      const res = await GateAccessService.updateProfile(formData);
+      if (res.data?.user) {
+        await refreshUser();
+        setStatusModal({
+          type: "success",
+          title: "Profile Picture Updated",
+          message: "Your profile picture has been updated successfully.",
+        });
+      }
+    } catch (err: any) {
+      console.error("Failed to upload profile picture:", err);
+      setSaveError(err.response?.data?.message || "Failed to upload image. Please try again.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -181,6 +223,14 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-4 sm:p-6 lg:p-8 text-white">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              className="hidden"
+            />
+
             <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-3xl font-bold tracking-tight text-white">My Profile</h2>
@@ -203,12 +253,32 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
 
             <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl bg-gradient-to-r from-[#173e8e] to-[#0d536c] p-5 sm:p-6 shadow-md">
               <div className="flex items-center gap-4 sm:gap-5">
-                <div className="flex h-14 w-14 sm:h-[72px] sm:w-[72px] shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/10 overflow-hidden shadow-inner">
+                <div 
+                  onClick={handleAvatarClick}
+                  className="group relative flex h-16 w-16 sm:h-[76px] sm:w-[76px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-white/40 bg-white/10 text-xl sm:text-2xl font-bold tracking-wide text-white shadow-lg transition hover:border-white hover:scale-105"
+                  title="Click to upload profile picture"
+                >
                   {user.profile_picture && user.profile_picture.length > 0 ? (
-                    <img src={user.profile_picture} alt="" className="h-full w-full object-cover" />
+                    <img src={user.profile_picture} alt={fullName} className="h-full w-full object-cover" />
                   ) : (
                     <span className="text-xl sm:text-2xl font-bold tracking-wide text-white">{userInitials}</span>
                   )}
+                  <div className={`absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white transition-opacity duration-200 ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    {uploading ? (
+                      <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <>
+                        <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <h3 className="text-xl sm:text-2xl font-bold text-white">{fullName}</h3>
@@ -253,9 +323,9 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-              <div className="flex flex-col gap-6">
-                <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] items-stretch">
+              <div className="flex flex-col gap-6 h-full">
+                <div className="h-full rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
                   <div className="mb-5 flex items-center gap-3">
                     <div className="h-6 w-6 rounded-md bg-[#2d3a56] flex items-center justify-center">
                       <svg className="h-3.5 w-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -360,58 +430,47 @@ const UserProfileModal: FC<UserProfileModalProps> = ({ isOpen, onClose, user, on
 
               </div>
 
-              <div className="h-fit rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
-                <div className="mb-5 flex items-center gap-3">
-                  <div className="h-6 w-6 rounded-md bg-[#243e30] flex items-center justify-center">
-                    <svg className="h-3.5 w-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
+              {/* Right Side: Account Information (Narrower Width, Perfectly Aligned Rows) */}
+              <div className="flex flex-col h-full">
+                <div className="h-full rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+                  <div className="mb-5 flex items-center gap-3">
+                    <div className="h-7 w-7 rounded-md bg-[#243e30] flex items-center justify-center">
+                      <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-[17px] font-bold text-white">Account Information</h4>
                   </div>
-                  <h4 className="text-[17px] font-bold text-white">Account Information</h4>
-                </div>
 
-                {!isEditing ? (
-                  <div className="flex flex-col gap-4">
-                    <InfoField label="Email" value={user.email} compact />
-                    <InfoField label="Username" value={user.username ? `@${user.username}` : undefined} compact />
-                    <InfoField label="Account ID" value={`#${user.user_id}`} compact />
-                    {isResident && (
-                      <InfoField label="RFID UID" value={user.rfid_card_uid} compact />
-                    )}
-                    <div className="rounded-lg border border-green-900/60 bg-[#16271e] p-5 shadow-inner">
-                      <p className="text-[11px] font-bold uppercase tracking-widest text-[#4ade80]">Access Status</p>
-                      <div className="mt-2.5 flex items-center gap-2.5 text-[15px] font-bold text-[#4ade80]">
-                        <span className="h-3 w-3 rounded-full bg-[#4ade80]"></span>
-                        Active
-                      </div>
+                  {!isEditing ? (
+                    <div className="flex flex-col gap-4">
+                      <InfoField label="Email" value={user.email} />
+                      <InfoField label="Username" value={user.username ? `@${user.username}` : undefined} />
+                      <InfoField label="Account ID" value={`#${user.user_id}`} />
+                      {isResident && (
+                        <InfoField label="RFID UID" value={user.rfid_card_uid} />
+                      )}
                     </div>
-                  </div>
-                ) : isResident ? (
-                  <div className="flex flex-col gap-4">
-                    <EditField label="Email" error={fieldError("email")}>
-                      <input className={inputClass} type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-                    </EditField>
-                    <EditField label="Username" error={fieldError("username")}>
-                      <input className={inputClass} value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} />
-                    </EditField>
-                    <InfoField label="Account ID" value={`#${user.user_id}`} compact />
-                    <InfoField label="RFID UID" value={user.rfid_card_uid} compact />
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    <EditField label="Email" error={fieldError("email")}>
-                      <input className={inputClass} type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-                    </EditField>
-                    <InfoField label="Account ID" value={`#${user.user_id}`} compact />
-                    <div className="rounded-lg border border-green-900/60 bg-[#16271e] p-5 shadow-inner">
-                      <p className="text-[11px] font-bold uppercase tracking-widest text-[#4ade80]">Access Status</p>
-                      <div className="mt-2.5 flex items-center gap-2.5 text-[15px] font-bold text-[#4ade80]">
-                        <span className="h-3 w-3 rounded-full bg-[#4ade80]"></span>
-                        Active
-                      </div>
+                  ) : isResident ? (
+                    <div className="flex flex-col gap-4">
+                      <EditField label="Email" error={fieldError("email")}>
+                        <input className={inputClass} type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                      </EditField>
+                      <EditField label="Username" error={fieldError("username")}>
+                        <input className={inputClass} value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} />
+                      </EditField>
+                      <InfoField label="Account ID" value={`#${user.user_id}`} />
+                      <InfoField label="RFID UID" value={user.rfid_card_uid} />
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      <EditField label="Email" error={fieldError("email")}>
+                        <input className={inputClass} type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                      </EditField>
+                      <InfoField label="Account ID" value={`#${user.user_id}`} />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -149,10 +149,14 @@ const AdminLogin = () => {
                 onClose={() => setForgotPasswordOpen(false)}
             />
 
-            <div className="mb-8 flex flex-col items-center text-center">
-                <img src={logoSrc} alt="Pueblo de Panay" className="max-h-28 w-auto object-contain drop-shadow-md" />
-                <h2 className="mt-4 text-[1.65rem] font-semibold tracking-tight text-white">Admin Portal</h2>
-                <p className="mt-2 max-w-[20rem] text-sm leading-relaxed text-violet-200/88">
+            <div className="mb-8 flex flex-col items-center text-center group cursor-pointer">
+                <img
+                    src={logoSrc}
+                    alt="Pueblo de Panay"
+                    className="max-h-28 w-auto object-contain drop-shadow-md transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-108 group-hover:rotate-1 group-hover:drop-shadow-[0_0_16px_rgba(255,255,255,0.4)] animate-logo-pulse"
+                />
+                <h2 className="mt-4 text-[1.65rem] font-semibold tracking-tight text-white transition-colors duration-300 group-hover:text-violet-100">Admin Portal</h2>
+                <p className="mt-2 max-w-[20rem] text-sm leading-relaxed text-violet-200/88 transition-colors duration-300 group-hover:text-white">
                     Sign in to monitor security guard login and logout activity.
                 </p>
             </div>

@@ -152,24 +152,28 @@ const ProtectedLayout = () => {
           <SidebarHoverLabel label={`${roleTitle} • ${userFullName}`} isCollapsed={isCollapsed} variant="dark" className="w-full">
             <button
               onClick={toggleCollapsed}
-              className={`flex items-center focus:outline-none cursor-pointer transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-full ${
+              className={`flex items-center focus:outline-none cursor-pointer transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-full group ${
                 isCollapsed ? 'justify-center' : 'justify-start'
               }`}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              <img src={puebloShellLogo} alt="Pueblo de Panay Emblem" className="h-12 w-auto shrink-0 object-contain" />
+              <img
+                src={puebloShellLogo}
+                alt="Pueblo de Panay Emblem"
+                className="h-12 w-auto shrink-0 object-contain transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:rotate-[-2deg] group-hover:drop-shadow-[0_0_14px_rgba(197,160,115,0.6)] animate-logo-pulse"
+              />
               <div className={`grid transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
                 isCollapsed ? 'grid-cols-[0fr] opacity-0 ml-0' : 'grid-cols-[1fr] opacity-100 ml-3.5'
               }`}>
                 <div className="overflow-hidden whitespace-nowrap">
-                  <div className="flex flex-col items-center justify-center text-center select-none shrink-0 leading-none">
-                    <span className="inline-block font-serif italic text-white text-[18px] tracking-wide border-b border-white/40 pb-[2px] px-1 leading-none font-semibold text-center">
+                  <div className="flex flex-col items-center justify-center text-center select-none shrink-0 leading-none transition-transform duration-300 ease-out group-hover:translate-x-0.5">
+                    <span className="inline-block font-serif italic text-white text-[18px] tracking-wide border-b border-white/40 pb-[2px] px-1 leading-none font-semibold text-center transition-all duration-300 group-hover:text-[#C5A073] group-hover:border-[#C5A073] group-hover:tracking-wider">
                       Pueblo de Panay
                     </span>
-                    <span className="text-[9px] font-sans font-bold uppercase tracking-[0.25em] text-zinc-400 text-center mt-[3.5px] leading-none">
+                    <span className="text-[9px] font-sans font-bold uppercase tracking-[0.25em] text-zinc-400 text-center mt-[3.5px] leading-none transition-all duration-300 group-hover:text-zinc-200 group-hover:tracking-[0.3em]">
                       TOWNSHIP
                     </span>
-                    <span className="text-[11px] font-serif italic text-zinc-300 tracking-wider text-center mt-[2.5px] leading-none">
+                    <span className="text-[11px] font-serif italic text-zinc-300 tracking-wider text-center mt-[2.5px] leading-none transition-all duration-300 group-hover:text-[#E2C7A7]">
                       Life. Work. Balance.
                     </span>
                   </div>

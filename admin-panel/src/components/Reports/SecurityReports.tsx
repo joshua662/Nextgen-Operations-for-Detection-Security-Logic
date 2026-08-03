@@ -48,7 +48,13 @@ const SecurityReports = () => {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <ActivityLogTable logs={guardLogs} loading={loading} emptyMessage="No security events found." />
+      <ActivityLogTable
+        logs={guardLogs}
+        loading={loading}
+        emptyMessage="No security events found."
+        hideContext={true}
+        hideIpAddress={true}
+      />
     </div>
   )
 }

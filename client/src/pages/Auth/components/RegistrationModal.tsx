@@ -6,6 +6,7 @@ import { useModalAnimation } from "../../../hooks/useModalAnimation";
 import type { AdmissionRegistrationForm } from "./authTypes";
 import puebloDePanayLogo from "../../../assets/img/pdp-logo-invert.png";
 import loginBackdrop from "../../../assets/img/subdivision-gate-background.png";
+import { CustomDatePicker } from "./CustomDatePicker";
 
 type TrailingIconName = "user" | "calendar" | "email" | "phone" | "lock" | "plate";
 
@@ -495,11 +496,11 @@ const RegistrationModal = ({
                                         onChange={(e) => setForm({ ...form, middle_name: e.target.value })}
                                         trailingIcon="user"
                                     />
-                                    <UnderlineField
-                                        label="Date of Birth (DD/MM/YYYY)" name="adm_dob" type="date"
+                                    <CustomDatePicker
+                                        label="Date of Birth (DD/MM/YYYY)" name="adm_dob"
                                         value={form.birth_date}
                                         onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
-                                        required error={err("birth_date")} trailingIcon="calendar"
+                                        required error={err("birth_date")}
                                     />
                                     <UnderlineField
                                         label="Email" name="adm_email" type="email" placeholder="you@gmail.com"
@@ -513,7 +514,7 @@ const RegistrationModal = ({
                                         </span>
                                         <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2">
                                             {genders.map((g) => (
-                                                <label key={g.gender_id} className="flex cursor-pointer items-center gap-2 text-[14.5px] text-violet-100/90">
+                                                <label key={g.gender_id} className="flex cursor-pointer items-center gap-2 text-[14.5px] text-violet-100/90 transition-colors hover:text-white">
                                                     <input
                                                         type="radio" name="adm_gender"
                                                         checked={form.gender === String(g.gender_id)}
@@ -534,7 +535,7 @@ const RegistrationModal = ({
                                     </span>
                                     <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2">
                                         {["Security Guard", "Resident"].map((r) => (
-                                            <label key={r} className="flex cursor-pointer items-center gap-2 text-[14.5px] text-violet-100/90">
+                                            <label key={r} className="flex cursor-pointer items-center gap-2 text-[14.5px] text-violet-100/90 transition-colors hover:text-white">
                                                 <input
                                                     type="radio" name="adm_role"
                                                     checked={form.role === r}
@@ -548,30 +549,38 @@ const RegistrationModal = ({
                                     {err("role") && <p className="mt-1.5 text-xs text-red-400">{err("role")}</p>}
                                 </div>
 
-                                {form.role === "Resident" && (
-                                    <div className="grid gap-x-16 gap-y-0 md:grid-cols-2">
-                                        <UnderlineField
-                                            label="Contact Number"
-                                            name="adm_contact"
-                                            placeholder="e.g. 09171234567"
-                                            value={form.contact_number}
-                                            onChange={(e) => setForm({ ...form, contact_number: e.target.value })}
-                                            required
-                                            error={err("contact_number")}
-                                            trailingIcon="phone"
-                                        />
-                                        <UnderlineField
-                                            label="Plate Number"
-                                            name="adm_plate"
-                                            placeholder="e.g. ABC1234"
-                                            value={form.plate_number}
-                                            onChange={(e) => setForm({ ...form, plate_number: e.target.value.toUpperCase() })}
-                                            required
-                                            error={err("plate_number")}
-                                            trailingIcon="plate"
-                                        />
+                                <div
+                                    className={`grid transition-all duration-500 ease-in-out ${
+                                        form.role === "Resident"
+                                            ? "grid-rows-[1fr] opacity-100 translate-y-0"
+                                            : "grid-rows-[0fr] opacity-0 -translate-y-3 pointer-events-none"
+                                    }`}
+                                >
+                                    <div className="overflow-hidden">
+                                        <div className="grid gap-x-16 gap-y-0 md:grid-cols-2 pt-1">
+                                            <UnderlineField
+                                                label="Contact Number"
+                                                name="adm_contact"
+                                                placeholder="e.g. 09171234567"
+                                                value={form.contact_number}
+                                                onChange={(e) => setForm({ ...form, contact_number: e.target.value })}
+                                                required={form.role === "Resident"}
+                                                error={err("contact_number")}
+                                                trailingIcon="phone"
+                                            />
+                                            <UnderlineField
+                                                label="Plate Number"
+                                                name="adm_plate"
+                                                placeholder="e.g. ABC1234"
+                                                value={form.plate_number}
+                                                onChange={(e) => setForm({ ...form, plate_number: e.target.value.toUpperCase() })}
+                                                required={form.role === "Resident"}
+                                                error={err("plate_number")}
+                                                trailingIcon="plate"
+                                            />
+                                        </div>
                                     </div>
-                                )}
+                                </div>
 
                                 <p className="mb-2 text-center text-[12.5px] leading-relaxed text-violet-200/65">
                                     Your username and password will be generated automatically and sent to the email address above.
