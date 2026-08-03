@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type Form
 import { createPortal } from 'react-dom'
 import Spinner from '../Spinner/Spinner'
 import { useModalAnimation } from '../../hooks/useModalAnimation'
+import { CustomDatePicker } from './CustomDatePicker'
 
 const loginBackdrop = '/assets/subdivision-gate-background.png'
 const logoSrc = '/assets/pdp-logo-invert.png'
@@ -351,7 +352,7 @@ const RegistrationModal = ({
                                 <UnderlineField label="First Name" name="adm_fn" placeholder="e.g. Juan" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required error={err("first_name")} trailingIcon="user" />
                                 <UnderlineField label="Last Name" name="adm_ln" placeholder="e.g. Santos" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required error={err("last_name")} trailingIcon="user" />
                                 <UnderlineField label="Middle Name" name="adm_mn" placeholder="Optional" value={form.middle_name} onChange={(e) => setForm({ ...form, middle_name: e.target.value })} trailingIcon="user" />
-                                <UnderlineField label="Date of Birth (DD/MM/YYYY)" name="adm_dob" type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} required error={err("birth_date")} trailingIcon="calendar" />
+                                <CustomDatePicker label="Date of Birth (DD/MM/YYYY)" name="adm_dob" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} required error={err("birth_date")} />
                                 <UnderlineField label="Email" name="adm_email" type="email" placeholder="you@gmail.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required error={err("email")} trailingIcon="email" />
                                 <div className="mb-7">
                                     <span className="mb-2 block text-[13.5px] font-medium text-violet-200/80"><span className="mr-1 text-red-400">*</span>Gender</span>

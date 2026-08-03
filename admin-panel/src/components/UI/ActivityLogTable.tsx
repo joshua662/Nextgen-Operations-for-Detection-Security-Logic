@@ -17,11 +17,12 @@ const formatEventLabel = (eventType: string) =>
     .join(' ')
 
 const formatRoleLabel = (role: string | null | undefined) => {
-  if (!role) return ''
-  if (role === 'admin') return 'admin'
-  if (role === 'security' || role === 'guard') return 'security Guard'
-  if (role === 'resident') return 'resident'
-  return role
+  if (!role) return 'Security Guard'
+  const normalized = role.toLowerCase().trim()
+  if (normalized === 'admin') return 'Admin'
+  if (normalized === 'security' || normalized === 'guard' || normalized === 'security_guard') return 'Security Guard'
+  if (normalized === 'resident') return 'Resident'
+  return role.charAt(0).toUpperCase() + role.slice(1)
 }
 
 const formatContext = (context: Record<string, unknown> | null | undefined) => {
@@ -37,7 +38,7 @@ const TableSkeleton = ({ hideContext, hideIpAddress }: { hideContext: boolean; h
           <tr>
             <AdminTh>Time</AdminTh>
             <AdminTh>Event</AdminTh>
-            <AdminTh>Identifier</AdminTh>
+            <AdminTh>Role</AdminTh>
             <AdminTh>User</AdminTh>
             {!hideIpAddress && <AdminTh>IP Address</AdminTh>}
             {!hideContext && <AdminTh>Context</AdminTh>}
@@ -80,7 +81,7 @@ const ActivityLogTable = ({
           <tr>
             <AdminTh>Time</AdminTh>
             <AdminTh>Event</AdminTh>
-            <AdminTh>Identifier</AdminTh>
+            <AdminTh>Role</AdminTh>
             <AdminTh>User</AdminTh>
             {!hideIpAddress && <AdminTh>IP Address</AdminTh>}
             {!hideContext && <AdminTh>Context</AdminTh>}
@@ -94,17 +95,16 @@ const ActivityLogTable = ({
                 <AdminTd>
                   <EventBadge eventType={log.event_type} />
                 </AdminTd>
-                <AdminTd mono>{log.username_attempted ?? '—'}</AdminTd>
+                <AdminTd>{formatRoleLabel(log.user?.role || (log.context?.role as string))}</AdminTd>
                 <AdminTd>
                   {log.user ? (
-                    <span>
-                      <span className="text-zinc-100">
-                        {log.user.first_name} {log.user.last_name}
-                      </span>{' '}
-                      <span className="text-zinc-500">{formatRoleLabel(log.user.role)}</span>
+                    <span className="font-medium text-zinc-100">
+                      {log.user.first_name} {log.user.last_name}
                     </span>
                   ) : (
-                    <span className="text-zinc-500">N/A</span>
+                    <span className="font-mono text-[13px] text-zinc-400">
+                      {log.username_attempted || 'N/A'}
+                    </span>
                   )}
                 </AdminTd>
                 {!hideIpAddress && (

@@ -264,10 +264,10 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
           </div>
 
           <form onSubmit={handleSaveProfile}>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] items-stretch">
               {/* Left Side: Personal Information */}
-              <div className="flex flex-col gap-6">
-                <div className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+              <div className="flex flex-col h-full">
+                <div className="h-full rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
                   <div className="mb-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-7 w-7 rounded-md bg-[#2d3a56] flex items-center justify-center">
@@ -360,31 +360,35 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
                 </div>
               </div>
 
-              {/* Right Side: Account Information */}
-              <div className="h-fit rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
-                <div className="mb-5 flex items-center gap-3">
-                  <div className="h-7 w-7 rounded-md bg-[#243e30] flex items-center justify-center">
-                    <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
+              {/* Right Side: Account Information (Narrower Width, Perfectly Aligned Rows) */}
+              <div className="flex flex-col h-full">
+                <div className="h-full rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+                  <div className="mb-5 flex items-center gap-3">
+                    <div className="h-7 w-7 rounded-md bg-[#243e30] flex items-center justify-center">
+                      <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-[17px] font-bold text-white">Account Information</h4>
                   </div>
-                  <h4 className="text-[17px] font-bold text-white">Account Information</h4>
-                </div>
 
-                <div className="flex flex-col gap-4">
                   {!isEditing ? (
-                    <>
+                    <div className="flex flex-col gap-4">
                       <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Email</p>
-                        <p className="mt-1.5 text-[14px] font-medium text-gray-100">{user.email || '—'}</p>
+                        <p className="mt-1.5 text-[15px] font-semibold text-gray-100 break-all">{user.email || '—'}</p>
                       </div>
                       <div className="rounded-lg border border-white/5 bg-black/25 p-4">
                         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Username</p>
-                        <p className="mt-1.5 text-[14px] font-medium text-gray-100">{user.username}</p>
+                        <p className="mt-1.5 text-[15px] font-semibold text-gray-100">{user.username}</p>
                       </div>
-                    </>
+                      <div className="rounded-lg border border-white/5 bg-black/25 p-4">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Account ID</p>
+                        <p className="mt-1.5 text-[15px] font-bold text-gray-100">#{user.user_id}</p>
+                      </div>
+                    </div>
                   ) : (
-                    <>
+                    <div className="flex flex-col gap-4">
                       <div>
                         <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-300 mb-1.5">Email Address *</label>
                         <input
@@ -405,21 +409,14 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
                           className={inputClass}
                         />
                       </div>
-                    </>
-                  )}
-
-                  <div className="rounded-lg border border-white/5 bg-black/25 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Account ID</p>
-                    <p className="mt-1.5 text-[14px] font-bold text-gray-100">#{user.user_id}</p>
-                  </div>
-                  
-                  <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-5 shadow-inner">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#4ade80]">Access Status</p>
-                    <div className="mt-2.5 flex items-center gap-2.5 text-[15px] font-bold text-[#4ade80]">
-                      <span className="h-3 w-3 rounded-full bg-[#4ade80]"></span>
-                      Active
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-300 mb-1.5">Account ID</label>
+                        <div className="w-full rounded-lg border border-white/10 bg-black/20 px-3.5 py-2.5 text-[14px] font-medium text-gray-400">
+                          #{user.user_id}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -372,7 +372,7 @@ const DashboardPage = () => {
                             </svg>
                         </a>
                     </div>
-                    <div className="flex-1 w-full min-h-[260px]">
+                    <div className="flex-1 w-full min-h-[280px]">
                         <BarChart
                             data={bklitChartData}
                             xDataKey="month"
@@ -381,8 +381,8 @@ const DashboardPage = () => {
                             barGap={0.2}
                         >
                             <Grid horizontal />
-                            <Bar dataKey="authorized" label="Authorized" lineCap="round" fill="var(--chart-1)" fadedOpacity={0.3} groupGap={4} />
-                            <Bar dataKey="unauthorized" label="Not Authorized" lineCap="round" fill="var(--chart-2)" fadedOpacity={0.3} groupGap={4} />
+                            <Bar dataKey="authorized" label="Authorized" lineCap="round" fill="#34d399" fadedOpacity={0.3} groupGap={4} />
+                            <Bar dataKey="unauthorized" label="Not Authorized" lineCap="round" fill="#f87171" fadedOpacity={0.3} groupGap={4} />
                             <BarXAxis />
                             <ChartTooltip showCrosshair={false} />
                         </BarChart>

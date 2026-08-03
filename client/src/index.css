@@ -149,3 +149,37 @@
 .animate-fade-in-up {
   animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* ── Logo & Text Animation System ── */
+@keyframes logoPulseGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(197, 160, 115, 0.25));
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(197, 160, 115, 0.55));
+    transform: translateY(-2px) scale(1.02);
+  }
+}
+
+@keyframes textShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-logo-pulse {
+  animation: logoPulseGlow 4s ease-in-out infinite;
+}
+
+.animate-text-shimmer {
+  background: linear-gradient(90deg, #ffffff 0%, #C5A073 50%, #ffffff 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: textShimmer 6s linear infinite;
+}

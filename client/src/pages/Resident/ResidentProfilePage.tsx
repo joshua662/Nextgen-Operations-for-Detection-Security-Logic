@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import GenderService from "../../services/GenderService";
 import { useAuth } from "../../contexts/AuthContext";
@@ -19,11 +19,50 @@ type ProfileForm = {
 };
 
 const ResidentProfilePage = () => {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
     const [genders, setGenders] = useState<{ gender_id: number; gender: string }[]>([]);
     const [showEditModal, setShowEditModal] = useState(false);
     const [message, setMessage] = useState("");
     const [submitting, setSubmitting] = useState(false);
+
+    const handleAvatarClick = () => {
+        if (uploading) return;
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            setMessage("Please select a valid image file (JPG, PNG, WebP).");
+            return;
+        }
+
+        try {
+            setUploading(true);
+            setMessage("");
+
+            const formData = new FormData();
+            formData.append("profile_picture", file);
+
+            const res = await GateAccessService.updateProfile(formData);
+            if (res.data?.user) {
+                await refreshUser();
+                setMessage("Profile picture updated successfully.");
+            }
+        } catch (err: unknown) {
+            console.error("Failed to upload profile picture:", err);
+            setMessage("Failed to upload profile picture. Please try again.");
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
     const [form, setForm] = useState<ProfileForm>({
         first_name: "",
         middle_name: "",
@@ -94,6 +133,14 @@ const ResidentProfilePage = () => {
 
     return (
         <div className="flex h-full w-full flex-1 flex-col gap-6">
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                className="hidden"
+            />
+
             {message && (
                 <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
                     <p className="text-sm font-medium text-green-800 dark:text-green-200">{message}</p>
@@ -108,8 +155,32 @@ const ResidentProfilePage = () => {
 
             <section className="rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-700 p-8 shadow-lg dark:from-blue-800 dark:to-cyan-900">
                 <div className="flex flex-col gap-6 md:flex-row md:items-center">
-                    <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 border-white/30 bg-white/20 text-3xl font-bold text-white">
-                        {initials}
+                    <div
+                        onClick={handleAvatarClick}
+                        className="group relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-white/30 bg-white/20 text-3xl font-bold text-white shadow-lg transition hover:border-white hover:scale-105"
+                        title="Click to upload profile picture"
+                    >
+                        {user?.user?.profile_picture ? (
+                            <img src={user.user.profile_picture} alt={displayName} className="h-full w-full object-cover" />
+                        ) : (
+                            initials
+                        )}
+                        <div className={`absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white transition-opacity duration-200 ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                            {uploading ? (
+                                <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            ) : (
+                                <>
+                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider">Upload</span>
+                                </>
+                            )}
+                        </div>
                     </div>
                     <div className="min-w-0 flex-1">
                         <h2 className="break-words text-3xl font-bold text-white">{displayName}</h2>
@@ -129,39 +200,36 @@ const ResidentProfilePage = () => {
                 </div>
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 lg:col-span-2">
-                    <SectionTitle title="Personal Information" tone="blue" />
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <InfoTile label="First Name" value={form.first_name} />
-                        <InfoTile label="Last Name" value={form.last_name} />
-                        <InfoTile label="Age" value={user?.user?.age} />
-                        <InfoTile label="Contact Number" value={form.contact_number} />
-                        <InfoTile label="Address" value={form.address} wide />
-                    </div>
-
-                    <div className="my-8 border-t border-zinc-200 pt-8 dark:border-zinc-700">
-                        <SectionTitle title="Vehicle Information" tone="violet" />
+            <div className="grid gap-6 lg:grid-cols-[1fr_320px] items-stretch">
+                <section className="flex flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+                    <div>
+                        <SectionTitle title="Personal Information" tone="blue" />
                         <div className="grid gap-4 md:grid-cols-2">
-                            <InfoTile label="Plate Number" value={form.plate_number} highlight />
-                            <InfoTile label="Car Model" value={form.car_model} />
-                            <InfoTile label="Car Color" value={form.car_color} />
+                            <InfoTile label="First Name" value={form.first_name} />
+                            <InfoTile label="Last Name" value={form.last_name} />
+                            <InfoTile label="Age" value={user?.user?.age} />
+                            <InfoTile label="Contact Number" value={form.contact_number} />
+                            <InfoTile label="Address" value={form.address} wide />
+                        </div>
+
+                        <div className="my-8 border-t border-zinc-200 pt-8 dark:border-zinc-700">
+                            <SectionTitle title="Vehicle Information" tone="violet" />
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <InfoTile label="Plate Number" value={form.plate_number} highlight />
+                                <InfoTile label="Car Model" value={form.car_model} />
+                                <InfoTile label="Car Color" value={form.car_color} />
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                <aside className="h-fit rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-                    <SectionTitle title="Account Information" tone="green" />
-                    <div className="space-y-4">
-                        <InfoTile label="Email" value={form.email} compact />
-                        <InfoTile label="Username" value={form.username} compact />
-                        <InfoTile label="Account ID" value={user?.user?.user_id ? `#${user.user.user_id}` : "-"} compact />
-                        <div className="rounded-xl border-2 border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
-                            <p className="mb-2 text-xs font-semibold uppercase text-green-600 dark:text-green-400">Access Status</p>
-                            <div className="flex items-center gap-2">
-                                <span className="h-3 w-3 rounded-full bg-green-500" />
-                                <p className="text-sm font-bold text-green-700 dark:text-green-400">Active</p>
-                            </div>
+                <aside className="flex flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+                    <div>
+                        <SectionTitle title="Account Information" tone="green" />
+                        <div className="space-y-4">
+                            <InfoTile label="Email" value={form.email} />
+                            <InfoTile label="Username" value={form.username} />
+                            <InfoTile label="Account ID" value={user?.user?.user_id ? `#${user.user.user_id}` : "-"} />
                         </div>
                     </div>
                     <button

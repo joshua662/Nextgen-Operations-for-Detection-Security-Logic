@@ -69,8 +69,8 @@ export const BarChart: React.FC<BarChartProps> = ({
     });
     if (bars.length === 0) {
       bars.push(
-        { dataKey: "authorized", fill: "var(--chart-1)", lineCap: "round", label: "Authorized" },
-        { dataKey: "unauthorized", fill: "var(--chart-2)", lineCap: "round", label: "Not Authorized" }
+        { dataKey: "authorized", fill: "#34d399", lineCap: "round", label: "Authorized" },
+        { dataKey: "unauthorized", fill: "#f87171", lineCap: "round", label: "Not Authorized" }
       );
     }
     return bars;
@@ -97,7 +97,7 @@ export const BarChart: React.FC<BarChartProps> = ({
     ? ((hoveredIdx + 0.5) / data.length) * 100
     : 0;
 
-  // Clamp percentage between 10% and 90% so vertical card never overflows boundaries
+  // Clamp percentage between 10% and 88% so vertical card never overflows boundaries
   const tooltipLeftPct = Math.max(10, Math.min(88, rawPct));
 
   const tooltipTransform = hoveredIdx === 0
@@ -133,9 +133,9 @@ export const BarChart: React.FC<BarChartProps> = ({
                     : b.dataKey === "unauthorized"
                     ? "Not Authorized"
                     : b.dataKey);
-                const dotColor = b.fill?.startsWith("var")
-                  ? (b.dataKey.includes("unauth") || b.dataKey === "mobile" ? "#71717a" : "#3f3f46")
-                  : (b.fill || "#64748b");
+                const dotColor = (!b.fill || b.fill.startsWith("var"))
+                  ? (b.dataKey.includes("unauth") || b.dataKey === "mobile" ? "#f87171" : "#34d399")
+                  : (b.fill || "#34d399");
 
                 return (
                   <div key={b.dataKey} className="flex items-center justify-between gap-4 text-xs">
@@ -172,9 +172,9 @@ export const BarChart: React.FC<BarChartProps> = ({
                     const heightPct = isZero ? 0 : Math.max(14, Math.min(100, (val / maxVal) * 100));
                     const faded = isAnyHovered && !isGroupHovered;
 
-                    const fillColor = b.fill?.startsWith("var")
-                      ? (b.dataKey.includes("unauth") || b.dataKey === "mobile" ? "#71717a" : "#3f3f46")
-                      : (b.fill || "#52525b");
+                    const fillColor = (!b.fill || b.fill.startsWith("var"))
+                      ? (b.dataKey.includes("unauth") || b.dataKey === "mobile" ? "#f87171" : "#34d399")
+                      : (b.fill || "#34d399");
 
                     return (
                       <div
@@ -234,9 +234,9 @@ export const BarChart: React.FC<BarChartProps> = ({
             ? (activeItem[keyName] ?? 0)
             : (latestItem ? (latestItem[keyName] ?? 0) : 0);
 
-          const color = b.fill?.startsWith("var")
-            ? (keyName.includes("unauth") || keyName === "mobile" ? "#71717a" : "#3f3f46")
-            : (b.fill || "#71717a");
+          const color = (!b.fill || b.fill.startsWith("var"))
+            ? (keyName.includes("unauth") || keyName === "mobile" ? "#f87171" : "#34d399")
+            : (b.fill || "#34d399");
 
           return (
             <div key={keyName} className="flex items-center gap-1.5 whitespace-nowrap">
