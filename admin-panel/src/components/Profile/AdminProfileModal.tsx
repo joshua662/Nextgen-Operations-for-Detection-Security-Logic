@@ -1,7 +1,20 @@
-import { useRef, useState, useEffect, type ChangeEvent, type FormEvent } from "react"
+import { useRef, useState, useEffect, useMemo, type ChangeEvent, type FormEvent } from "react"
 import { adminAuthApi, type AdminUser } from "../../services/adminApi"
 import { useModalAnimation } from "../../hooks/useModalAnimation"
 import { useAuth } from "../../hooks/useAuth"
+const loginBackdrop = "/assets/subdivision-gate-background.png";
+
+const resolveProfilePictureUrl = (path?: string | null): string | null => {
+  if (!path) return null
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("blob:")) {
+    return path
+  }
+  const cleanPath = path.replace(/^\/+/, "").replace(/^public\//, "")
+  if (cleanPath.startsWith("storage/")) {
+    return `http://127.0.0.1:8000/${cleanPath}`
+  }
+  return `http://127.0.0.1:8000/storage/${cleanPath}`
+}
 
 interface AdminProfileModalProps {
   isOpen: boolean
@@ -16,8 +29,14 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [uploading, setUploading] = useState(false)
+  const [previewAvatar, setPreviewAvatar] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  const displayAvatarUrl = useMemo(() => {
+    if (previewAvatar) return previewAvatar
+    return resolveProfilePictureUrl(user.profile_picture)
+  }, [previewAvatar, user.profile_picture])
 
   const [notification, setNotification] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
 
@@ -64,6 +83,8 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
     try {
       setUploading(true)
       setNotification(null)
+      const objectUrl = URL.createObjectURL(file)
+      setPreviewAvatar(objectUrl)
 
       const formData = new FormData()
       formData.append('profile_picture', file)
@@ -72,7 +93,7 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
       if (res.data?.user) {
         updateUser(res.data.user)
         setNotification({ type: 'success', message: 'Profile picture updated successfully!' })
-        setTimeout(() => setNotification(null), 3500)
+        setTimeout(() => setNotification(null), 3000)
       }
     } catch (err: any) {
       console.error('Failed to upload profile picture:', err)
@@ -150,18 +171,6 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
             className="hidden"
           />
 
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-white">My Profile</h2>
-              <p className="mt-1 text-sm text-gray-400">View and manage your personal and account information</p>
-            </div>
-            <button onClick={onClose} className="rounded-lg p-2 text-gray-400 transition hover:bg-[#2a2a2a] hover:text-white">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
           {notification && (
             <div className={`mb-4 rounded-lg border px-4 py-3 text-sm font-medium ${
               notification.type === 'error' 
@@ -172,94 +181,155 @@ const AdminProfileModal = ({ isOpen, onClose, user, onLogout }: AdminProfileModa
             </div>
           )}
 
-          {/* Profile Header Banner */}
-          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl bg-gradient-to-r from-[#173e8e] to-[#0d536c] p-5 sm:p-6 shadow-md">
-            <div className="flex items-center gap-4 sm:gap-5">
-              <div 
-                onClick={handleAvatarClick}
-                className="group relative flex h-16 w-16 sm:h-[76px] sm:w-[76px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-white/40 bg-white/10 text-xl sm:text-2xl font-bold tracking-wide text-white shadow-lg transition hover:border-white hover:scale-105"
-                title="Click to upload profile picture"
-              >
-                {user.profile_picture && user.profile_picture.length > 0 ? (
-                  <img src={user.profile_picture} alt={user.first_name} className="h-full w-full object-cover" />
-                ) : (
-                  userInitials
-                )}
-                <div className={`absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white transition-opacity duration-200 ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  {uploading ? (
-                    <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  ) : (
-                    <>
-                      <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider">Upload</span>
-                    </>
-                  )}
+          {/* ── Profile Header with Expanded Cover Banner ── */}
+          <div className="mb-6 sm:mb-8 overflow-hidden rounded-2xl border border-white/10 bg-[#16161c]/90 shadow-2xl">
+            {/* Expanded Top Cover Banner (Login Form Background Image containing "My Profile" text & close button) */}
+            <div className="relative h-48 sm:h-56 w-full overflow-hidden">
+              <img
+                src={loginBackdrop}
+                alt="Cover Banner"
+                className="absolute inset-0 h-full w-full object-cover scale-105"
+              />
+              {/* Gradient overlays for crisp readability and login backdrop aesthetic */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-indigo-950/45 to-purple-950/70" />
+              <div
+                className="pointer-events-none absolute inset-0 opacity-25"
+                style={{
+                  backgroundImage: `
+                    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.75), transparent),
+                    radial-gradient(1px 1px at 70% 18%, rgba(255,255,255,0.55), transparent),
+                    radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.5), transparent)
+                  `,
+                }}
+              />
+
+              {/* Integrated "My Profile" Title, Subtitle & Close Button inside Banner */}
+              <div className="relative z-10 flex items-start justify-between p-5 sm:p-6">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-md">My Profile</h2>
+                  <p className="mt-1 text-xs sm:text-sm text-zinc-200/90 font-medium drop-shadow">View and manage your personal and account information</p>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-white">{user.first_name} {user.last_name}</h3>
-                <p className="text-xs sm:text-sm font-medium text-blue-100 capitalize">{user.role} Member</p>
-                <div className="mt-1.5 flex items-center gap-2 text-[11px] sm:text-[12px] font-bold uppercase tracking-wider text-green-300">
-                  <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span>
-                  Active Account
-                </div>
+                <button 
+                  type="button"
+                  onClick={onClose} 
+                  className="rounded-full bg-black/40 p-2 text-zinc-300 backdrop-blur-md transition hover:bg-black/70 hover:text-white shadow-lg border border-white/10"
+                  aria-label="Close profile modal"
+                >
+                  <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </div>
-            
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              {!isEditing ? (
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border border-blue-200/50 bg-white/15 px-5 py-2.5 text-sm font-bold tracking-wide text-white shadow transition hover:bg-white/25"
+
+            {/* Lower Section with Overlapping Avatar & Info */}
+            <div className="relative px-5 sm:px-6 pb-6 pt-0">
+              {/* Avatar + Right Action Buttons Row */}
+              <div className="flex items-end justify-between gap-4">
+                {/* Overlapping Avatar - Bigger Size */}
+                <div 
+                  onClick={handleAvatarClick}
+                  className="group relative -mt-14 sm:-mt-18 flex h-28 w-28 sm:h-36 sm:w-36 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-[5px] sm:border-[6px] border-[#1e1e24] bg-[#2a2a36] text-3xl sm:text-4xl font-bold text-white shadow-2xl transition hover:scale-105"
+                  title="Click to upload profile picture"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  Edit Profile
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                    className="flex-1 sm:flex-none rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold tracking-wide text-white shadow transition hover:bg-white/20 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveProfile}
-                    disabled={saving}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-bold tracking-wide text-white shadow-lg transition hover:bg-emerald-500 disabled:opacity-60"
-                  >
-                    {saving ? (
-                      <>
-                        <svg className="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Saving...
-                      </>
+                  {displayAvatarUrl ? (
+                    <img src={displayAvatarUrl} alt={user.first_name} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-3xl sm:text-4xl font-bold tracking-wide text-white">{userInitials}</span>
+                  )}
+                  <div className={`absolute inset-0 flex flex-col items-center justify-center bg-black/65 text-white transition-opacity duration-200 ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    {uploading ? (
+                      <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
                     ) : (
-                      'Save Changes'
+                      <>
+                        <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                      </>
                     )}
+                  </div>
+                </div>
+
+                {/* Action Buttons on the Right */}
+                <div className="flex items-center gap-2 sm:gap-3 pt-3">
+                  {!isEditing ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="rounded-xl border border-white/15 bg-white/10 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/20 active:scale-95 flex items-center gap-2"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      Edit Profile
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        disabled={saving}
+                        className="rounded-xl border border-white/15 bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-50 active:scale-95"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveProfile}
+                        disabled={saving}
+                        className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-emerald-500 disabled:opacity-60 active:scale-95 flex items-center gap-2"
+                      >
+                        {saving ? (
+                          <>
+                            <svg className="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Changes'
+                        )}
+                      </button>
+                    </>
+                  )}
+                  <button 
+                    type="button"
+                    onClick={onLogout} 
+                    className="rounded-xl border border-red-500/30 bg-red-500/15 px-5 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/25 active:scale-95"
+                  >
+                    Sign Out
                   </button>
-                </>
-              )}
-              <button 
-                onClick={onLogout} 
-                className="flex-1 sm:flex-none rounded-lg border border-red-400/50 bg-red-500/20 px-5 py-2.5 text-sm font-bold tracking-wide text-red-100 shadow transition hover:bg-red-500/30"
-              >
-                Sign Out
-              </button>
+                </div>
+              </div>
+
+              {/* Name, Verified Badge, Email & Role Details below avatar */}
+              <div className="mt-3.5">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">{user.first_name} {user.last_name}</h3>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm" title="Verified Admin">
+                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                </div>
+
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400">
+                  <span>{user.email || user.username || "Admin Account"}</span>
+                  <span className="text-zinc-600">&bull;</span>
+                  <span className="capitalize text-blue-300 font-medium">{user.role} Member</span>
+                  <span className="text-zinc-600">&bull;</span>
+                  <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                    Active Account
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

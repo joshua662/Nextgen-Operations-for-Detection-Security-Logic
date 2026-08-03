@@ -1,7 +1,20 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import GateAccessService from "../../services/GateAccessService";
 import GenderService from "../../services/GenderService";
 import { useAuth } from "../../contexts/AuthContext";
+import loginBackdrop from "../../assets/img/subdivision-gate-background.png";
+
+const resolveProfilePictureUrl = (path?: string | null): string | null => {
+    if (!path) return null;
+    if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("blob:")) {
+        return path;
+    }
+    const cleanPath = path.replace(/^\/+/, "").replace(/^public\//, "");
+    if (cleanPath.startsWith("storage/")) {
+        return `http://127.0.0.1:8000/${cleanPath}`;
+    }
+    return `http://127.0.0.1:8000/storage/${cleanPath}`;
+};
 
 type ProfileForm = {
     first_name: string;
@@ -22,10 +35,16 @@ const ResidentProfilePage = () => {
     const { user, refreshUser } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
+    const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
     const [genders, setGenders] = useState<{ gender_id: number; gender: string }[]>([]);
     const [showEditModal, setShowEditModal] = useState(false);
     const [message, setMessage] = useState("");
     const [submitting, setSubmitting] = useState(false);
+
+    const displayAvatarUrl = useMemo(() => {
+        if (previewAvatar) return previewAvatar;
+        return resolveProfilePictureUrl(user?.user?.profile_picture);
+    }, [previewAvatar, user?.user?.profile_picture]);
 
     const handleAvatarClick = () => {
         if (uploading) return;
@@ -44,6 +63,8 @@ const ResidentProfilePage = () => {
         try {
             setUploading(true);
             setMessage("");
+            const objectUrl = URL.createObjectURL(file);
+            setPreviewAvatar(objectUrl);
 
             const formData = new FormData();
             formData.append("profile_picture", file);
@@ -52,6 +73,7 @@ const ResidentProfilePage = () => {
             if (res.data?.user) {
                 await refreshUser();
                 setMessage("Profile picture updated successfully.");
+                setTimeout(() => setMessage(""), 3000);
             }
         } catch (err: unknown) {
             console.error("Failed to upload profile picture:", err);
@@ -160,8 +182,8 @@ const ResidentProfilePage = () => {
                         className="group relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-white/30 bg-white/20 text-3xl font-bold text-white shadow-lg transition hover:border-white hover:scale-105"
                         title="Click to upload profile picture"
                     >
-                        {user?.user?.profile_picture ? (
-                            <img src={user.user.profile_picture} alt={displayName} className="h-full w-full object-cover" />
+                        {displayAvatarUrl ? (
+                            <img src={displayAvatarUrl} alt={displayName} className="h-full w-full object-cover" />
                         ) : (
                             initials
                         )}

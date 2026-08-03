@@ -20,6 +20,18 @@ const formatFullName = (
     return name.replace(/^,\s*/, "").replace(/,\s*$/, "");
 };
 
+const resolveProfilePictureUrl = (path?: string | null): string | null => {
+    if (!path) return null;
+    if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("blob:")) {
+        return path;
+    }
+    const cleanPath = path.replace(/^\/+/, "").replace(/^public\//, "");
+    if (cleanPath.startsWith("storage/")) {
+        return `http://127.0.0.1:8000/${cleanPath}`;
+    }
+    return `http://127.0.0.1:8000/storage/${cleanPath}`;
+};
+
 type UserProfileMenuProps = {
     onViewProfile?: () => void;
     variant?: "sidebar" | "header";
@@ -36,6 +48,7 @@ const UserProfileMenu = ({ onViewProfile, variant = "sidebar", isCollapsed = fal
         user?.user?.last_name,
         user?.user?.suffix_name,
     );
+    const profilePicUrl = resolveProfilePictureUrl(user?.user?.profile_picture);
 
     if (variant === "sidebar") {
         return (
@@ -50,10 +63,14 @@ const UserProfileMenu = ({ onViewProfile, variant = "sidebar", isCollapsed = fal
                         title="Click to view profile"
                         aria-label={fullName || "My Profile"}
                     >
-                        <span className={`flex shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-sm font-semibold text-white transition-all duration-300 ease-in-out ${
-                            isCollapsed ? "h-10 w-10" : "h-8 w-8"
+                        <span className={`flex shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-sm font-semibold text-white overflow-hidden transition-all duration-300 ease-in-out ${
+                            isCollapsed ? "h-10 w-10" : "h-9 w-9"
                         }`}>
-                            {initials}
+                            {profilePicUrl ? (
+                                <img src={profilePicUrl} alt={fullName || "User"} className="h-full w-full object-cover" />
+                            ) : (
+                                initials
+                            )}
                         </span>
                         <div className={`flex flex-1 items-center justify-between min-w-0 transition-all duration-300 ease-in-out origin-left truncate ${
                             isCollapsed ? "w-0 opacity-0 scale-90 pointer-events-none" : "w-auto opacity-100 scale-100"
@@ -79,8 +96,12 @@ const UserProfileMenu = ({ onViewProfile, variant = "sidebar", isCollapsed = fal
             className="flex rounded-full ring-2 ring-[#C5A073]/30 transition hover:ring-[#C5A073]/50 focus:outline-none focus:ring-4 focus:ring-[#C5A073]/20 cursor-pointer"
             title="Click to view profile"
         >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-white">
-                {initials}
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-white overflow-hidden">
+                {profilePicUrl ? (
+                    <img src={profilePicUrl} alt={fullName || "User"} className="h-full w-full object-cover" />
+                ) : (
+                    initials
+                )}
             </span>
         </button>
     );
