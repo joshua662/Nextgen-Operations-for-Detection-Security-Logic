@@ -11,6 +11,7 @@ import '../../core/utils/toast_helper.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/auth/auth_page_layout.dart';
 import '../../widgets/auth/underline_input_field.dart';
+import '../../widgets/custom_calendar_picker.dart';
 import '../../widgets/modals/confirmation_dialog.dart';
 import '../../widgets/modals/success_modal.dart';
 
@@ -88,24 +89,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
   Future<void> _selectBirthDate() async {
     final initialDate = DateTime.tryParse(_birthDateCtrl.text) ?? DateTime(2000, 1, 1);
-    final picked = await showDatePicker(
+    final picked = await showCustomCalendarPicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(1920),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF7C3AED),
-              onPrimary: Colors.white,
-              surface: Color(0xFF1E1B4B),
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       final formatted =
@@ -451,29 +437,41 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             ),
 
             // ── Resident Specific Fields ──────────────────────────────────
-            if (_selectedRole == 'Resident') ...[
-              UnderlineInputField(
-                label: 'Contact Number',
-                hint: 'e.g. 09171234567',
-                controller: _contactCtrl,
-                keyboardType: TextInputType.phone,
-                required: true,
-                trailingIcon: Icons.phone_outlined,
-                errorText: _fieldErrors['contact_number'],
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Contact number is required for residents' : null,
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: AnimatedOpacity(
+                opacity: _selectedRole == 'Resident' ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: _selectedRole == 'Resident'
+                    ? Column(
+                        children: [
+                          UnderlineInputField(
+                            label: 'Contact Number',
+                            hint: 'e.g. 09171234567',
+                            controller: _contactCtrl,
+                            keyboardType: TextInputType.phone,
+                            required: true,
+                            trailingIcon: Icons.phone_outlined,
+                            errorText: _fieldErrors['contact_number'],
+                            validator: (v) =>
+                                v == null || v.trim().isEmpty ? 'Contact number is required for residents' : null,
+                          ),
+                          UnderlineInputField(
+                            label: 'Plate Number',
+                            hint: 'e.g. ABC1234',
+                            controller: _plateCtrl,
+                            required: true,
+                            trailingIcon: Icons.directions_car_outlined,
+                            errorText: _fieldErrors['plate_number'],
+                            validator: (v) =>
+                                v == null || v.trim().isEmpty ? 'Plate number is required for residents' : null,
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
               ),
-              UnderlineInputField(
-                label: 'Plate Number',
-                hint: 'e.g. ABC1234',
-                controller: _plateCtrl,
-                required: true,
-                trailingIcon: Icons.directions_car_outlined,
-                errorText: _fieldErrors['plate_number'],
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Plate number is required for residents' : null,
-              ),
-            ],
+            ),
 
             // ── Auto Credentials Helper Text ──────────────────────────────
             Text(

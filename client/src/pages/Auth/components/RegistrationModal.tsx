@@ -550,14 +550,14 @@ const RegistrationModal = ({
                                 </div>
 
                                 <div
-                                    className={`grid transition-all duration-500 ease-in-out ${
+                                    className={`grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                                         form.role === "Resident"
-                                            ? "grid-rows-[1fr] opacity-100 translate-y-0"
-                                            : "grid-rows-[0fr] opacity-0 -translate-y-3 pointer-events-none"
+                                            ? "grid-rows-[1fr] opacity-100 translate-y-0 scale-100 mb-4"
+                                            : "grid-rows-[0fr] opacity-0 -translate-y-2 scale-[0.98] pointer-events-none mb-0"
                                     }`}
                                 >
                                     <div className="overflow-hidden">
-                                        <div className="grid gap-x-16 gap-y-0 md:grid-cols-2 pt-1">
+                                        <div className="grid gap-x-16 gap-y-0 md:grid-cols-2 pt-1 transition-all duration-500">
                                             <UnderlineField
                                                 label="Contact Number"
                                                 name="adm_contact"

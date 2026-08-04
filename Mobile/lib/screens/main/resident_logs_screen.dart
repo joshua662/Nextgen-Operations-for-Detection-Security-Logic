@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/gate_log_model.dart';
 import '../../providers/resident_provider.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class ResidentLogsScreen extends ConsumerWidget {
   const ResidentLogsScreen({super.key});
@@ -24,7 +25,7 @@ class ResidentLogsScreen extends ConsumerWidget {
         ],
       ),
       body: logsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SkeletonListLoader(count: 6),
         error: (e, _) => Center(child: Text('Failed to load logs: $e')),
         data: (logs) {
           final entriesToday = logs.where((l) => l.direction == 'IN').length;

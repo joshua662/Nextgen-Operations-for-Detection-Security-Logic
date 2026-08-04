@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/notification_model.dart';
 import '../../providers/resident_provider.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class ResidentNotificationsScreen extends ConsumerWidget {
   const ResidentNotificationsScreen({super.key});
@@ -15,6 +16,7 @@ class ResidentNotificationsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Notifications'),
         actions: [
           TextButton(
@@ -31,7 +33,7 @@ class ResidentNotificationsScreen extends ConsumerWidget {
         ],
       ),
       body: notifsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SkeletonListLoader(count: 5),
         error: (e, _) => Center(child: Text('Failed to load notifications: $e')),
         data: (notifications) {
           if (notifications.isEmpty) {

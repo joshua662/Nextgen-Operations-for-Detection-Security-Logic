@@ -208,6 +208,7 @@ class _ResidentHomeScreenState extends ConsumerState<ResidentHomeScreen> {
                   slivers: [
                     // ── Header Banner with Clock ─────────────────────────────
                     SliverAppBar(
+                      automaticallyImplyLeading: false,
                       expandedHeight: 180.h,
                       pinned: true,
                       elevation: 0,

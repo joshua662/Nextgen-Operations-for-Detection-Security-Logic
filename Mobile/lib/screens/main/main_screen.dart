@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../widgets/custom_floating_nav_bar.dart';
 import 'profile_screen.dart';
 import 'resident_home_screen.dart';
 import 'resident_notifications_screen.dart';
@@ -21,8 +22,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final tabs = [
       ResidentHomeScreen(onNavigateTab: _onNavigateTab),
       const ResidentNotificationsScreen(),
@@ -30,44 +29,29 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     ];
 
     return Scaffold(
+      backgroundColor: const Color(0xFF0D1117),
+      extendBody: true,
       body: IndexedStack(index: _currentIndex, children: tabs),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (i) => setState(() => _currentIndex = i),
-          height: 64,
-          backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-          indicatorColor: const Color(0xFF1E90FF).withAlpha(30),
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF1E90FF)),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.notifications_outlined),
-              selectedIcon:
-                  Icon(Icons.notifications_rounded, color: Color(0xFF1E90FF)),
-              label: 'Alerts',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon:
-                  Icon(Icons.person_rounded, color: Color(0xFF1E90FF)),
-              label: 'Profile',
-            ),
-          ],
-        ),
+      bottomNavigationBar: CustomFloatingBottomNavBar(
+        selectedIndex: _currentIndex,
+        onItemSelected: (i) => setState(() => _currentIndex = i),
+        items: const [
+          NavItemData(
+            icon: Icons.home_outlined,
+            selectedIcon: Icons.home_rounded,
+            label: 'Home',
+          ),
+          NavItemData(
+            icon: Icons.notifications_outlined,
+            selectedIcon: Icons.notifications_rounded,
+            label: 'Alerts',
+          ),
+          NavItemData(
+            icon: Icons.person_outline,
+            selectedIcon: Icons.person_rounded,
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
