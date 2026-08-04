@@ -49,8 +49,17 @@ class User {
 
   String get avatarUrl {
     if (avatar == null || avatar!.isEmpty) return '';
-    if (avatar!.startsWith('http://') || avatar!.startsWith('https://')) {
-      final uri = Uri.tryParse(avatar!);
+    final path = avatar!.trim();
+    if (path.startsWith('file:') ||
+        (path.length > 2 && path[1] == ':') ||
+        path.contains('/cache/') ||
+        path.contains('/tmp/') ||
+        path.contains('/data/user/') ||
+        path.contains('/data/data/')) {
+      return path;
+    }
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      final uri = Uri.tryParse(path);
       if (uri != null && (uri.host == 'localhost' || uri.host == '127.0.0.1')) {
         final domainUri = Uri.tryParse(ApiConstants.domain);
         if (domainUri != null) {
@@ -63,9 +72,9 @@ class User {
               .toString();
         }
       }
-      return avatar!;
+      return path;
     }
-    final cleanPath = avatar!.startsWith('/') ? avatar!.substring(1) : avatar!;
+    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
     if (cleanPath.startsWith('storage/')) {
       return '${ApiConstants.domain}/$cleanPath';
     }

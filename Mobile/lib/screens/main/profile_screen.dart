@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,11 +6,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/router/app_router.dart';
+import '../../core/utils/image_helper.dart';
 import '../../core/utils/toast_helper.dart';
 import '../../models/user_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/resident_provider.dart';
 import '../../widgets/modals/action_confirm_dialog.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -20,6 +23,9 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _showEditModal = false;
+  bool _showAvatarPopover = false;
+  String? _selectedAvatarPath;
+  bool _isUploadingAvatar = false;
 
   // Edit form controllers
   final _editFormKey = GlobalKey<FormState>();
@@ -45,8 +51,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _openEditModal(User user) {
-    _firstNameCtrl.text = user.firstName ?? '';
-    _lastNameCtrl.text = user.lastName ?? '';
+    final nameParts = user.name.trim().split(' ');
+    _firstNameCtrl.text = (user.firstName?.isNotEmpty == true)
+        ? user.firstName!
+        : (nameParts.isNotEmpty ? nameParts.first : '');
+    _lastNameCtrl.text = (user.lastName?.isNotEmpty == true)
+        ? user.lastName!
+        : (nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '');
     _contactCtrl.text = user.contactNumber ?? '';
     _plateCtrl.text = user.plateNumber ?? '';
     _modelCtrl.text = user.carModel ?? '';
@@ -62,19 +73,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _isSubmittingEdit = true);
     try {
       final service = ref.read(residentServiceProvider);
+      final fName = _firstNameCtrl.text.trim();
+      final lName = _lastNameCtrl.text.trim();
+      final contact = _contactCtrl.text.trim();
+      final plate = _plateCtrl.text.trim().toUpperCase();
+      final model = _modelCtrl.text.trim();
+      final color = _colorCtrl.text.trim();
+      final addr = _addressCtrl.text.trim();
+
       await service.submitUpdateRequest({
         'request_type': 'profile_update',
-        'first_name': _firstNameCtrl.text.trim(),
-        'last_name': _lastNameCtrl.text.trim(),
-        'contact_number': _contactCtrl.text.trim(),
-        'plate_number': _plateCtrl.text.trim().toUpperCase(),
-        if (_modelCtrl.text.trim().isNotEmpty)
-          'car_model': _modelCtrl.text.trim(),
-        if (_colorCtrl.text.trim().isNotEmpty)
-          'car_color': _colorCtrl.text.trim(),
-        if (_addressCtrl.text.trim().isNotEmpty)
-          'address': _addressCtrl.text.trim(),
+        'first_name': fName,
+        'last_name': lName,
+        'contact_number': contact,
+        'plate_number': plate,
+        if (model.isNotEmpty) 'car_model': model,
+        if (color.isNotEmpty) 'car_color': color,
+        if (addr.isNotEmpty) 'address': addr,
       });
+
+      // Optimistically update local Auth state so profile screen reflects changes live
+      final currentUser = ref.read(authProvider).value;
+      if (currentUser != null) {
+        final combinedName = '$fName $lName'.trim();
+        final updatedUser = currentUser.copyWith(
+          name: combinedName.isNotEmpty ? combinedName : currentUser.name,
+          firstName: fName.isNotEmpty ? fName : currentUser.firstName,
+          lastName: lName.isNotEmpty ? lName : currentUser.lastName,
+          contactNumber: contact.isNotEmpty ? contact : currentUser.contactNumber,
+          plateNumber: plate.isNotEmpty ? plate : currentUser.plateNumber,
+          carModel: model.isNotEmpty ? model : currentUser.carModel,
+          carColor: color.isNotEmpty ? color : currentUser.carColor,
+          address: addr.isNotEmpty ? addr : currentUser.address,
+        );
+        ref.read(authProvider.notifier).setUser(updatedUser);
+      }
+
       _closeEditModal();
       if (mounted) {
         ToastHelper.showSuccess(
@@ -119,12 +153,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
       body: authAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SkeletonProfileLoader(),
         error: (e, _) => Center(
           child: Text('Error: $e', style: const TextStyle(color: Colors.white)),
         ),
         data: (user) {
-          if (user == null) return const SizedBox.shrink();
+          if (user == null) return const SkeletonProfileLoader();
           return Stack(
             children: [
               _buildMainContent(user),
@@ -144,60 +178,38 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ? user.name.split(' ').sublist(1).join(' ')
             : '');
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 32.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Title Row: "My Profile" + X button ─────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'My Profile',
-                      style: TextStyle(
-                        fontSize: 22.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      'View and manage your personal and account information',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: const Color(0xFF9CA3AF),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    return GestureDetector(
+      onTap: () {
+        if (_showAvatarPopover) {
+          setState(() => _showAvatarPopover = false);
+        }
+      },
+      behavior: HitTestBehavior.translucent,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 32.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Profile Banner Card with Header Image ──────────────────
+              _buildProfileBanner(user),
 
-            SizedBox(height: 16.h),
+              SizedBox(height: 16.h),
 
-            // ── Profile Banner Card ────────────────────────────────────
-            _buildProfileBanner(user),
+              // ── Personal Information Card ──────────────────────────────
+              _buildPersonalInfoCard(firstName, lastName, user),
 
-            SizedBox(height: 16.h),
+              SizedBox(height: 16.h),
 
-            // ── Personal Information Card ──────────────────────────────
-            _buildPersonalInfoCard(firstName, lastName, user),
+              // ── Account Information Card ───────────────────────────────
+              _buildAccountInfoCard(user),
 
-            SizedBox(height: 16.h),
+              SizedBox(height: 16.h),
 
-            // ── Account Information Card ───────────────────────────────
-            _buildAccountInfoCard(user),
-
-            SizedBox(height: 16.h),
-
-            // ── Vehicle Information Card ───────────────────────────────
-            _buildVehicleInfoCard(user),
-          ],
+              // ── Vehicle Information Card ───────────────────────────────
+              _buildVehicleInfoCard(user),
+            ],
+          ),
         ),
       ),
     );
@@ -206,142 +218,384 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // ── Profile Banner ───────────────────────────────────────────────────────
   Widget _buildProfileBanner(User user) {
     return Container(
-      padding: EdgeInsets.all(16.r),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20.r),
         border: Border.all(color: const Color(0xFF30363D)),
-      ),
-      child: Row(
-        children: [
-          // Avatar circle with initials
-          Container(
-            width: 52.r,
-            height: 52.r,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF3B82F6), Color(0xFF06B6D4)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(
-                color: const Color(0xFF3B82F6).withAlpha(100),
-                width: 2.5,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                user.initials,
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-
-          SizedBox(width: 12.w),
-
-          // Name, role, active status
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.name,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  'Resident Member',
-                  style: TextStyle(
-                    fontSize: 11.5.sp,
-                    color: const Color(0xFF9CA3AF),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Top Banner Image Header ──────────────────────────────────────
+              Container(
+                height: 150.h,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/subdivision-gate-background.png'),
+                    fit: BoxFit.cover,
                   ),
                 ),
-                SizedBox(height: 3.h),
-                Row(
-                  children: [
-                    Container(
-                      width: 7.r,
-                      height: 7.r,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF22C55E),
-                        shape: BoxShape.circle,
-                      ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.black.withValues(alpha: 0.75),
+                        Colors.black.withValues(alpha: 0.35),
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
-                    SizedBox(width: 5.w),
-                    Text(
-                      'ACTIVE ACCOUNT',
-                      style: TextStyle(
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF22C55E),
-                        letterSpacing: 0.3,
+                  ),
+                  padding: EdgeInsets.fromLTRB(20.w, 16.h, 16.w, 16.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'My Profile',
+                        style: TextStyle(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
                       ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        'View and manage your personal and account information',
+                        style: TextStyle(
+                          fontSize: 11.5.sp,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ── Content Area Under Banner Image ─────────────────────────────
+              Padding(
+                padding: EdgeInsets.fromLTRB(20.w, 62.h, 20.w, 18.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // User Name with Verified Badge
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  user.name,
+                                  style: TextStyle(
+                                    fontSize: 22.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.4,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              SizedBox(width: 6.w),
+                              Icon(
+                                Icons.verified_rounded,
+                                color: const Color(0xFF3B82F6),
+                                size: 20.r,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Action Buttons (Edit Profile + Sign Out)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Edit Profile Button
+                            GestureDetector(
+                              onTap: () => _openEditModal(user),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF21262D),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(color: const Color(0xFF363B42)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.edit_outlined,
+                                      color: Colors.white,
+                                      size: 14.r,
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      'Edit Profile',
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            // Sign Out Button
+                            GestureDetector(
+                              onTap: _confirmLogout,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3C1618),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(color: const Color(0xFF5C1D21)),
+                                ),
+                                child: Text(
+                                  'Sign Out',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFF87171),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 6.h),
+
+                    // Subtitle Metadata Row
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6.w,
+                      runSpacing: 4.h,
+                      children: [
+                        if (user.email.isNotEmpty) ...[
+                          Text(
+                            user.email,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                          Text(
+                            '·',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: const Color(0xFF6B7280),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                        Text(
+                          'Resident Member',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF60A5FA),
+                          ),
+                        ),
+                        Text(
+                          '·',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: const Color(0xFF6B7280),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6.r,
+                              height: 6.r,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF22C55E),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'ACTIVE ACCOUNT',
+                              style: TextStyle(
+                                fontSize: 10.5.sp,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF22C55E),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+            ],
+          ),
+
+          // ── Overlapping Avatar Circle ─────────────────────────────────────────
+          Positioned(
+            left: 20.w,
+            top: 95.h,
+            child: GestureDetector(
+              onTap: () {
+                setState(() => _showAvatarPopover = !_showAvatarPopover);
+              },
+              child: Container(
+                width: 108.r,
+                height: 108.r,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF21262D),
+                  border: Border.all(color: const Color(0xFF161B22), width: 4.5.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: _buildAvatarImage(user),
+                ),
+              ),
             ),
           ),
 
-          // Edit + Sign Out buttons
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Edit button
-              GestureDetector(
-                onTap: () => _openEditModal(user),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 14.w,
-                    vertical: 8.h,
+          // ── Popover Modal beside Avatar with Smooth Spring Open & Close Animation ──
+          Positioned(
+            left: 114.w,
+            top: 125.h,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 320),
+              reverseDuration: const Duration(milliseconds: 240),
+              switchInCurve: const Cubic(0.34, 1.56, 0.64, 1),
+              switchOutCurve: Curves.easeInBack,
+              transitionBuilder: (child, animation) {
+                final scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: const Cubic(0.34, 1.56, 0.64, 1),
+                    reverseCurve: Curves.easeInBack,
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB),
-                    borderRadius: BorderRadius.circular(8.r),
+                );
+                final slideAnimation = Tween<Offset>(
+                  begin: const Offset(-0.15, 0.0),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                    reverseCurve: Curves.easeInCubic,
                   ),
-                  child: Text(
-                    'Edit',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                );
+                final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOut,
+                    reverseCurve: Curves.easeIn,
+                  ),
+                );
+
+                return ScaleTransition(
+                  scale: scaleAnimation,
+                  alignment: Alignment.centerLeft,
+                  child: SlideTransition(
+                    position: slideAnimation,
+                    child: FadeTransition(
+                      opacity: fadeAnimation,
+                      child: child,
                     ),
                   ),
-                ),
-              ),
-              SizedBox(width: 8.w),
-              // Sign Out button
-              GestureDetector(
-                onTap: _confirmLogout,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 14.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.r),
-                    border: Border.all(color: const Color(0xFFEF4444)),
-                  ),
-                  child: Text(
-                    'Sign Out',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFEF4444),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+                );
+              },
+              child: _showAvatarPopover
+                  ? _SpeechBubbleContainer(
+                      key: const ValueKey('avatar_popover_open'),
+                      child: InkWell(
+                        onTap: () async {
+                          setState(() => _showAvatarPopover = false);
+                          final path = await ImageHelper.pickAndCropImage(context);
+                          if (path != null && mounted) {
+                            setState(() {
+                              _selectedAvatarPath = path;
+                              _isUploadingAvatar = true;
+                            });
+                            try {
+                              final currentUser = ref.read(authProvider).value;
+                              if (currentUser != null) {
+                                final updatedUser = currentUser.copyWith(avatar: path);
+                                ref.read(authProvider.notifier).setUser(updatedUser);
+                              }
+                              if (mounted) {
+                                ToastHelper.showSuccess(context, 'Profile photo updated successfully!');
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ToastHelper.showError(context, 'Failed to update profile photo.');
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isUploadingAvatar = false);
+                              }
+                            }
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(18.r),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1D6BF3),
+                            borderRadius: BorderRadius.circular(18.r),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.camera_alt_outlined,
+                                color: Colors.white,
+                                size: 19.r,
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'Upload Photo',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('avatar_popover_closed')),
+            ),
           ),
         ],
       ),
@@ -555,20 +809,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Center(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(18.r),
-                child: Container(
-                  padding: EdgeInsets.all(20.r),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF161B22),
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(color: const Color(0xFF30363D)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(200),
-                        blurRadius: 32,
-                        offset: const Offset(0, 16),
-                      ),
-                    ],
-                  ),
+                child: GestureDetector(
+                  onTap: () {}, // Absorb taps inside modal card
+                  child: Container(
+                    padding: EdgeInsets.all(20.r),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161B22),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(color: const Color(0xFF30363D)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(200),
+                          blurRadius: 32,
+                          offset: const Offset(0, 16),
+                        ),
+                      ],
+                    ),
                   child: Form(
                     key: _editFormKey,
                     child: Column(
@@ -766,7 +1022,66 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ),
-        ],
+        ),
+      ],
+    ),
+  );
+}
+
+  Widget _buildAvatarImage(User user) {
+    if (_isUploadingAvatar) {
+      return const Center(
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          color: Color(0xFF3B82F6),
+        ),
+      );
+    }
+
+    final candidatePath = _selectedAvatarPath ?? user.avatar;
+    if (candidatePath != null && candidatePath.isNotEmpty) {
+      final cleanPath = candidatePath.replaceFirst('file://', '');
+      try {
+        final file = File(cleanPath);
+        if (file.existsSync()) {
+          final modTime = file.lastModifiedSync().millisecondsSinceEpoch;
+          return Image.file(
+            file,
+            key: ValueKey('avatar_file_${file.path}_$modTime'),
+            width: 108.r,
+            height: 108.r,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildInitialsText(user),
+          );
+        }
+      } catch (_) {}
+    }
+
+    final url = user.avatarUrl;
+    if (url.isNotEmpty &&
+        (url.startsWith('http://') || url.startsWith('https://'))) {
+      return Image.network(
+        url,
+        key: ValueKey('avatar_net_$url'),
+        width: 108.r,
+        height: 108.r,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildInitialsText(user),
+      );
+    }
+
+    return _buildInitialsText(user);
+  }
+
+  Widget _buildInitialsText(User user) {
+    return Center(
+      child: Text(
+        user.initials,
+        style: TextStyle(
+          fontSize: 34.sp,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -964,4 +1279,97 @@ class _ModalField extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SpeechBubbleContainer extends StatelessWidget {
+  final Widget child;
+  final Color backgroundColor;
+  final Color borderColor;
+
+  const _SpeechBubbleContainer({
+    super.key,
+    required this.child,
+    this.backgroundColor = const Color(0xFF13121A),
+    this.borderColor = const Color(0xFF2A2838),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _SpeechBubblePainter(
+        color: backgroundColor,
+        borderColor: borderColor,
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16.w, 7.r, 7.r, 7.r),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _SpeechBubblePainter extends CustomPainter {
+  final Color color;
+  final Color borderColor;
+
+  _SpeechBubblePainter({
+    required this.color,
+    required this.borderColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const double arrowW = 9.0;
+    const double arrowH = 14.0;
+    const double radius = 20.0;
+
+    final Path path = Path();
+    // Top-left of container body after arrow
+    path.moveTo(arrowW + radius, 0);
+    path.lineTo(size.width - radius, 0);
+    path.arcToPoint(
+      Offset(size.width, radius),
+      radius: const Radius.circular(radius),
+    );
+    path.lineTo(size.width, size.height - radius);
+    path.arcToPoint(
+      Offset(size.width - radius, size.height),
+      radius: const Radius.circular(radius),
+    );
+    path.lineTo(arrowW + radius, size.height);
+    path.arcToPoint(
+      Offset(arrowW, size.height - radius),
+      radius: const Radius.circular(radius),
+    );
+
+    // Left border going up to arrow bottom point
+    final double centerY = size.height / 2;
+    path.lineTo(arrowW, centerY + arrowH / 2);
+    // Sharp arrow tip pointing left
+    path.lineTo(0, centerY);
+    // Up to arrow top point
+    path.lineTo(arrowW, centerY - arrowH / 2);
+    path.lineTo(arrowW, radius);
+    path.arcToPoint(
+      Offset(arrowW + radius, 0),
+      radius: const Radius.circular(radius),
+    );
+    path.close();
+
+    // Fill background
+    final Paint fillPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, fillPaint);
+
+    // Stroke border
+    final Paint borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

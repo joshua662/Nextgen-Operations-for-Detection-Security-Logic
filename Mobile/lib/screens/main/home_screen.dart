@@ -27,6 +27,7 @@ class HomeScreen extends ConsumerWidget {
             slivers: [
               // ── Sticky header with gradient ────────────────────────────
               SliverAppBar(
+                automaticallyImplyLeading: false,
                 expandedHeight: 180.h,
                 pinned: true,
                 elevation: 0,
