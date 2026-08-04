@@ -594,6 +594,9 @@ class AuthController extends Controller
             $file->storeAs('img/user/profile_picture', $filename, 'public');
             $user->profile_picture = 'img/user/profile_picture/' . $filename;
             $user->save();
+        } elseif ($request->boolean('remove_profile_picture') || $request->input('remove_profile_picture') == '1') {
+            $user->profile_picture = null;
+            $user->save();
         }
 
         if ($user->isAdmin() || $user->isSecurityGuard()) {
