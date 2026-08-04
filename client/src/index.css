@@ -77,6 +77,36 @@
 .animate-modal-panel-in { animation: modal-panel-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 .animate-modal-panel-out { animation: modal-panel-out 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
+@keyframes popover-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.85) translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1) translateX(0);
+  }
+}
+
+@keyframes popover-pop-out {
+  from {
+    opacity: 1;
+    transform: translateY(-50%) scale(1) translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.85) translateX(-10px);
+  }
+}
+
+.animate-popover-in {
+  animation: popover-pop-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-popover-out {
+  animation: popover-pop-out 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {

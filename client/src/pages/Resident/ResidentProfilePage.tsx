@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent,
 import GateAccessService from "../../services/GateAccessService";
 import GenderService from "../../services/GenderService";
 import { useAuth } from "../../contexts/AuthContext";
+import { useModalAnimation } from "../../hooks/useModalAnimation";
 import loginBackdrop from "../../assets/img/subdivision-gate-background.png";
 
 const resolveProfilePictureUrl = (path?: string | null): string | null => {
@@ -34,8 +35,22 @@ type ProfileForm = {
 const ResidentProfilePage = () => {
     const { user, refreshUser } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const avatarContainerRef = useRef<HTMLDivElement>(null);
     const [uploading, setUploading] = useState(false);
     const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
+    const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+    const { shouldRender: showAvatarMenu, isAnimatingOut: isAvatarMenuOut } = useModalAnimation(avatarMenuOpen, 180);
+
+    useEffect(() => {
+        if (!avatarMenuOpen) return;
+        const handleClickOutside = (event: MouseEvent) => {
+            if (avatarContainerRef.current && !avatarContainerRef.current.contains(event.target as Node)) {
+                setAvatarMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [avatarMenuOpen]);
     const [genders, setGenders] = useState<{ gender_id: number; gender: string }[]>([]);
     const [showEditModal, setShowEditModal] = useState(false);
     const [message, setMessage] = useState("");
@@ -78,6 +93,32 @@ const ResidentProfilePage = () => {
         } catch (err: unknown) {
             console.error("Failed to upload profile picture:", err);
             setMessage("Failed to upload profile picture. Please try again.");
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
+
+    const handleRemovePhoto = async () => {
+        if (uploading) return;
+        try {
+            setUploading(true);
+            setMessage("");
+            const formData = new FormData();
+            formData.append("remove_profile_picture", "1");
+
+            const res = await GateAccessService.updateProfile(formData);
+            if (res.data?.user) {
+                setPreviewAvatar(null);
+                await refreshUser();
+                setMessage("Profile picture removed successfully.");
+                setTimeout(() => setMessage(""), 3000);
+            }
+        } catch (err: unknown) {
+            console.error("Failed to remove profile picture:", err);
+            setMessage("Failed to remove profile picture. Please try again.");
         } finally {
             setUploading(false);
             if (fileInputRef.current) {
@@ -177,32 +218,76 @@ const ResidentProfilePage = () => {
 
             <section className="rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-700 p-8 shadow-lg dark:from-blue-800 dark:to-cyan-900">
                 <div className="flex flex-col gap-6 md:flex-row md:items-center">
-                    <div
-                        onClick={handleAvatarClick}
-                        className="group relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-white/30 bg-white/20 text-3xl font-bold text-white shadow-lg transition hover:border-white hover:scale-105"
-                        title="Click to upload profile picture"
-                    >
-                        {displayAvatarUrl ? (
-                            <img src={displayAvatarUrl} alt={displayName} className="h-full w-full object-cover" />
-                        ) : (
-                            initials
-                        )}
-                        <div className={`absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white transition-opacity duration-200 ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                            {uploading ? (
-                                <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
+                    {/* Overlapping Avatar + Click Action Buttons on Right */}
+                    <div ref={avatarContainerRef} className="relative flex shrink-0 items-center">
+                        {/* Circle Avatar Container */}
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setAvatarMenuOpen((prev) => !prev);
+                            }}
+                            className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-white/30 bg-white/20 text-3xl font-bold text-white shadow-lg transition hover:border-white hover:ring-4 hover:ring-white/30"
+                        >
+                            {displayAvatarUrl ? (
+                                <img src={displayAvatarUrl} alt={displayName} className="h-full w-full object-cover" />
                             ) : (
-                                <>
-                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                initials
+                            )}
+                            {uploading && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 text-white">
+                                    <svg className="h-6 w-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Floating Action Menu on the RIGHT SIDE of Profile Picture - Shown ONLY on click with smooth enter/exit animation */}
+                        {showAvatarMenu && !uploading && (
+                            <div 
+                                onClick={(e) => e.stopPropagation()}
+                                className={`absolute left-[calc(100%+14px)] top-1/2 z-30 flex flex-col gap-1.5 rounded-2xl bg-zinc-900/95 p-2 backdrop-blur-xl border border-white/20 shadow-2xl whitespace-nowrap origin-left ${
+                                    isAvatarMenuOut ? "animate-popover-out" : "animate-popover-in"
+                                }`}
+                            >
+                                {/* Left Arrow pointing to profile picture */}
+                                <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 rotate-45 bg-zinc-900 border-b border-l border-white/20" />
+
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setAvatarMenuOpen(false);
+                                        handleAvatarClick();
+                                    }}
+                                    className="relative z-10 w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md transition border border-blue-400/30 active:scale-95 cursor-pointer"
+                                >
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
-                                    <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider">Upload</span>
-                                </>
-                            )}
-                        </div>
+                                    <span>Upload Photo</span>
+                                </button>
+
+                                {displayAvatarUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            setAvatarMenuOpen(false);
+                                            await handleRemovePhoto();
+                                        }}
+                                        className="relative z-10 w-full flex items-center justify-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md transition border border-red-400/30 active:scale-95 cursor-pointer"
+                                    >
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        <span>Remove Photo</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                     <div className="min-w-0 flex-1">
                         <h2 className="break-words text-3xl font-bold text-white">{displayName}</h2>
@@ -331,6 +416,7 @@ const ResidentProfilePage = () => {
                     </div>
                 </div>
             )}
+
         </div>
     );
 };
