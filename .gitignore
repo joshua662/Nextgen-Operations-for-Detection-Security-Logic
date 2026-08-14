@@ -2,3 +2,11 @@ Flutter-Demo.git-local-backup/
 arduino/rfid_rc522/oracleJdk-26/lib/modules
 *.jdk
 oracleJdk-26/
+
+# Flutter / Dart dev artifacts (prevent accidental API key leaks from Chrome cache)
+**/.dart_tool/
+**/build/
+Flutter-Demo/.dart_tool/
+Flutter-Demo/build/
+Mobile/.dart_tool/
+Mobile/build/
